@@ -605,6 +605,8 @@ yet another fix for display problems during restore:  if game is saved while
 	restore will try to update hero's spot when making sure objects aren't
 	being obfuscated by hallucination, but when displaying the hero there
 	instead it would access steed pointer before that has been set up
+resistances gained from worn or wielded items also protect hero's inventory
+non-metallic gloves protect worn rings from shock
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -798,6 +800,11 @@ if hero died while wearing gold dragon scales/mail and left bones, they would
 	still be emitting light witout being worn when bones got loaded
 if an invisible monster put on or took off armor while out of hero's sight
 	spurious message "Suddenly you cannot see it" would be given
+an item thrown or dropped while swallowed was treated as being picked up by an
+	unseen monster so object fields {known, dknown, bknown} got cleared
+segfault if gremlin fled weaponless hero wearing gold dragon scales/mail
+'disambiguate WHACK' patch affected field layout of objects[] but EDITLEVEL
+	wasn't incremented, allowing incompatable save files to be restored
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
