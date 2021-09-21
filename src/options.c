@@ -4129,6 +4129,7 @@ optfn_boolean(int optidx, int req, boolean negated, char *opts, char *op)
         case opt_ascii_map:
         case opt_tiled_map:
             g.opt_need_redraw = TRUE;
+            g.opt_need_glyph_reset = TRUE;
             break;
         case opt_hilite_pet:
 #ifdef CURSES_GRAPHICS
@@ -4166,6 +4167,7 @@ optfn_boolean(int optidx, int req, boolean negated, char *opts, char *op)
             }
 #endif
             g.opt_need_redraw = TRUE;
+            g.opt_need_glyph_reset = TRUE;
             break;
         case opt_menucolors:
         case opt_guicolor:
@@ -5840,7 +5842,7 @@ initoptions_finish(void)
     if (sym)
         g.showsyms[SYM_BOULDER + SYM_OFF_X] = sym;
     reglyph_darkroom();
-
+    reset_glyphmap(gm_optionchange);
 #ifdef STATUS_HILITES
     /*
      * A multi-interface binary might only support status highlighting
@@ -7349,6 +7351,7 @@ doset(void) /* changing options via menu by Per Liboriussen */
 #endif
     end_menu(tmpwin, "Set what options?");
     g.opt_need_redraw = FALSE;
+    g.opt_need_glyph_reset = FALSE;
     if ((pick_cnt = select_menu(tmpwin, PICK_ANY, &pick_list)) > 0) {
         /*
          * Walk down the selection list and either invert the booleans
@@ -7396,6 +7399,9 @@ doset(void) /* changing options via menu by Per Liboriussen */
     }
 
     destroy_nhwindow(tmpwin);
+    if (g.opt_need_glyph_reset) {
+        reset_glyphmap(gm_optionchange);
+    }
     if (g.opt_need_redraw) {
         check_gold_symbol();
         reglyph_darkroom();
@@ -7829,9 +7835,17 @@ match_sym(char *buf)
         const char *altnm;
         const char *nm;
     } alternates[] = {
-        { "S_armour" , "S_armor"},
+        { "S_armour" , "S_armor" },
+        { "S_explode1" , "S_expl_tl" },
+        { "S_explode2" , "S_expl_tc" },
+        { "S_explode3" , "S_expl_tr" },
+        { "S_explode4" , "S_expl_ml" },
+        { "S_explode5" , "S_expl_mc" },
+        { "S_explode6" , "S_expl_mr" },
+        { "S_explode7" , "S_expl_bl" },
+        { "S_explode8" , "S_expl_bc" },
+        { "S_explode9" , "S_expl_br" },
     };
-
     size_t len = strlen(buf);
     const char *p = index(buf, ':'), *q = index(buf, '=');
     struct symparse *sp = loadsyms;

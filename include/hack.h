@@ -212,11 +212,9 @@ enum misc_arti_nums {
 #define SYM_OFF_X (SYM_OFF_W + WARNCOUNT)
 #define SYM_MAX (SYM_OFF_X + MAXOTHER)
 
-/* glyphmod entries */
-enum { GM_FLAGS, GM_TTYCHAR, GM_COLOR, NUM_GLYPHMOD };
-
 #include "rect.h"
 #include "region.h"
+#include "display.h"
 #include "decl.h"
 #include "timeout.h"
 
@@ -268,7 +266,6 @@ typedef struct sortloot_item Loot;
 #include "trap.h"
 #include "flag.h"
 #include "vision.h"
-#include "display.h"
 #include "engrave.h"
 
 #include "extern.h"
@@ -366,6 +363,7 @@ typedef struct sortloot_item Loot;
 #define BUC_CURSED        0x0200
 #define BUC_UNCURSED      0x0400
 #define BUC_UNKNOWN       0x0800
+#define JUSTPICKED        0x1000
 #define BUC_ALLBKNOWN (BUC_BLESSED | BUC_CURSED | BUC_UNCURSED)
 #define BUCX_TYPES (BUC_ALLBKNOWN | BUC_UNKNOWN)
 #define ALL_TYPES_SELECTED -2

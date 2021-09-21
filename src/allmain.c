@@ -17,6 +17,7 @@ static void u_calc_moveamt(int);
 #ifdef POSITIONBAR
 static void do_positionbar(void);
 #endif
+static void regen_pw(int);
 static void regen_hp(int);
 static void interrupt_multi(const char *);
 static void debug_fields(const char *);
@@ -61,6 +62,7 @@ moveloop_preamble(boolean resuming)
     if (!resuming) { /* new game */
         g.context.rndencode = rnd(9000);
         set_wear((struct obj *) 0); /* for side-effects of starting gear */
+        reset_justpicked(g.invent);
         (void) pickup(1);      /* autopickup at initial location */
         /* only matters if someday a character is able to start with
            clairvoyance (wizard with cornuthaum perhaps?); without this,
@@ -273,19 +275,7 @@ moveloop_core(void)
                     }
                 }
 
-                if (u.uen < u.uenmax
-                    && ((mvl_wtcap < MOD_ENCUMBER
-                         && (!(g.moves % ((MAXULEV + 8 - u.ulevel)
-                                          * (Role_if(PM_WIZARD) ? 3 : 4)
-                                          / 6)))) || Energy_regeneration)) {
-                    u.uen += rn1(
-                             (int) (ACURR(A_WIS) + ACURR(A_INT)) / 15 + 1, 1);
-                    if (u.uen > u.uenmax)
-                        u.uen = u.uenmax;
-                    g.context.botl = TRUE;
-                    if (u.uen == u.uenmax)
-                        interrupt_multi("You feel full of energy.");
-                }
+                regen_pw(mvl_wtcap);
 
                 if (!u.uinvulnerable) {
                     if (Teleportation && !rn2(85)) {
@@ -518,6 +508,25 @@ moveloop(boolean resuming)
     moveloop_preamble(resuming);
     for (;;) {
         moveloop_core();
+    }
+}
+
+static void
+regen_pw(int wtcap)
+{
+    if (u.uen < u.uenmax
+        && ((wtcap < MOD_ENCUMBER
+             && (!(g.moves % ((MAXULEV + 8 - u.ulevel)
+                              * (Role_if(PM_WIZARD) ? 3 : 4)
+                              / 6)))) || Energy_regeneration)) {
+        int upper = (int) (ACURR(A_WIS) + ACURR(A_INT)) / 15 + 1;
+
+        u.uen += rn1(upper, 1);
+        if (u.uen > u.uenmax)
+            u.uen = u.uenmax;
+        g.context.botl = TRUE;
+        if (u.uen == u.uenmax)
+            interrupt_multi("You feel full of energy.");
     }
 }
 

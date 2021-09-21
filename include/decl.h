@@ -224,11 +224,6 @@ E const int shield_static[];
 
 #include "spell.h"
 
-#include "color.h"
-#ifdef TEXTCOLOR
-E const int zapcolors[];
-#endif
-
 E const struct class_sym def_oc_syms[MAXOCLASSES]; /* default class symbols */
 E uchar oc_syms[MAXOCLASSES];                      /* current class symbols */
 E const struct class_sym def_monsyms[MAXMCLASSES]; /* default class symbols */
@@ -556,14 +551,6 @@ struct trapinfo {
     int time_needed;
     boolean force_bungle;
 };
-
-typedef struct {
-    xchar gnew; /* perhaps move this bit into the rm structure. */
-    int glyph;
-#ifndef UNBUFFERED_GLYPHINFO
-    glyph_info glyphinfo;
-#endif
-} gbuf_entry;
 
 enum vanq_order_modes {
     VANQ_MLVL_MNDX = 0,
@@ -1075,6 +1062,7 @@ struct instance_globals {
     boolean opt_initial;
     boolean opt_from_file;
     boolean opt_need_redraw; /* for doset() */
+    boolean opt_need_glyph_reset;
     /* use menucolors to show colors in the pick-a-color menu */
     boolean save_menucolors; /* copy of iflags.use_menu_colors */
     struct menucoloring *save_colorings; /* copy of g.menu_colorings */
@@ -1095,6 +1083,8 @@ struct instance_globals {
     boolean class_filter;
     boolean bucx_filter;
     boolean shop_filter;
+    boolean picked_filter;
+    boolean loot_reset_justpicked;
 
     /* pline.c */
     unsigned pline_flags;
@@ -1274,8 +1264,6 @@ struct const_globals {
 };
 
 E const struct const_globals cg;
-
-E const glyph_info nul_glyphinfo;
 
 #undef E
 

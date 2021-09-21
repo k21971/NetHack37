@@ -382,6 +382,7 @@ extern void set_wall_state(void);
 extern void unset_seenv(struct rm *, int, int, int, int);
 extern int warning_of(struct monst *);
 extern void map_glyphinfo(xchar, xchar, int, unsigned, glyph_info *);
+extern void reset_glyphmap(enum glyphmap_change_triggers trigger);
 
 /* ### do.c ### */
 
@@ -1087,7 +1088,7 @@ extern void free_pickinv_cache(void);
 extern int count_unpaid(struct obj *);
 extern int count_buc(struct obj *, int, boolean(*)(struct obj *));
 extern void tally_BUCX(struct obj *, boolean, int *, int *, int *, int *,
-                       int *);
+                       int *, int *);
 extern long count_contents(struct obj *, boolean, boolean, boolean, boolean);
 extern void carry_obj_effects(struct obj *);
 extern const char *currency(long);
@@ -1773,6 +1774,7 @@ extern void objects_globals_init(void);
 
 /* ### objnam.c ### */
 
+extern void maybereleaseobuf(char *);
 extern char *obj_typename(int);
 extern char *simple_typename(int);
 extern char *safe_typename(int);
@@ -1960,6 +1962,9 @@ extern boolean allow_category(struct obj *);
 extern boolean is_worn_by_type(struct obj *);
 extern int ck_bag(struct obj *);
 extern void removed_from_icebox(struct obj *);
+extern void reset_justpicked(struct obj *);
+extern int count_justpicked(struct obj *);
+extern struct obj *find_justpicked(struct obj *);
 extern int pickup(int);
 extern int pickup_object(struct obj *, long, boolean);
 extern int query_category(const char *, struct obj *, int, menu_item **, int);
@@ -2148,6 +2153,7 @@ extern void assign_candy_wrapper(struct obj *);
 extern int doread(void);
 extern int charge_ok(struct obj *);
 extern void recharge(struct obj *, int);
+extern boolean valid_cloud_pos(int, int);
 extern int seffects(struct obj *);
 extern void drop_boulder_on_player(boolean, boolean, boolean, boolean);
 extern boolean drop_boulder_on_monster(int, int, boolean, boolean);

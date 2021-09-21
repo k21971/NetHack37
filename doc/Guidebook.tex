@@ -45,7 +45,7 @@
 %.au
 \author{Original version - Eric S. Raymond\\
 (Edited and expanded for 3.7 by Mike Stephenson and others)}
-\date{August 26, 2021}
+\date{September 17, 2021}
 
 \maketitle
 
@@ -829,6 +829,7 @@ the bless\-ed/\-un\-curs\-ed/\-curs\-ed groups may be typed.\\
 {\tt DU}  --- drop all objects known to be uncursed.\\
 {\tt DC}  --- drop all objects known to be cursed.\\
 {\tt DX}  --- drop all objects of unknown B/U/C status.\\
+{\tt DP}  --- drop objects picked up last.\\
 {\tt Da}  --- drop all objects, without asking for confirmation.\\
 {\tt Di}  --- examine your inventory before dropping anything.\\
 {\tt Du}  --- drop only unpaid objects (when in a shop).\\
@@ -903,6 +904,7 @@ for potions.\\
 {\tt IU} --- list all items known to be uncursed;\\
 {\tt IC} --- list all items known to be cursed;\\
 {\tt IX} --- list all items whose bless/curse status is unknown;\\
+{\tt IP} --- list items picked up last;\\
 {\tt I\$} --- count your money.
 %.ei
 %.ed
@@ -1466,7 +1468,7 @@ Pay your shopping bill. Default key is `{\tt p}'.
 If persistent inventory display is supported and enabled (with the
 {\it perm\verb+_+invent\/} option), interact with it instead of with the map.
 You'll be prompted for menu scrolling keystrokes such
-as `{\tt >}' and `\{\tt <}'.
+as `{\tt \verb+>+}' and `{\tt \verb+<+}'.
 Press {\tt RReturn} or {\tt Escape} to resume normal play.
 Default key is {\tt \verb+|+}.
 %.lp
@@ -5799,15 +5801,15 @@ Default                      & Symbol Name                & Description\\
 \verb@D@ & S\verb+_+dragon                  &	(dragon)\\
 \verb@;@ & S\verb+_+eel                     &	(sea monster)\\
 \verb@E@ & S\verb+_+elemental               &	(elemental)\\
-\verb@/@ & S\verb+_+explode1                &	(explosion top left)\\
-\verb@-@ & S\verb+_+explode2                &	(explosion top center)\\
-\verb@\@ & S\verb+_+explode3                &	(explosion top right)\\
-\verb@|@ & S\verb+_+explode4                &	(explosion middle left)\\
-\verb@ @ & S\verb+_+explode5                &	(explosion middle center)\\
-\verb@|@ & S\verb+_+explode6                &	(explosion middle right)\\
-\verb@\@ & S\verb+_+explode7                &	(explosion bottom left)\\
-\verb@-@ & S\verb+_+explode8                &	(explosion bottom center)\\
-\verb@/@ & S\verb+_+explode9                &	(explosion bottom right)\\
+\verb@/@ & S\verb+_+expl\verb+_+tl          &	(explosion top left)\\
+\verb@-@ & S\verb+_+expl\verb+_+tc          &	(explosion top center)\\
+\verb@\@ & S\verb+_+expl\verb+_+tr          &	(explosion top right)\\
+\verb@|@ & S\verb+_+expl\verb+_+ml          &	(explosion middle left)\\
+\verb@ @ & S\verb+_+expl\verb+_+mc          &	(explosion middle center)\\
+\verb@|@ & S\verb+_+expl\verb+_+mr          &	(explosion middle right)\\
+\verb@\@ & S\verb+_+expl\verb+_+bl          &	(explosion bottom left)\\
+\verb@-@ & S\verb+_+expl\verb+_+bc          &	(explosion bottom center)\\
+\verb@/@ & S\verb+_+expl\verb+_+br          &	(explosion bottom right)\\
 \verb@e@ & S\verb+_+eye                     &	(eye or sphere)\\
 \verb@^@ & S\verb+_+falling\verb+_+rock\verb+_+trap     &	(falling rock trap)\\
 \verb@f@ & S\verb+_+feline                  &	(cat or other feline)\\
