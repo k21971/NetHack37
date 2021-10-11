@@ -634,6 +634,11 @@ if a Rider or displacer beast swapped places with a single-segment long worm
 	the segment co-located with the head wasn't moved with that head;
 	if sanity_checking was enabled a warning could be triggered:
 	mon (000000) at seg location is not worm (123abc)
+blessed scroll of remove curse read while confused blesses or curses any
+	uncursed items in inventory, but if hero was dual-wielding and the
+	scroll cursed the secondary weapon, that would be dropped and further
+	object traversal would process items on the floor at hero's spot
+	instead of the rest of inventory
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -824,7 +829,7 @@ baby gold dragons weren't able to grow into adult gold dragons
 when hero is displaced, make monsters who try to stay out of direct line do so
 	with spot where they think the hero is rather than where he really is
 if hero died while wearing gold dragon scales/mail and left bones, they would
-	still be emitting light witout being worn when bones got loaded
+	still be emitting light without being worn when bones got loaded
 if an invisible monster put on or took off armor while out of hero's sight
 	spurious message "Suddenly you cannot see it" would be given
 an item thrown or dropped while swallowed was treated as being picked up by an
@@ -832,6 +837,8 @@ an item thrown or dropped while swallowed was treated as being picked up by an
 segfault if gremlin fled weaponless hero wearing gold dragon scales/mail
 'disambiguate WHACK' patch affected field layout of objects[] but EDITLEVEL
 	wasn't incremented, allowing incompatable save files to be restored
+restore the boulder exception for piletops that had been unintentionally
+	removed during the expanded-glyphs changes
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
