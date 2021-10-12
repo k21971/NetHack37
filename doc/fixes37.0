@@ -639,6 +639,9 @@ blessed scroll of remove curse read while confused blesses or curses any
 	scroll cursed the secondary weapon, that would be dropped and further
 	object traversal would process items on the floor at hero's spot
 	instead of the rest of inventory
+can now use m<dir> to try to move to an adjacent boulder's spot without
+	pushing it; hero poly'd into a giant or a tiny creature or carrying so
+	little as to be able to squeeze there will succeed, others will fail
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -839,6 +842,8 @@ segfault if gremlin fled weaponless hero wearing gold dragon scales/mail
 	wasn't incremented, allowing incompatable save files to be restored
 restore the boulder exception for piletops that had been unintentionally
 	removed during the expanded-glyphs changes
+misaligned potion colors due to lack of reset_glyphmap() following obj shuffle;
+	this issue only impacted a new game
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support

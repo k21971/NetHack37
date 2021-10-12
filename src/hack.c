@@ -94,6 +94,8 @@ revive_nasty(int x, int y, const char *msg)
     return revived;
 }
 
+#define squeezeablylightinvent() (!g.invent || inv_weight() <= -850)
+
 static int
 moverock(void)
 {
@@ -123,7 +125,45 @@ moverock(void)
         rx = u.ux + 2 * u.dx; /* boulder destination position */
         ry = u.uy + 2 * u.dy;
         nomul(0);
+
+        /* using m<dir> towards an adjacent boulder steps over/onto it if
+           poly'd into a giant or squeezes under/beside it if small/light
+           enough but is a no-op in other circumstances unless move attempt
+           reveals an unseen boulder or lack of remembered, unseen monster */
+        if (g.context.nopick) {
+            int oldglyph = glyph_at(sx, sy); /* before feel_location() */
+
+            feel_location(sx, sy); /* same for all 3 if/else-if/else cases */
+            if (throws_rocks(g.youmonst.data)) {
+                /* player has used 'm<dir>' to move, so step to boulder's
+                   spot without pushing it; hero is poly'd into a giant,
+                   so exotic forms of locomotion are out, but might be
+                   levitating (ring, potion, spell) or flying (amulet) */
+                You("%s over a boulder here.",
+                    Levitation ? "float" : Flying ? "fly" : "step");
+                /* ["over" seems weird on air level but what else to say?] */
+                sokoban_guilt();
+                res = 0; /* move to <sx,sy> */
+            } else if (!u.usteed && (squeezeablylightinvent()
+                                     || verysmall(g.youmonst.data))) {
+                You("squeeze yourself against the boulder.");
+                sokoban_guilt();
+                res = 0; /* move to <sx,sy> */
+            } else {
+                There("is a boulder in your way.");
+                /* use a move if hero learns something; see test_move() for
+                   how/why 'context.door_opened' is being dragged into this */
+                if (glyph_at(sx, sy) != oldglyph)
+                    g.context.door_opened = g.context.move = TRUE;
+                res = -1; /* don't move to <sx,sy>, so no soko guilt */
+            }
+            goto moverock_done; /* stop further push attempts */
+        }
         if (Levitation || Is_airlevel(&u.uz)) {
+            /* FIXME?  behavior in an air bubble on the water level should
+               be similar to being on the air level; both cases probably
+               ought to let push attempt proceed when flying (which implies
+               not levitating) */
             if (Blind)
                 feel_location(sx, sy);
             You("don't have enough leverage to push %s.", the(xname(otmp)));
@@ -391,11 +431,13 @@ moverock(void)
                 break;
             }
 
-            if (!u.usteed
-                && (((!g.invent || inv_weight() <= -850)
-                     && (!u.dx || !u.dy || (IS_ROCK(levl[u.ux][sy].typ)
-                                            && IS_ROCK(levl[sx][u.uy].typ))))
-                    || verysmall(g.youmonst.data))) {
+            /* similar to m<dir> above, but that doesn't care if you're
+               moving orthogonally or toward a diagonal squeeze */
+            if (!u.usteed && ((squeezeablylightinvent()
+                               && (!u.dx || !u.dy
+                                   || (IS_ROCK(levl[u.ux][sy].typ)
+                                       && IS_ROCK(levl[sx][u.uy].typ))))
+                              || verysmall(g.youmonst.data))) {
                 pline(
                    "However, you can squeeze yourself into a small opening.");
                 sokoban_guilt();
@@ -875,8 +917,7 @@ test_move(int ux, int uy, int dx, int dy, int mode)
                                we haven't opened a door but we're going to
                                return False and without having 'door_opened'
                                set, 'move' would get reset by caller */
-                            g.context.door_opened
-                                = g.context.move = TRUE;
+                            g.context.door_opened = g.context.move = TRUE;
                             /* since we've just lied about successfully
                                moving, we need to manually stop running */
                             nomul(0);
