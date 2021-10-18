@@ -642,6 +642,12 @@ blessed scroll of remove curse read while confused blesses or curses any
 can now use m<dir> to try to move to an adjacent boulder's spot without
 	pushing it; hero poly'd into a giant or a tiny creature or carrying so
 	little as to be able to squeeze there will succeed, others will fail
+breaching a shop wall, using locking magic to put a door there, then unlocking
+	that door yielded a situation where subsequent shop damage repair
+	produced invalid map data which resulted in an impossible() warning
+	about "wall_angle: unknown" during map display
+melting ice timer could persist after the ice was gone from digging or from an
+	exploding land mine
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -871,6 +877,8 @@ Windows: nhl_loadlua() was missing the RDBMODE argument on the [dlb_]fopen(),
 	which is required on Windows to set binary mode; binary mode is
 	required in order to be able to reliably navigate through a file using
 	fseek(), ftell() and fread()
+Windows: when VIRTUAL_TERMINAL_SEQUENCES was not defined, the preprocessing
+	would fail on consoletty.c
 X11: was still initializing map to 'stone' instead of 'unexplored' after they
 	became separate glyphs
 X11: for text map without color, add support for black&white ice; draw it in
@@ -1289,8 +1297,10 @@ permit blind feeling for objects on trap door and fix up msgs when dropping
 travel from 'interesting position' (pr #575 by entrez)
 running on ice sent hero in weird directions (pr #588 by copperwater)
 delete extra lines in Guidebook.mn (pr #590 by argrath)
-Supply missing changes on Guidebook.tex (pr #591 by argrath)
-
+supply missing changes on Guidebook.tex (pr #591 by argrath)
+fix out-of-bounds access of xdir and ydir in farlook (pr #592 by copperwater)
+variation of imp's period-speak (pr #602 by Vivit-R)
+fix m-prefix movement into warning symbol (pr #573 by entrez)
 
 
 Code Cleanup and Reorganization

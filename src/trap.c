@@ -596,7 +596,7 @@ fall_through(
 struct monst *
 animate_statue(
     struct obj *statue,
-    xchar x, 
+    xchar x,
     xchar y,
     int cause,
     int *fail_reason)
@@ -776,7 +776,7 @@ animate_statue(
 struct monst *
 activate_statue_trap(
     struct trap *trap,
-    xchar x, 
+    xchar x,
     xchar y,
     boolean shatter)
 {
@@ -2570,8 +2570,9 @@ blow_up_landmine(struct trap* trap)
 {
     int x = trap->tx, y = trap->ty, dbx, dby;
     struct rm *lev = &levl[x][y];
-    schar typ;
+    schar old_typ, typ;
 
+    old_typ = lev->typ;
     (void) scatter(x, y, 4,
                    MAY_DESTROY | MAY_HIT | MAY_FRACTURE | VIS_EFFECTS,
                    (struct obj *) 0);
@@ -2607,6 +2608,7 @@ blow_up_landmine(struct trap* trap)
             }
         }
     }
+    spot_checks(x, y, old_typ);
 }
 
 static void
@@ -2950,7 +2952,7 @@ feeltrap(struct trap* trap)
 static int
 mkroll_launch(
     struct trap *ttmp,
-    xchar x, 
+    xchar x,
     xchar y,
     short otyp,
     long ocount)
@@ -3796,7 +3798,7 @@ fire_damage(
 int
 fire_damage_chain(
     struct obj *chain,
-    boolean force, 
+    boolean force,
     boolean here,
     xchar x,
     xchar y)
@@ -5996,4 +5998,20 @@ ignite_items(struct obj* objchn)
     }
 }
 
+void
+trap_ice_effects(xchar x, xchar y, boolean ice_is_melting)
+{
+    struct trap *ttmp = t_at(x, y);
+
+    if (ttmp && ice_is_melting) {
+        if (ttmp->ttyp == LANDMINE || ttmp->ttyp == BEAR_TRAP) {
+            /* landmine or bear trap set on top of the ice falls
+               into the water */
+            int otyp = (ttmp->ttyp == LANDMINE) ? LAND_MINE : BEARTRAP;
+            cnv_trap_obj(otyp, 1, ttmp, TRUE);
+        } else {
+            deltrap(ttmp);
+        }
+    }
+}
 /*trap.c*/

@@ -1573,10 +1573,10 @@ dopay(void)
  */
 static int
 dopayobj(
-    register struct monst* shkp, 
-    register struct bill_x* bp, 
-    struct obj** obj_p, 
-    int which /* 0 => used-up item, 1 => other (unpaid or lost) */, 
+    register struct monst* shkp,
+    register struct bill_x* bp,
+    struct obj** obj_p,
+    int which /* 0 => used-up item, 1 => other (unpaid or lost) */,
     boolean itemize)
 
 {
@@ -2047,7 +2047,7 @@ oid_price_adjustment(struct obj* obj, unsigned int oid)
 /* calculate the value that the shk will charge for [one of] an object */
 static long
 get_cost(
-    register struct obj* obj, 
+    register struct obj* obj,
     register struct monst* shkp) /* if angry, impose a surcharge */
 {
     long tmp = getprice(obj, FALSE),
@@ -2517,7 +2517,7 @@ add_to_billobjs(struct obj* obj)
 static void
 bill_box_content(
     register struct obj *obj,
-    register boolean ininv, 
+    register boolean ininv,
     register boolean dummy,
     register struct monst *shkp)
 {
@@ -2616,7 +2616,7 @@ billable(
 void
 addtobill(
     struct obj *obj,
-    boolean ininv, 
+    boolean ininv,
     boolean dummy,
     boolean silent)
 {
@@ -2723,9 +2723,10 @@ append_honorific(char *buf)
 {
     /* (chooses among [0]..[3] normally; [1]..[4] after the
        Wizard has been killed or invocation ritual performed) */
-    static const char *const honored[] = { "good", "honored", "most gracious",
-                                           "esteemed",
-                                           "most renowned and sacred" };
+    static const char *const honored[] = {
+        "good", "honored", "most gracious", "esteemed",
+        "most renowned and sacred"
+    };
 
     Strcat(buf, honored[rn2(SIZE(honored) - 1) + u.uevent.udemigod]);
     if (is_vampire(g.youmonst.data))
@@ -2878,9 +2879,9 @@ stolen_container(
 long
 stolen_value(
     struct obj *obj,
-    xchar x, 
+    xchar x,
     xchar y,
-    boolean peaceful, 
+    boolean peaceful,
     boolean silent)
 {
     long value = 0L, gvalue = 0L, billamt = 0L;
@@ -3484,6 +3485,7 @@ add_damage(
     tmp_dam->place.y = y;
     tmp_dam->cost = cost;
     tmp_dam->typ = levl[x][y].typ;
+    tmp_dam->flags = levl[x][y].flags;
     tmp_dam->next = g.level.damagelist;
     g.level.damagelist = tmp_dam;
     /* If player saw damage, display as a wall forever */
@@ -3573,7 +3575,7 @@ discard_damage_struct(struct damage *dam)
         if (prev)
             prev->next = dam->next;
     }
-    (void) memset(dam, 0, sizeof(struct damage));
+    (void) memset(dam, 0, sizeof *dam);
     free((genericptr_t) dam);
 }
 
@@ -3805,10 +3807,14 @@ repair_damage(
         stop_picking = picking_at(x, y);
 
     /* door or wall repair; trap, if any, is now gone;
-       restore original terrain type and move any items away */
+       restore original terrain type and move any items away;
+       rm.doormask and rm.wall_info are both overlaid on rm.flags
+       so the new flags value needs to match the restored typ */
     levl[x][y].typ = tmp_dam->typ;
     if (IS_DOOR(tmp_dam->typ))
         levl[x][y].doormask = D_CLOSED; /* arbitrary */
+    else /* not a door; set rm.wall_info or whatever old flags are relevant */
+        levl[x][y].flags = tmp_dam->flags;
 
     litter = litter_getpos(&k, x, y, shkp);
     litter_scatter(litter, k, x, y, shkp);
