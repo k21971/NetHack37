@@ -556,6 +556,8 @@ shopkeepers can remove pits and webs
 perm_invent: when buying shop goods using itemized purchasing while persistent
 	inventory window was enabled, the prices of unpaid items went away as
 	soon as any item was bought (actual item-by-item purchase worked ok)
+perm_invent: making an engraving which reduced known enchantment of a weapon
+	or known charge count of a marker didn't update persistent inventory
 change getloc fastmove keys in number_pad mode from hardcoded HJKL to the
 	run/rush movement keys (meta+number)
 allow using rush/run prefix key in getloc to fastmove the cursor
@@ -645,7 +647,12 @@ can now use m<dir> to try to move to an adjacent boulder's spot without
 breaching a shop wall, using locking magic to put a door there, then unlocking
 	that door yielded a situation where subsequent shop damage repair
 	produced invalid map data which resulted in an impossible() warning
-	about "wall_angle: unknown" during map display
+	about "wall_angle: unknown" during map display; similar for a vault
+	wall if it's the spot where the guard arrives to lead hero out
+if vault guard arrives on a boulder in a breach in the vault wall when coming
+	to lead the hero out, smash that boulder into rocks so that the hero
+	won't try--and fail, because the guard will be in its way--to push it
+when vault walls are repaired, destroy any rocks or boulders at their spots
 melting ice timer could persist after the ice was gone from digging or from an
 	exploding land mine
 
@@ -1301,6 +1308,14 @@ supply missing changes on Guidebook.tex (pr #591 by argrath)
 fix out-of-bounds access of xdir and ydir in farlook (pr #592 by copperwater)
 variation of imp's period-speak (pr #602 by Vivit-R)
 fix m-prefix movement into warning symbol (pr #573 by entrez)
+pointer precedence fix incrementing flagcounter in do.c (pr #612 by argrath)
+MAX_RADIUS defines the outer bound of the radius table, so leave it at 15
+	to avoid out-of-bound access in view_from() and do_clear_area()
+	(pr #613 by argrath) 
+variable attknum was declared without initialization, and was used in
+	find_roll_to_hit() (pr #615 by argrath)
+check for NULL lua_State before calling lua_close() (pr #616 by argrath)
+use %lu, not %d, in format string in timer_sanity_check() (pr #617 by argrath)
 
 
 Code Cleanup and Reorganization
