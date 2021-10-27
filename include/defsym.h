@@ -107,8 +107,10 @@
     PCHAR2(12, '.',  S_ndoor, "no door", "doorway", CLR(CLR_GRAY))
     PCHAR2(13, '-',  S_vodoor, "vertical open door", "open door", CLR(CLR_BROWN))
     PCHAR2(14, '|',  S_hodoor, "horizontal open door", "open door", CLR(CLR_BROWN))
-    PCHAR( 15, '+',  S_vcdoor, "vertical closed door", CLR(CLR_BROWN))
-    PCHAR( 16, '+',  S_hcdoor, "horizontal closed door", CLR(CLR_BROWN))
+    PCHAR2(15, '+',  S_vcdoor,
+           "vertical closed door", "closed door", CLR(CLR_BROWN))
+    PCHAR2(16, '+',  S_hcdoor,
+           "horizontal closed door", "closed door", CLR(CLR_BROWN))
     PCHAR( 17, '#',  S_bars, "iron bars", CLR(HI_METAL))
     PCHAR( 18, '#',  S_tree, "tree", CLR(CLR_GREEN))
     PCHAR( 19, '.',  S_room, "floor of a room", CLR(CLR_GRAY))
@@ -173,11 +175,11 @@
     PCHAR( 68, '~',  S_vibrating_square, "vibrating square", CLR(CLR_MAGENTA))
     /* end traps                                                       */
     /* end cmap B */
-    /*                                                                 */
-    /* begin special effects                                           */
-    /*                                                                 */
-    /* zap colors are changed by map_glyphinfo() to match type of beam */
-    /*                                                                 */
+    /*                                                                   */
+    /* begin special effects                                             */
+    /*                                                                   */
+    /* zap colors are changed by reset_glyphmap() to match type of beam */
+    /*                                                                   */
     PCHAR2(69, '|',  S_vbeam, "vertical beam", "", CLR(CLR_GRAY))
     PCHAR2(70, '-',  S_hbeam, "horizontal beam", "", CLR(CLR_GRAY))
     PCHAR2(71, '\\', S_lslant, "left slant beam", "", CLR(CLR_GRAY))
@@ -198,8 +200,8 @@
     /*                                                             */
     /* The 8 swallow symbols.  Do NOT separate.                    */
     /* To change order or add, see the function swallow_to_glyph() */
-    /* in display.c. swallow colors are changed by map_glyphinfo() */
-    /* to match the engulfing monst.                               */
+    /* in display.c. swallow colors are changed by                 */
+    /* reset_glyphmap() to match the engulfing monst.              */
     /*                                                             */
     /*  Order:                                                     */
     /*                                                             */
@@ -216,7 +218,7 @@
     PCHAR2(89, '-',  S_sw_bc, "swallow bottom center", "", CLR(CLR_GREEN)) /* 8 */
     PCHAR2(90, '/',  S_sw_br, "swallow bottom right", "", CLR(CLR_GREEN))  /* 9 */
     /*                                                             */
-    /* explosion colors are changed by map_glyphinfo() to match    */
+    /* explosion colors are changed by reset_glyphmap() to match   */
     /* the type of expl.                                           */
     /*                                                             */
     /*    Ex.                                                      */
