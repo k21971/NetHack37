@@ -404,9 +404,17 @@ baalz_fixup(void)
                     g.bughack.delarea.x2 = x, g.bughack.delarea.y2 = y;
             } else if (levl[x][y].typ == IRONBARS) {
                 /* novelty effect; allowing digging in front of 'eyes' */
-                levl[x - 1][y].wall_info &= ~W_NONDIGGABLE;
-                if (isok(x - 2, y))
-                    levl[x - 2][y].wall_info &= ~W_NONDIGGABLE;
+                if (isok(x - 1, y)
+                    && (levl[x - 1][y].wall_info & W_NONDIGGABLE) != 0) {
+                    levl[x - 1][y].wall_info &= ~W_NONDIGGABLE;
+                    if (isok(x - 2, y))
+                        levl[x - 2][y].wall_info &= ~W_NONDIGGABLE;
+                } else if (isok(x + 1, y)
+                    && (levl[x + 1][y].wall_info & W_NONDIGGABLE) != 0) {
+                    levl[x + 1][y].wall_info &= ~W_NONDIGGABLE;
+                    if (isok(x + 2, y))
+                        levl[x + 2][y].wall_info &= ~W_NONDIGGABLE;
+                }
             }
 
     wallification(max(g.bughack.inarea.x1 - 2, 1),
@@ -418,17 +426,18 @@ baalz_fixup(void)
        both top and bottom gets a bogus extra connection to room area,
        producing unwanted rectangles; change back to separated legs */
     x = g.bughack.delarea.x1, y = g.bughack.delarea.y1;
-    if (isok(x, y) && levl[x][y].typ == TLWALL
+    if (isok(x, y) && (levl[x][y].typ == TLWALL || levl[x][y].typ == TRWALL)
         && isok(x, y + 1) && levl[x][y + 1].typ == TUWALL) {
-        levl[x][y].typ = BRCORNER;
+        levl[x][y].typ = (levl[x][y].typ == TLWALL) ? BRCORNER : BLCORNER;
         levl[x][y + 1].typ = HWALL;
         if ((mtmp = m_at(x, y)) != 0) /* something at temporary pool... */
             (void) rloc(mtmp, FALSE);
     }
+
     x = g.bughack.delarea.x2, y = g.bughack.delarea.y2;
-    if (isok(x, y) && levl[x][y].typ == TLWALL
+    if (isok(x, y) && (levl[x][y].typ == TLWALL || levl[x][y].typ == TRWALL)
         && isok(x, y - 1) && levl[x][y - 1].typ == TDWALL) {
-        levl[x][y].typ = TRCORNER;
+        levl[x][y].typ = (levl[x][y].typ == TLWALL) ? TRCORNER : TLCORNER;
         levl[x][y - 1].typ = HWALL;
         if ((mtmp = m_at(x, y)) != 0) /* something at temporary pool... */
             (void) rloc(mtmp, FALSE);
