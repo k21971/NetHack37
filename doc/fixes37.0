@@ -677,6 +677,8 @@ handle flipped level when fixing up the baalz level "eyes" too
 prevent normal monster activity from picking up the mines' luckstone or the
 	Sokoban amulet/bag before hero has done so; relying on scare monster
 	and/or engraved Elbereth wasn't sufficient to guard the Sokoban prize
+proceed a little further into dochat() if hero is deaf
+stacks of 1 to 49 gold pieces weighed 0
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1215,7 +1217,7 @@ using 'f' while quiver is empty and 'autoquiver' is Off when wielding a
 	to Maskerade, three to Hogfather, two to Jingo, four to The Last
 	Continent, four to Carpe Jugulum, three to The Fifth Elephant, five
 	to The Truth, six to Thief of Time, six to The Last Hero, four to
-	The Amazing Maurice
+	The Amazing Maurice, five to Night Watch, four to The Wee Free Men
 monsters can see and remember hero resistances
 monsters can gain resistances by eating corpses
 menu for what-is command supports /^ and /" to view a list of nearby or whole
@@ -1228,6 +1230,10 @@ branch stairs have a different glyph, show up in yellow color in tty
 duration of confusion when drinking booze depends upon hunger state
 using 'D' allows dropping items picked up previously
 bones piles can be ransacked by adjacent monsters
+decaying globs of {ooze,pudding,slime} shrink over time based on their total
+	weight, eventually to nothing; for combined globs it can take a long
+	time, and while doing so they no longer give the tainted corpse food
+	poisoning effect when eaten
 
 
 Platform- and/or Interface-Specific New Features
