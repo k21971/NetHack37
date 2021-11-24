@@ -1757,6 +1757,7 @@ extern void set_output_mode(int);
 extern void synch_cursor(void);
 extern void nethack_enter_consoletty(void);
 extern void consoletty_exit(void);
+extern int set_keyhandling_via_option(void);
 #endif /* WIN32 */
 
 /* ### o_init.c ### */
@@ -2280,6 +2281,8 @@ extern void save_oracles(NHFILE *);
 extern void restore_oracles(NHFILE *);
 extern int doconsult(struct monst *);
 extern void rumor_check(void);
+extern boolean CapitalMon(const char *);
+extern void free_CapMons(void);
 
 /* ### save.c ### */
 

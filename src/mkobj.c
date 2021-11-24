@@ -1331,12 +1331,14 @@ start_glob_timeout(
    part of the program destroys it, the timer will be cancelled) */
 void
 shrink_glob(
-    anything *arg,           /* glob (in arg->a_obj) */
-    long expire_time UNUSED) /* timer callback data, not referenced here */
+    anything *arg,    /* glob (in arg->a_obj) */
+    long expire_time) /* turn the timer should have gone off; if less than
+                       * current 'moves', we're making up for lost time
+                       * after leaving and then returning to this level */
 {
     char globnambuf[BUFSZ];
-    int globloc;
     struct obj *obj = arg->a_obj;
+    int globloc = item_on_ice(obj);
     boolean ininv = (obj->where == OBJ_INVENT),
             shrink = FALSE, gone = FALSE, updinv = FALSE;
     struct obj *contnr = (obj->where == OBJ_CONTAINED) ? obj->ocontainer : 0,
@@ -1344,13 +1346,42 @@ shrink_glob(
     unsigned old_top_owt = 0;
 
     if (!obj->globby) {
-        impossible("shrink_glob for non-glob [%s: %s]?",
+        impossible("shrink_glob for non-glob [%d: %s]?",
                    obj->otyp, simpleonames(obj));
         return; /* old timer is gone, don't start a new one */
     }
     /* note: if check_glob() complains about a problem, the " obj " here
        will be replaced in the feedback with info about this glob */
     check_glob(obj, "shrink obj ");
+
+    /*
+     * If shrinkage occurred while we were on another level, catch up now.
+     */
+    if (expire_time < g.moves && globloc != BURIED_UNDER_ICE) {
+        /* number of units of weight to remove */
+        long delta = (g.moves - expire_time + 24L) / 25L,
+             /* leftover amount to use for new timer */
+            moddelta = 25L - (delta % 25L);
+
+        if (globloc == SET_ON_ICE)
+            delta = (delta + 2L) / 3L;
+
+        if (delta >= (long) obj->owt) {
+            /* no newsym() or message here; forthcoming map update for
+               level arrival is all that's needed */
+            obj_extract_self(obj);
+            obfree(obj, (struct obj *) 0);
+
+            /* won't be a container carried by hero but might be a floor
+               one or one carried by a monster */
+            if (contnr)
+                container_weight(contnr);
+        } else {
+            obj->owt -= (unsigned) delta;
+            start_glob_timeout(obj, moddelta);
+        }
+        return;
+    }
 
     /*
      * When on ice, only shrink every third try.  If buried under ice,
@@ -1363,7 +1394,7 @@ shrink_glob(
      * monster, timer won't have a chance to run before meal is finished).
      */
     if (eating_glob(obj)
-        || (globloc = item_on_ice(obj)) == BURIED_UNDER_ICE
+        || globloc == BURIED_UNDER_ICE
         || (globloc == SET_ON_ICE && (g.moves % 3L) == 1L)) {
         /* schedule next shrink attempt; for the being eaten case, the
            glob and its timer might be deleted before this kicks in */
@@ -1380,9 +1411,14 @@ shrink_glob(
     Strcpy(globnambuf, Yname2(obj));
     iflags.partly_eaten_hack = FALSE;
 
-    if (obj->owt > 0) {
-        /* objects[].oc_weight for all globs is 20 */
-        shrink = (obj->owt % objects[obj->otyp].oc_weight) == 0;
+    if (obj->owt > 0) { /* sanity precaution */
+        /* globs start out weighing 20 units; give two messages per glob,
+           when going from 20 to 19 and from 10 to 9; a different message
+           is given for going from 1 to 0 (gone) */
+        unsigned basewt = objects[obj->otyp].oc_weight, /* 20 */
+                 msgwt = (max(basewt, 1U) + 1U) / 2U; /* 10 */
+
+        shrink = (obj->owt % msgwt) == 0;
         obj->owt -= 1;
         /* if glob is partly eaten, reduce the amount still available (but
            not all the way to 0 which would change it back to untouched) */
@@ -1402,11 +1438,6 @@ shrink_glob(
                   gone ? "dissippates completely" : "shrinks");
         updinv = TRUE;
     } else if (contnr) {
-        /* if obj->owt has dropped to 0, weight() will assume that this is a
-           brand new glob and use 20 instead; that would yield an incorrect
-           total weight for enclosing container(s), so take it out now */
-        if (gone)
-            obj_extract_self(obj);
         /* when in a container, it might be nested so find outermost one */
         topcontnr = contnr;
         while (topcontnr->where == OBJ_CONTAINED)
@@ -1414,13 +1445,21 @@ shrink_glob(
         /* obj's weight has been reduced, but weight(s) of enclosing
            container(s) haven't been adjusted for that yet */
         old_top_owt = topcontnr->owt;
-        /* update those weights now; recursively updates nested containers */
-        container_weight(contnr);
+        /* update those weights now; recursively updates nested containers
+           (extracting from a container does that automatically); if obj->owt
+           has dropped to 0, weight() will assume that this is a brand new
+           glob and use 20 instead; that would yield an incorrect total
+           weight for enclosing container(s), so take 'gone' glob out now */
+        if (gone)
+            obj_extract_self(obj);
+        else
+            container_weight(contnr);
 
         if (topcontnr->where == OBJ_INVENT) {
             /* for regular containers, the weight will always be reduced
                when glob's weight has been reduced but we only say so
-               when shrinking beneath an integral number of globs or
+               when shrinking beneath a particular threshold (N*20 to
+               (N-1)*20 + 19 or (N-1)*20 + 10 to (N-1)*20 + 9), or
                if we're going to report a change in carrying capacity;
                for a non-cursed bag of holding the total weight might not
                change because only a fraction of glob's weight is counted;

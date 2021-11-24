@@ -679,6 +679,18 @@ prevent normal monster activity from picking up the mines' luckstone or the
 	and/or engraved Elbereth wasn't sufficient to guard the Sokoban prize
 proceed a little further into dochat() if hero is deaf
 stacks of 1 to 49 gold pieces weighed 0
+the chance for #untrap to free a monster stuck in a web was very unlikely
+	unless was poly'd into spider form; make it less hard
+if #untrap monst-from-web failure happened while hero was standing on a spot
+	where a new web couldn't be created (furniture, grave, magic portal),
+	the expected "<monst> remains entangled" feedback wasn't delivered
+if hero is wearing an amulet of magical breathing and polymorphs into a fish
+	or sea monster, don't lose health for turns spent out of water
+fix up some "the" handling for monsters whose type name is upper case to avoid
+	"Uruk-hai is healthy for a statue", "You can't polymorph into Oracle"
+controlled polymorph would turn hero into new man or woman if player asked to
+	become a unique monster of the same race (so usually human) instead of
+	being told that polymorphing into the specified form wasn't allowed
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -883,6 +895,7 @@ misaligned potion colors due to lack of reset_glyphmap() following obj shuffle;
 	this issue only impacted a new game
 closed doors were described as "horizontal closed door" or "vertical closed
 	door" instead of just "closed door"
+glob shrinkage while hero was away from glob's level wasn't handled properly
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support

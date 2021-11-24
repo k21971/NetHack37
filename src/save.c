@@ -1084,6 +1084,7 @@ freedynamicdata(void)
     freenames();
     free_waterlevel();
     free_dungeons();
+    free_CapMons();
 
     /* some pointers in iflags */
     if (iflags.wc_font_map)
