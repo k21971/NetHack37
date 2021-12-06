@@ -219,7 +219,8 @@ artifact_name(const char *name, short *otyp)
         if (!strncmpi(aname, "the ", 4))
             aname += 4;
         if (!strcmpi(name, aname)) {
-            *otyp = a->otyp;
+            if (otyp)
+                *otyp = a->otyp;
             return a->name;
         }
     }
@@ -999,6 +1000,8 @@ Mb_hit(struct monst *magr, /* attacker */
                     mdef->mhp = 1; /* cancelled clay golems will die */
                 if (youattack && attacktype(mdef->data, AT_MAGC)) {
                     u.uenmax++;
+                    if (u.uenmax > u.uenpeak)
+                        u.uenpeak = u.uenmax;
                     u.uen++;
                     g.context.botl = TRUE;
                     You("absorb magical energy!");

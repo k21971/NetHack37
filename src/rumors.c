@@ -6,7 +6,8 @@
 #include "hack.h"
 #include "dlb.h"
 
-/*      [note: this comment is fairly old, but still accurate for 3.1]
+/*      [Note:  this comment is fairly old, but still accurate for 3.1;
+ *       it's no longer accurate for 3.7 but may still be of interest.]
  * Rumors have been entirely rewritten to speed up the access.  This is
  * essential when working from floppies.  Using fseek() the way that's done
  * here means rumors following longer rumors are output more often than those
@@ -40,7 +41,10 @@
  * and placed there by 'makedefs'.
  */
 
+static void unpadline(char *);
 static void init_rumors(dlb *);
+static char *get_rnd_line(dlb *, char *, unsigned, int (*)(int),
+                          long, long, unsigned);
 static void init_oracles(dlb *);
 static void others_check(const char *ftype, const char *, winid *);
 static void couldnt_open_file(const char *);
@@ -48,8 +52,31 @@ static void init_CapMons(void);
 
 /* used by CapitalMon(); set up by init_CapMons(), released by free_CapMons();
    there's no need for these to be put into 'struct instance_globals g' */
-static unsigned CapMonSiz = 0;
+static unsigned CapMonstCnt = 0, CapBogonCnt = 0,
+                CapMonSiz = 0; /* CapMonstCnt+CapBogonCnt+1 when non-zero */
 static const char **CapMons = 0;
+
+/* list of bogusmons prefixes used to indicate special monster type such as
+   unique or always a particular gender; see dat/bogusmon.txt */
+extern const char bogon_codes[]; /* from do_name.c */
+
+/* makedefs pads short rumors, epitaphs, engravings, and hallucinatory
+   monster names with trailing underscores; strip those off */
+static void
+unpadline(char *line)
+{
+    char *p = eos(line);
+
+    /* remove newline if still present; caller should have stripped it */
+    if (p > line && p[-1] == '\n')
+        --p;
+
+    /* remove padding */
+    while (p > line && p[-1] == '_')
+        --p;
+
+    *p = '\0';
+}
 
 DISABLE_WARNING_FORMAT_NONLITERAL
 
@@ -92,15 +119,14 @@ getrumor(
     boolean exclude_cookie)
 {
     dlb *rumors;
-    long tidbit, beginning;
-    char *endp, line[BUFSZ], xbuf[BUFSZ];
+    long beginning, ending;
+    char line[BUFSZ];
 
     rumor_buf[0] = '\0';
-    if (g.true_rumor_size < 0L) /* we couldn't open RUMORFILE */
+    if (g.true_rumor_size < 0L) /* a previous try failed to open RUMORFILE */
         return rumor_buf;
 
     rumors = dlb_fopen(RUMORFILE, "r");
-
     if (rumors) {
         int count = 0;
         int adjtruth;
@@ -123,31 +149,23 @@ getrumor(
             case 2: /*(might let a bogus input arg sneak thru)*/
             case 1:
                 beginning = (long) g.true_rumor_start;
-                tidbit = rn2(g.true_rumor_size);
+                ending = g.true_rumor_end;
                 break;
             case 0: /* once here, 0 => false rather than "either"*/
             case -1:
                 beginning = (long) g.false_rumor_start;
-                tidbit = rn2(g.false_rumor_size);
+                ending = g.false_rumor_end;
                 break;
             default:
                 impossible("strange truth value for rumor");
                 return strcpy(rumor_buf, "Oops...");
             }
-            (void) dlb_fseek(rumors, beginning + tidbit, SEEK_SET);
-            (void) dlb_fgets(line, sizeof line, rumors);
-            if (!dlb_fgets(line, sizeof line, rumors)
-                || (adjtruth > 0 && dlb_ftell(rumors) > g.true_rumor_end)) {
-                /* reached end of rumors -- go back to beginning */
-                (void) dlb_fseek(rumors, beginning, SEEK_SET);
-                (void) dlb_fgets(line, sizeof line, rumors);
-            }
-            if ((endp = index(line, '\n')) != 0)
-                *endp = 0;
-            Strcat(rumor_buf, xcrypt(line, xbuf));
-        } while (
-            count++ < 50 && exclude_cookie
-            && (strstri(rumor_buf, "fortune") || strstri(rumor_buf, "pity")));
+            Strcpy(rumor_buf,
+                   get_rnd_line(rumors, line, (unsigned) sizeof line, rn2,
+                                beginning, ending, MD_PAD_RUMORS));
+        } while (count++ < 50 && (exclude_cookie
+                                  && (strstri(rumor_buf, "fortune")
+                                      || strstri(rumor_buf, "pity"))));
         (void) dlb_fclose(rumors);
         if (count >= 50)
             impossible("Can't find non-cookie rumor?");
@@ -157,22 +175,6 @@ getrumor(
         couldnt_open_file(RUMORFILE);
         g.true_rumor_size = -1; /* don't try to open it again */
     }
-
-    /* this is safe either way, so do it always since we can't get the
-     * definition out of makedefs.c
-     */
-#define PAD_RUMORS_TO
-#ifdef PAD_RUMORS_TO
-    /* remove padding */
-    {
-        char *x = eos(rumor_buf) - 1;
-
-        while (x > rumor_buf && *x == '_')
-            x--;
-        *++x = '\n';
-        *x = '\0';
-    }
-#endif
     return rumor_buf;
 }
 
@@ -387,52 +389,119 @@ others_check(const char* ftype, const char* fname, winid* winptr)
 
 RESTORE_WARNING_FORMAT_NONLITERAL
 
+/* load one randomly chosen line from a section of a file; undoes
+   decryption and strips trailing underscore padding and final newline;
+   if padlength is non-zero, every line is expected to be at least that
+   long and every line in the file will have an equal chance of being
+   chosen; however, if padlength is 0, lines following long lines are
+   more likely than average to be picked, and lines after short lines
+   are less likely */
+static char *
+get_rnd_line(
+    dlb *fh,            /* already opened file */
+    char *buf,          /* output buffer */
+    unsigned bufsiz,    /* (unsigned) sizeof buf */
+    int (*rng)(int),    /* random number routine; rn2(N) or similar, 0..N-1 */
+    long startpos,      /* location in file of first line of interest */
+    long endpos,        /* location one byte past last line of interest;
+                         * if 0, end-of-file will be used */
+    unsigned padlength) /* expected line length; 0 if no expectations */
+{
+    char *newl, *xbufp, xbuf[BUFSZ];
+    long filechunksize, chunkoffset;
+    int trylimit;
+
+    *buf = '\0';
+    if (!endpos) {
+        (void) dlb_fseek(fh, 0L, SEEK_END);
+        endpos = dlb_ftell(fh);
+    }
+    filechunksize = endpos - startpos;
+
+    /* might be zero (only if file is empty); should complain in that
+       case but it could happen over and over, also the suggestion
+       that save and restore might fix the problem wouldn't be useful */
+    if (filechunksize < 1L)
+        return buf;
+    /* 'rumors' is about 3/4 of the way to the limit on a 16-bit config
+       for the whole, roughly 3/8 of the way for either half; all active
+       configuations these days are at least 32-bits anyway */
+    nhassert(filechunksize <= INT_MAX); /* essential for rn2() */
+
+    /*
+     * Position randomly which will probably be in the middle of a line.
+     * (Occasionally by chance it will happen to be at the very start of
+     * a line, but we'll have no way of knowing that so have to behave
+     * as if it were positioned in the middle.)
+     * Read the rest of that line, then use the next one.  If there's no
+     * next line (ie, end of file), go back to beginning and use first.
+     *
+     * When short lines have been padded to length N, only accept long
+     * lines if we land within last N+1 characters (+1 is for newline
+     * which hasn't been stripped away yet), effectively shortening
+     * them to normal length.  That yields even selection distribution.
+     */
+    for (trylimit = 10; trylimit > 0; --trylimit) {
+        chunkoffset = (long) (*rng)((int) filechunksize);
+        (void) dlb_fseek(fh, startpos + chunkoffset, SEEK_SET);
+        (void) dlb_fgets(buf, bufsiz, fh);
+        /* if padlength is 0, accept any position; when non-zero,
+           padlength does not count the newline but strlen(buf) does */
+        if (!padlength || (unsigned) strlen(buf) <= padlength + 1)
+            break;
+    }
+    /* use next line; for rumors, caller takes care of whether startpos
+       and endpos cover just true rumors or just false rumors; reaching
+       endpos is equivalent to end-of-file in order to avoid using the
+       first false rumor if fseek for a true one lands within the last one */
+    if (dlb_ftell(fh) >= endpos || !dlb_fgets(buf, bufsiz, fh)) {
+        /* assume failure is due to end-of-file; go back to start */
+        (void) dlb_fseek(fh, startpos, SEEK_SET);
+        (void) dlb_fgets(buf, bufsiz, fh);
+    }
+    if ((newl = index(buf, '\n')) != 0)
+        *newl = '\0';
+    /* decrypt line; make sure that our intermediate buffer is big enough */
+    xbufp = (strlen(buf) <= sizeof xbuf - 1) ? &xbuf[0]
+            : (char *) alloc((unsigned) strlen(buf) + 1);
+    Strcpy(buf, xcrypt(buf, xbufp));
+    if (xbufp != &xbuf[0])
+        free((genericptr_t) xbufp);
+    /* strip padding that makedefs adds to short lines */
+    if (padlength)
+        unpadline(buf);
+    return buf;
+}
+
 /* Gets a random line of text from file 'fname', and returns it.
    rng is the random number generator to use, and should act like rn2 does. */
 char *
-get_rnd_text(const char* fname, char* buf, int (*rng)(int))
+get_rnd_text(
+    const char *fname,
+    char *buf,
+    int (*rng)(int),
+    unsigned padlength)
 {
-    dlb *fh;
+    dlb *fh = dlb_fopen(fname, "r");
 
     buf[0] = '\0';
-    fh = dlb_fopen(fname, "r");
     if (fh) {
-        /* TODO: cache sizetxt, starttxt, endtxt. maybe cache file contents? */
-        long sizetxt = 0L, starttxt = 0L, endtxt = 0L, tidbit = 0L;
-        char *endp, line[BUFSZ], xbuf[BUFSZ];
+        long starttxt = 0L;
+        char line[BUFSZ];
 
         /* skip "don't edit" comment */
         (void) dlb_fgets(line, sizeof line, fh);
-
+        /* obtain current file position */
         (void) dlb_fseek(fh, 0L, SEEK_CUR);
         starttxt = dlb_ftell(fh);
-        (void) dlb_fseek(fh, 0L, SEEK_END);
-        endtxt = dlb_ftell(fh);
-        sizetxt = endtxt - starttxt;
-        /* might be zero (only if file is empty); should complain in that
-           case but it could happen over and over, also the suggestion
-           that save and restore might fix the problem wouldn't be useful */
-        if (sizetxt < 1L)
-            return buf;
-        tidbit = (*rng)(sizetxt);
 
-        /* position randomly which will probably be in the middle of a line;
-           read the rest of that line, then use the next one; if there's no
-           next one (ie, end of file), go back to beginning and use first */
-        (void) dlb_fseek(fh, starttxt + tidbit, SEEK_SET);
-        (void) dlb_fgets(line, sizeof line, fh);
-        if (!dlb_fgets(line, sizeof line, fh)) {
-            (void) dlb_fseek(fh, starttxt, SEEK_SET);
-            (void) dlb_fgets(line, sizeof line, fh);
-        }
-        if ((endp = index(line, '\n')) != 0)
-            *endp = 0;
-        Strcat(buf, xcrypt(line, xbuf));
+        /* get a randomly chosen line; it comes back decrypted and unpadded */
+        Strcpy(buf, get_rnd_line(fh, line, (unsigned) sizeof line, rng,
+                                 starttxt, 0L, padlength));
         (void) dlb_fclose(fh);
     } else {
         couldnt_open_file(fname);
     }
-
     return buf;
 }
 
@@ -449,15 +518,16 @@ outrumor(
 
     if (reading) {
         /* deal with various things that prevent reading */
-        if (is_fainted() && mechanism == BY_COOKIE)
+        if (is_fainted() && mechanism == BY_COOKIE) {
             return;
-        else if (Blind) {
+        } else if (Blind) {
             if (mechanism == BY_COOKIE)
                 pline(fortune_msg);
             pline("What a pity that you cannot read it!");
             return;
         }
     }
+
     line = getrumor(truth, buf, reading ? FALSE : TRUE);
     if (!*line)
         line = "NetHack rumors file closed for renovation.";
@@ -708,8 +778,6 @@ CapitalMon(
     wln = (unsigned) strlen(word);
     for (i = 0; i < CapMonSiz - 1; ++i) {
         nam = CapMons[i];
-        if (*nam == '\033') /* if dynamic alloc flag is present, skip it */
-            ++nam;
         nln = (unsigned) strlen(nam);
         if (wln < nln)
             continue;
@@ -743,9 +811,14 @@ init_CapMons(void)
     for (pass = 1; pass <= 2; ++pass) {
         struct permonst *mptr;
         const char *nam;
-        unsigned mndx, mgend, count;
+        unsigned mndx, mgend;
 
-        count = 0;
+        /* the first CapMonstCnt entries come from mons[].pmnames[] and
+           the next CapBogonCnt entries from from the 'bogusmons' file;
+           there is an extra entry for Null at the end, but that is only
+           useful to force non-zero array size in case both mons[] and
+           bogusmons get modified to have no applicable monster names */
+        CapMonstCnt = CapBogonCnt = 0;
 
         /* gather applicable actual monsters */
         for (mndx = LOW_PM; mndx < NUMMONS; ++mndx) {
@@ -756,13 +829,13 @@ init_CapMons(void)
                 nam = mptr->pmnames[mgend];
                 if (nam && *nam != lowc(*nam)) {
                     if (pass == 2)
-                        CapMons[count] = nam;
-                    ++count;
+                        CapMons[CapMonstCnt] = nam;
+                    ++CapMonstCnt;
                 }
             }
         }
 
-        /* now gather applicable hallucinatory monsters; don't reset count */
+        /* now gather applicable hallucinatory monsters */
         if (bogonfile) {
             char hline[BUFSZ], xbuf[BUFSZ], *endp, *startp, code;
 
@@ -779,32 +852,28 @@ init_CapMons(void)
                 if ((endp = index(hline, '\n')) != 0)
                     *endp = '\0'; /* strip newline */
                 (void) xcrypt(hline, xbuf);
+                unpadline(xbuf);
 
-                if (letter(xbuf[0]))
+                if (!xbuf[0] || !index(bogon_codes, xbuf[0]))
                     code = '\0', startp = &xbuf[0]; /* ordinary */
                 else
                     code = xbuf[0], startp = &xbuf[1]; /* special */
 
                 if (*startp != lowc(*startp) && !bogon_is_pname(code)) {
-                    if (pass == 2) {
-                        /* insert a "dynamically allocated flag" and save a
-                           copy of bogus monst name without its prefix code */
-                        hline[0] = '\033';
-                        Strcpy(&hline[1], startp);
-                        CapMons[count] = dupstr(hline);
-                    }
-                    ++count;
+                    if (pass == 2)
+                        CapMons[CapMonstCnt + CapBogonCnt] = dupstr(startp);
+                    ++CapBogonCnt;
                 }
             }
         }
 
         /* finish the current pass */
         if (pass == 1) {
-            CapMonSiz = count + 1; /* +1: room for terminator */
+            CapMonSiz = CapMonstCnt + CapBogonCnt + 1; /* +1: terminator */
             CapMons = (const char **) alloc(CapMonSiz * sizeof *CapMons);
         } else { /* pass == 2 */
             /* terminator; not strictly needed */
-            CapMons[count] = (const char *) 0;
+            CapMons[CapMonSiz - 1] = (const char *) 0;
 
             if (bogonfile)
                 (void) dlb_fclose(bogonfile), bogonfile = (dlb *) 0;
@@ -821,17 +890,13 @@ init_CapMons(void)
      */
     if (wizard && explicitdebug("CapMons")) {
         char buf[BUFSZ];
-        const char *nam;
         unsigned i;
         winid tmpwin = create_nhwindow(NHW_TEXT);
 
         putstr(tmpwin, 0,
               "Capitalized monster type names normally preceded by \"the\":");
         for (i = 0; i < CapMonSiz - 1; ++i) {
-            nam = CapMons[i];
-            if (*nam == '\033')
-                ++nam;
-            Sprintf(buf, "  %.77s", nam);
+            Sprintf(buf, "  %.77s", CapMons[i]);
             putstr(tmpwin, 0, buf);
         }
         display_nhwindow(tmpwin, TRUE);
@@ -847,14 +912,13 @@ free_CapMons(void)
 {
     /* note: some elements of CapMons[] are string literals from
        mons[].pmnames[] and should not be freed, others are dynamically
-       allocated copies of hallucinatory monster names and should be freed;
-       the first character for each element of the latter group is ESC */
+       allocated copies of hallucinatory monster names and should be freed */
     if (CapMons) {
         unsigned idx;
 
-        for (idx = 0; idx < CapMonSiz - 1; ++idx)
-            if (CapMons[idx] && *CapMons[idx] == '\033')
-                free((genericptr_t) CapMons[idx]); /* cast: discard 'const' */
+        /* skip 0..MonstCnt-1, free MonstCnt..(MonstCnt+BogonCnt-1) */
+        for (idx = CapMonstCnt; idx < CapMonSiz - 1; ++idx)
+            free((genericptr_t) CapMons[idx]); /* cast: discard 'const' */
         free((genericptr_t) CapMons), CapMons = (const char **) 0;
     }
     CapMonSiz = 0;

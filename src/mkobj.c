@@ -1,4 +1,4 @@
-/* NetHack 3.7	mkobj.c	$NHDT-Date: 1629403671 2021/08/19 20:07:51 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.205 $ */
+/* NetHack 3.7	mkobj.c	$NHDT-Date: 1637992348 2021/11/27 05:52:28 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.222 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1310,7 +1310,7 @@ start_glob_timeout(
     long when)       /* when to shrink; if 0L, use random value close to 25 */
 {
     if (!obj->globby) {
-        impossible("start_glob_timeout for non-glob [%s: %s]?",
+        impossible("start_glob_timeout for non-glob [%d: %s]?",
                    obj->otyp, simpleonames(obj));
         return; /* skip timer creation */
     }
@@ -1367,17 +1367,19 @@ shrink_glob(
             delta = (delta + 2L) / 3L;
 
         if (delta >= (long) obj->owt) {
-            /* no newsym() or message here; forthcoming map update for
+            /* gone; no newsym() or message here--forthcoming map update for
                level arrival is all that's needed */
-            obj_extract_self(obj);
+            obj_extract_self(obj); /* if contained, also updates container's
+                                    * weight (recursively when nested) */
             obfree(obj, (struct obj *) 0);
-
-            /* won't be a container carried by hero but might be a floor
-               one or one carried by a monster */
+        } else {
+            /* shrank but not gone; reduce remaining weight */
+            obj->owt -= (unsigned) delta;
+            /* won't be in container carried by hero but might be in floor one
+               or one carried by monster; if so, update container's weight */
             if (contnr)
                 container_weight(contnr);
-        } else {
-            obj->owt -= (unsigned) delta;
+            /* resume regular shrinking */
             start_glob_timeout(obj, moddelta);
         }
         return;

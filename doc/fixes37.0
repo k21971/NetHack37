@@ -680,7 +680,7 @@ prevent normal monster activity from picking up the mines' luckstone or the
 proceed a little further into dochat() if hero is deaf
 stacks of 1 to 49 gold pieces weighed 0
 the chance for #untrap to free a monster stuck in a web was very unlikely
-	unless was poly'd into spider form; make it less hard
+	unless hero was poly'd into spider form; make it less hard
 if #untrap monst-from-web failure happened while hero was standing on a spot
 	where a new web couldn't be created (furniture, grave, magic portal),
 	the expected "<monst> remains entangled" feedback wasn't delivered
@@ -691,6 +691,23 @@ fix up some "the" handling for monsters whose type name is upper case to avoid
 controlled polymorph would turn hero into new man or woman if player asked to
 	become a unique monster of the same race (so usually human) instead of
 	being told that polymorphing into the specified form wasn't allowed
+assigning a fruit name that matches the name of an artifact which doesn't use
+	any "the" prefix could yield messages showing "the Artifact" when
+	dealing with the artifact rather than fruit: "You are blasted by _the_
+	Excalibur's power!"; didn't impact basic inventory formatting
+selection of random engravings, epitaphs, and hallucinatory monster names had
+	the same problem that rumor selection used to have:  entries which
+	follow longer than average lines are most likely to be chosen and
+	ones which follow shorter than average lines are least likely; use
+	same workaround as for rumors:  pad the shortest lines; result isn't
+	uniforn distribution but is better (tradeoff vs size; see makedefs)
+make selection of random rumors, engravings, epitaphs, and hallucinatory monst
+	names have uniform distribution by handling long lines specially
+when filling a special room with monsters, if one that can come in groups got
+	picked the group could spill to outside of the room
+extend 3.6.1 fix to explicitly use name of unseen shopkeeper instead of "It"
+	in various shop related messages (ones issued outside of shk.c)
+fix some inconsistencies with applied bullwhip vs monster
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -896,6 +913,11 @@ misaligned potion colors due to lack of reset_glyphmap() following obj shuffle;
 closed doors were described as "horizontal closed door" or "vertical closed
 	door" instead of just "closed door"
 glob shrinkage while hero was away from glob's level wasn't handled properly
+unpaid shop-owned glob that shrank to nothing had weight 0 which triggered
+	onbill warnings when 'sanity_check' was On; for 'Ix' and itemized
+	billing, the empty weight was shown to player if 'wizweight' was On
+if 'showrace' was On and invisible hero couldn't see invisible so didn't see
+	self, the color of wharever could be seen underneath changed to white
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1230,7 +1252,8 @@ using 'f' while quiver is empty and 'autoquiver' is Off when wielding a
 	to Maskerade, three to Hogfather, two to Jingo, four to The Last
 	Continent, four to Carpe Jugulum, three to The Fifth Elephant, five
 	to The Truth, six to Thief of Time, six to The Last Hero, four to
-	The Amazing Maurice, five to Night Watch, four to The Wee Free Men
+	The Amazing Maurice, five to Night Watch, four to The Wee Free Men,
+	four to Monstrous Regiment, two to A Hat Full of Sky
 monsters can see and remember hero resistances
 monsters can gain resistances by eating corpses
 menu for what-is command supports /^ and /" to view a list of nearby or whole
@@ -1247,6 +1270,7 @@ decaying globs of {ooze,pudding,slime} shrink over time based on their total
 	weight, eventually to nothing; for combined globs it can take a long
 	time, and while doing so they no longer give the tainted corpse food
 	poisoning effect when eaten
+track peak maximum HP and peak maximum energy/power; no noticeable effect
 
 
 Platform- and/or Interface-Specific New Features

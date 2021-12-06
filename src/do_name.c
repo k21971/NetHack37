@@ -2202,17 +2202,21 @@ obj_pmname(struct obj *obj)
     return "two-legged glorkum-seeker";
 }
 
+/* used by bogusmon(next) and also by init_CapMons(rumors.c);
+   bogon_is_pname(below) checks a hard-coded subset of these rather than
+   use this list */
+const char bogon_codes[] = "-_+|="; /* see dat/bonusmon.txt */
+
 /* fake monsters used to be in a hard-coded array, now in a data file */
 char *
 bogusmon(char *buf, char *code)
 {
-    static const char bogon_codes[] = "-_+|="; /* see dat/bonusmon.txt */
     char *mnam = buf;
 
     if (code)
         *code = '\0';
     /* might fail (return empty buf[]) if the file isn't available */
-    get_rnd_text(BOGUSMONFILE, buf, rn2_on_display_rng);
+    get_rnd_text(BOGUSMONFILE, buf, rn2_on_display_rng, MD_PAD_BOGONS);
     if (!*mnam) {
         Strcpy(buf, "bogon");
     } else if (index(bogon_codes, *mnam)) { /* strip prefix if present */
