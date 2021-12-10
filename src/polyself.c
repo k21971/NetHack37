@@ -141,6 +141,8 @@ check_strangling(boolean on)
 {
     /* on -- maybe resume strangling */
     if (on) {
+        boolean was_strangled = (Strangled != 0L);
+
         /* when Strangled is already set, polymorphing from one
            vulnerable form into another causes the counter to be reset */
         if (uamul && uamul->otyp == AMULET_OF_STRANGULATION
@@ -148,7 +150,7 @@ check_strangling(boolean on)
             Strangled = 6L;
             g.context.botl = TRUE;
             Your("%s %s your %s!", simpleonames(uamul),
-                 Strangled ? "still constricts" : "begins constricting",
+                 was_strangled ? "still constricts" : "begins constricting",
                  body_part(NECK)); /* "throat" */
             makeknown(AMULET_OF_STRANGULATION);
         }
@@ -395,7 +397,7 @@ newman(void)
 void
 polyself(int psflags)
 {
-    char buf[BUFSZ] = DUMMY;
+    char buf[BUFSZ];
     int old_light, new_light, mntmp, class, tryct, gvariant = NEUTRAL;
     boolean forcecontrol = (psflags == 1),
             monsterpoly = (psflags == 2),
@@ -432,6 +434,7 @@ polyself(int psflags)
         goto do_vampyr;
 
     if (controllable_poly || forcecontrol) {
+        buf[0] = '\0';
         tryct = 5;
         do {
             mntmp = NON_PM;
@@ -465,7 +468,14 @@ polyself(int psflags)
                     pline("I've never heard of such monsters.");
                 else
                     You_cant("polymorph into any of those.");
-            } else if (wizard && Upolyd && mntmp == u.umonster) {
+            } else if (wizard && Upolyd
+                       && (mntmp == u.umonster
+                           /* "priest" and "priestess" match the monster
+                              rather than the role; override that unless
+                              the text explicitly contains "aligned" */
+                           || (u.umonster == PM_CLERIC
+                               && mntmp == PM_ALIGNED_CLERIC
+                               && !strstri(buf, "aligned")))) {
                 /* in wizard mode, picking own role while poly'd reverts to
                    normal without newman()'s chance of level or sex change */
                 rehumanize();

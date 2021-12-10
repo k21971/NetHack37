@@ -708,6 +708,8 @@ when filling a special room with monsters, if one that can come in groups got
 extend 3.6.1 fix to explicitly use name of unseen shopkeeper instead of "It"
 	in various shop related messages (ones issued outside of shk.c)
 fix some inconsistencies with applied bullwhip vs monster
+polymorphing while wearing an amulet of strangulation from a form that wasn't
+	vulnerable to one that was gave wrong message ("still constricts")
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -918,6 +920,9 @@ unpaid shop-owned glob that shrank to nothing had weight 0 which triggered
 	billing, the empty weight was shown to player if 'wizweight' was On
 if 'showrace' was On and invisible hero couldn't see invisible so didn't see
 	self, the color of wharever could be seen underneath changed to white
+in wizard mode, a poly'd priest/priestess attempting to polymorph into priest
+	or priestess in order to rehumanize became a new man or woman instead
+	because "priest" matched "aligned cleric" rather than the role monster
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
