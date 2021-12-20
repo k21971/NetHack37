@@ -233,7 +233,7 @@ expels(struct monst *mtmp,
         }
     }
     unstuck(mtmp); /* ball&chain returned in unstuck() */
-    mnexto(mtmp);
+    mnexto(mtmp, RLOC_NOMSG);
     newsym(u.ux, u.uy);
     spoteffects(TRUE);
     /* to cover for a case where mtmp is not in a next square */
@@ -1838,11 +1838,12 @@ doseduce(struct monst *mon)
     }
 
     naked = (!uarmc && !uarmf && !uarmg && !uarms && !uarmh && !uarmu);
-    pline("%s %s%s.", Who,
-          Deaf ? "seems to murmur into your ear"
-               : naked ? "murmurs sweet nothings into your ear"
-                       : "murmurs in your ear",
-          naked ? "" : ", while helping you undress");
+    custompline(URGENT_MESSAGE,
+                "%s %s%s.", Who,
+                Deaf ? "seems to murmur into your ear"
+                : naked ? "murmurs sweet nothings into your ear"
+                  : "murmurs in your ear",
+                naked ? "" : ", while helping you undress");
     mayberem(mon, Who, uarmc, cloak_simple_name(uarmc));
     if (!uarmc)
         mayberem(mon, Who, uarm, suit_simple_name(uarm));
@@ -1878,22 +1879,24 @@ doseduce(struct monst *mon)
                 verbalize("Well, then you owe me %s%s!",
                           yourgloves ? yname(yourgloves)
                                      : "twelve pairs of gloves",
-                          yourgloves ? " and eleven more pairs of gloves" : "");
+                          yourgloves ? " and eleven more pairs of gloves"
+                                     : "");
             }
 	} else if (seewho)
             pline("%s appears to sigh.", Monnam(mon));
         /* else no regret message if can't see or hear seducer */
 
         if (!tele_restrict(mon))
-            (void) rloc(mon, TRUE);
+            (void) rloc(mon, RLOC_MSG);
         return 1;
     }
     if (u.ualign.type == A_CHAOTIC)
         adjalign(1);
 
     /* by this point you have discovered mon's identity, blind or not... */
-    pline("Time stands still while you and %s lie in each other's arms...",
-          noit_mon_nam(mon));
+    custompline(URGENT_MESSAGE,
+             "Time stands still while you and %s lie in each other's arms...",
+                noit_mon_nam(mon));
     /* 3.6.1: a combined total for charisma plus intelligence of 35-1
        used to guarantee successful outcome; now total maxes out at 32
        as far as deciding what will happen; chance for bad outcome when
@@ -2018,7 +2021,7 @@ doseduce(struct monst *mon)
     if (!rn2(25))
         mon->mcan = 1; /* monster is worn out */
     if (!tele_restrict(mon))
-        (void) rloc(mon, TRUE);
+        (void) rloc(mon, RLOC_MSG);
     return 1;
 }
 

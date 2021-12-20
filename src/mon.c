@@ -757,7 +757,7 @@ minliquid_core(struct monst* mtmp)
             /* not fair...?  hero doesn't automatically teleport away
                from lava, just from water */
             if (can_teleport(mtmp->data) && !tele_restrict(mtmp)) {
-                if (rloc(mtmp, TRUE))
+                if (rloc(mtmp, RLOC_MSG))
                     return 0;
             }
             if (!resists_fire(mtmp)) {
@@ -790,7 +790,7 @@ minliquid_core(struct monst* mtmp)
             if (!DEADMONSTER(mtmp)) {
                 (void) fire_damage_chain(mtmp->minvent, FALSE, FALSE,
                                          mtmp->mx, mtmp->my);
-                (void) rloc(mtmp, FALSE);
+                (void) rloc(mtmp, RLOC_ERR|RLOC_NOMSG);
                 return 0;
             }
             return 1;
@@ -805,7 +805,7 @@ minliquid_core(struct monst* mtmp)
             /* like hero with teleport intrinsic or spell, teleport away
                if possible */
             if (can_teleport(mtmp->data) && !tele_restrict(mtmp)) {
-                if (rloc(mtmp, TRUE))
+                if (rloc(mtmp, RLOC_MSG))
                     return 0;
             }
             if (cansee(mtmp->mx, mtmp->my)) {
@@ -827,7 +827,7 @@ minliquid_core(struct monst* mtmp)
                 xkilled(mtmp, XKILL_NOMSG);
             if (!DEADMONSTER(mtmp)) {
                 water_damage_chain(mtmp->minvent, FALSE);
-                if (!rloc(mtmp, TRUE))
+                if (!rloc(mtmp, RLOC_NOMSG))
                     deal_with_overcrowding(mtmp);
                 return 0;
             }
@@ -2752,6 +2752,8 @@ monstone(struct monst* mdef)
 
     if ((int) mdef->data->msize > MZ_TINY
         || !rn2(2 + ((int) (mdef->data->geno & G_FREQ) > 2))) {
+        unsigned corpstatflags = CORPSTAT_NONE;
+
         oldminvent = 0;
         /* some objects may end up outside the statue */
         while ((obj = mdef->minvent) != 0) {
@@ -2776,7 +2778,14 @@ monstone(struct monst* mdef)
         /* defer statue creation until after inventory removal
            so that saved monster traits won't retain any stale
            item-conferred attributes */
-        otmp = mkcorpstat(STATUE, mdef, mdef->data, x, y, CORPSTAT_NONE);
+        if (mdef->female)
+            corpstatflags |= CORPSTAT_FEMALE;
+        else if (!is_neuter(mdef->data))
+            corpstatflags |= CORPSTAT_MALE;
+        /* Archeologists should not break unique statues */
+        if (mdef->data->geno & G_UNIQ)
+            corpstatflags |= CORPSTAT_HISTORIC;
+        otmp = mkcorpstat(STATUE, mdef, mdef->data, x, y, corpstatflags);
         if (has_mgivenname(mdef))
             otmp = oname(otmp, MGIVENNAME(mdef));
         while ((obj = oldminvent) != 0) {
@@ -2784,9 +2793,6 @@ monstone(struct monst* mdef)
             obj->nobj = 0; /* avoid merged-> obfree-> dealloc_obj-> panic */
             (void) add_to_container(otmp, obj);
         }
-        /* Archeologists should not break unique statues */
-        if (mdef->data->geno & G_UNIQ)
-            otmp->spe = 1;
         otmp->owt = weight(otmp);
     } else
         otmp = mksobj_at(ROCK, x, y, TRUE, FALSE);
@@ -3331,10 +3337,9 @@ elemental_clog(struct monst* mon)
 /* make monster mtmp next to you (if possible);
    might place monst on far side of a wall or boulder */
 void
-mnexto(struct monst* mtmp)
+mnexto(struct monst* mtmp, unsigned int rlocflags)
 {
     coord mm;
-    boolean couldspot = canspotmon(mtmp);
 
     if (mtmp == u.usteed) {
         /* Keep your steed in sync with you instead */
@@ -3347,13 +3352,7 @@ mnexto(struct monst* mtmp)
         deal_with_overcrowding(mtmp);
         return;
     }
-    rloc_to(mtmp, mm.x, mm.y);
-    if (!g.in_mklev && (mtmp->mstrategy & STRAT_APPEARMSG)) {
-        mtmp->mstrategy &= ~STRAT_APPEARMSG; /* one chance only */
-        if (!couldspot && canspotmon(mtmp))
-            pline("%s suddenly %s!", Amonnam(mtmp),
-                  !Blind ? "appears" : "arrives");
-    }
+    rloc_to_flag(mtmp, mm.x, mm.y, rlocflags);
     return;
 }
 
@@ -3406,7 +3405,8 @@ mnearto(
     register struct monst *mtmp,
     xchar x,
     xchar y,
-    boolean move_other) /* make sure mtmp gets to x, y! so move m_at(x, y) */
+    boolean move_other, /* make sure mtmp gets to x, y! so move m_at(x, y) */
+    unsigned int rlocflags)
 {
     struct monst *othermon = (struct monst *) 0;
     xchar newx, newy;
@@ -3446,11 +3446,11 @@ mnearto(
         newx = mm.x;
         newy = mm.y;
     }
-    rloc_to(mtmp, newx, newy);
+    rloc_to_flag(mtmp, newx, newy, rlocflags);
 
     if (move_other && othermon) {
         res = 2; /* moving another monster out of the way */
-        if (!mnearto(othermon, x, y, FALSE))  /* no 'move_other' this time */
+        if (!mnearto(othermon, x, y, FALSE, rlocflags))  /* no 'move_other' this time */
             deal_with_overcrowding(othermon);
     }
 
@@ -4420,8 +4420,15 @@ newcham(
     /* take on the new form... */
     set_mon_data(mtmp, mdat);
 
-    if (mtmp->mleashed && !leashable(mtmp))
-        m_unleash(mtmp, TRUE);
+    if (mtmp->mleashed) {
+        if (!leashable(mtmp))
+            m_unleash(mtmp, TRUE);
+        else
+            /* if leashed, persistent inventory window needs updating
+               (really only when mon_nam() is going to yield "a frog"
+               rather than "Kermit" but no need to micromanage here) */
+            update_inventory(); /* x - leash (attached to a <mon>) */
+    }
 
     if (emits_light(olddata) != emits_light(mtmp->data)) {
         /* used to give light, now doesn't, or vice versa,

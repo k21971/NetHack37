@@ -276,6 +276,24 @@ check_caitiff(struct monst *mtmp)
     }
 }
 
+/* wake up monster, maybe unparalyze it */
+void
+mon_maybe_wakeup_on_hit(struct monst *mtmp)
+{
+    if (mtmp->msleeping)
+        mtmp->msleeping = 0;
+
+    if (!mtmp->mcanmove) {
+        if (!rn2(10)) {
+            mtmp->mcanmove = 1;
+            mtmp->mfrozen = 0;
+        }
+    }
+}
+
+/* how easy it is for hero to hit a monster,
+   using attack type aatyp and/or weapon.
+   larger value == easier to hit */
 int
 find_roll_to_hit(struct monst *mtmp,
                  uchar aatyp,        /* usually AT_WEAP or AT_KICK */
@@ -296,23 +314,15 @@ find_roll_to_hit(struct monst *mtmp,
         check_caitiff(mtmp);
     }
 
-    /* adjust vs. (and possibly modify) monster state */
+    /* adjust vs. monster state */
     if (mtmp->mstun)
         tmp += 2;
     if (mtmp->mflee)
         tmp += 2;
-
-    if (mtmp->msleeping) {
-        mtmp->msleeping = 0;
+    if (mtmp->msleeping)
         tmp += 2;
-    }
-    if (!mtmp->mcanmove) {
+    if (!mtmp->mcanmove)
         tmp += 4;
-        if (!rn2(10)) {
-            mtmp->mcanmove = 1;
-            mtmp->mfrozen = 0;
-        }
-    }
 
     /* role/race adjustments */
     if (Role_if(PM_MONK) && !Upolyd) {
@@ -617,6 +627,7 @@ hitum_cleave(struct monst *target, /* non-Null; forcefight at nothing doesn't
 
         tmp = find_roll_to_hit(mtmp, uattk->aatyp, uwep,
                                &attknum, &armorpenalty);
+        mon_maybe_wakeup_on_hit(mtmp);
         dieroll = rnd(20);
         mhit = (tmp > dieroll);
         g.bhitpos.x = tx, g.bhitpos.y = ty; /* normally set up by
@@ -652,6 +663,8 @@ hitum(struct monst *mon, struct attack *uattk)
     int dieroll = rnd(20);
     int mhit = (tmp > dieroll || u.uswallow);
 
+    mon_maybe_wakeup_on_hit(mon);
+
     /* Cleaver attacks three spots, 'mon' and one on either side of 'mon';
        it can't be part of dual-wielding but we guard against that anyway;
        cleave return value reflects status of primary target ('mon') */
@@ -673,6 +686,7 @@ hitum(struct monst *mon, struct attack *uattk)
     if (u.twoweap && !g.override_confirmation && malive && m_at(x, y) == mon) {
         tmp = find_roll_to_hit(mon, uattk->aatyp, uswapwep, &attknum,
                                &armorpenalty);
+        mon_maybe_wakeup_on_hit(mon);
         dieroll = rnd(20);
         mhit = (tmp > dieroll || u.uswallow);
         malive = known_hitum(mon, uswapwep, &mhit, tmp, armorpenalty, uattk,
@@ -2321,7 +2335,8 @@ mhitm_ad_sgld(struct monst *magr, struct attack *mattk, struct monst *mdef,
         if (!tele_restrict(magr)) {
             boolean couldspot = canspotmon(magr);
 
-            (void) rloc(magr, TRUE);
+            (void) rloc(magr, RLOC_NOMSG);
+            /* TODO: use RLOC_MSG instead? */
             if (g.vis && couldspot && !canspotmon(magr))
                 pline("%s suddenly disappears!", buf);
         }
@@ -2415,7 +2430,8 @@ mhitm_ad_tlpt(struct monst *magr, struct attack *mattk, struct monst *mdef,
             if (g.vis && wasseen)
                 Strcpy(mdef_Monnam, Monnam(mdef));
             mdef->mstrategy &= ~STRAT_WAITFORU;
-            (void) rloc(mdef, TRUE);
+            (void) rloc(mdef, RLOC_NOMSG);
+            /* TODO: use RLOC_MSG instead? */
             if (g.vis && wasseen && !canspotmon(mdef) && mdef != u.usteed)
                 pline("%s suddenly disappears!", mdef_Monnam);
             if (mhm->damage >= mdef->mhp) { /* see hitmu(mhitu.c) */
@@ -3690,7 +3706,7 @@ mhitm_ad_heal(struct monst *magr, struct attack *mattk, struct monst *mdef,
                 return;
             } else if (!rn2(33)) {
                 if (!tele_restrict(magr))
-                    (void) rloc(magr, TRUE);
+                    (void) rloc(magr, RLOC_MSG);
                 monflee(magr, d(3, 6), TRUE, FALSE);
                 mhm->done = TRUE;
                 mhm->hitflags = MM_HIT | MM_DEF_DIED; /* return 3??? */
@@ -3969,7 +3985,7 @@ mhitm_ad_sedu(struct monst *magr, struct attack *mattk, struct monst *mdef,
                       ? "brags about the goods some dungeon explorer provided"
                   : "makes some remarks about how difficult theft is lately");
             if (!tele_restrict(magr))
-                (void) rloc(magr, TRUE);
+                (void) rloc(magr, RLOC_MSG);
             mhm->hitflags = MM_AGR_DONE; /* return 3??? */
             mhm->done = TRUE;
             return;
@@ -3981,7 +3997,7 @@ mhitm_ad_sedu(struct monst *magr, struct attack *mattk, struct monst *mdef,
                       flags.female ? "unaffected" : "uninterested");
             if (rn2(3)) {
                 if (!tele_restrict(magr))
-                    (void) rloc(magr, TRUE);
+                    (void) rloc(magr, RLOC_MSG);
                 mhm->hitflags = MM_AGR_DONE; /* return 3??? */
                 mhm->done = TRUE;
                 return;
@@ -3998,7 +4014,7 @@ mhitm_ad_sedu(struct monst *magr, struct attack *mattk, struct monst *mdef,
             return;
         default:
             if (!is_animal(magr->data) && !tele_restrict(magr))
-                (void) rloc(magr, TRUE);
+                (void) rloc(magr, RLOC_MSG);
             if (is_animal(magr->data) && *buf) {
                 if (canseemon(magr))
                     pline("%s tries to %s away with %s.", Monnam(magr),
@@ -4053,7 +4069,8 @@ mhitm_ad_sedu(struct monst *magr, struct attack *mattk, struct monst *mdef,
             if (pa->mlet == S_NYMPH && !tele_restrict(magr)) {
                 boolean couldspot = canspotmon(magr);
 
-                (void) rloc(magr, TRUE);
+                (void) rloc(magr, RLOC_NOMSG);
+                /* TODO: use RLOC_MSG instead? */
                 if (g.vis && couldspot && !canspotmon(magr))
                     pline("%s suddenly disappears!", buf);
             }
@@ -4584,6 +4601,7 @@ hmonas(struct monst *mon)
 
             tmp = find_roll_to_hit(mon, AT_WEAP, weapon, &attknum,
                                    &armorpenalty);
+            mon_maybe_wakeup_on_hit(mon);
             dieroll = rnd(20);
             dhit = (tmp > dieroll || u.uswallow);
             /* caller must set g.bhitpos */
@@ -4625,6 +4643,7 @@ hmonas(struct monst *mon)
         /*weaponless:*/
             tmp = find_roll_to_hit(mon, mattk->aatyp, (struct obj *) 0,
                                    &attknum, &armorpenalty);
+            mon_maybe_wakeup_on_hit(mon);
             dieroll = rnd(20);
             dhit = (tmp > dieroll || u.uswallow);
             if (dhit) {
@@ -4817,6 +4836,7 @@ hmonas(struct monst *mon)
         case AT_ENGL:
             tmp = find_roll_to_hit(mon, mattk->aatyp, (struct obj *) 0,
                                    &attknum, &armorpenalty);
+            mon_maybe_wakeup_on_hit(mon);
             if ((dhit = (tmp > rnd(20 + i)))) {
                 wakeup(mon, TRUE);
                 if (mon->data == &mons[PM_SHADE]) {

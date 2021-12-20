@@ -710,6 +710,13 @@ extend 3.6.1 fix to explicitly use name of unseen shopkeeper instead of "It"
 fix some inconsistencies with applied bullwhip vs monster
 polymorphing while wearing an amulet of strangulation from a form that wasn't
 	vulnerable to one that was gave wrong message ("still constricts")
+for accessibility reasons, give a message when monster teleports
+if a gremlin stole intrinsic 'see invisible' the map wasn't updated properly
+mark some messages as urgent ("You die*.", having equipment stolen, being
+	caught in a magical explosion)
+if a leashed pet changed name (#name m) or an unnamed pet changed type
+	(polymorph or grow-up) and perm_invent was On, persistent inventory
+	display didn't get updated to show the leash's changed information
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -923,6 +930,11 @@ if 'showrace' was On and invisible hero couldn't see invisible so didn't see
 in wizard mode, a poly'd priest/priestess attempting to polymorph into priest
 	or priestess in order to rehumanize became a new man or woman instead
 	because "priest" matched "aligned cleric" rather than the role monster
+if a glob which has just shrunk away to nothing was wielded or quivered,
+	unwield it before destroying it
+after changes to gender tracking for corpses and statues, when a unique
+	monster got turned into a statue if was erroneouly flagged as female
+	rather than 'historic'
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -938,6 +950,8 @@ Qt: at Xp levels above 20 with 'showexp' On, the combined status field
 	"Level:NN/nnnnnnnn" was too big and truncated by a char at each end
 Qt: searching a text window for something that wasn't found and then searching
 	for some other target could crash
+Qt: changes in glyph handling in the core introduced a bug in the "paper doll"
+	display for inventory subset
 tty: redraw unexplored locations as S_unexplored rather than <space> after
 	map has been partially overwritten by popup menu or text display
 tty: previous change resulted in remnants of previous level being shown on
@@ -1290,6 +1304,8 @@ curses: implement selecting menu items via mouse
 curses: 'windowborders' can be set to 3 or 4 to suppress perm_invent borders
 	to provide slightly more room for actual inventory info
 curses: if panictrace is triggered, reset the terminal before giving backtrace
+curses: if a message is marked urgent, override message suppression initiated
+	by user having typed ESC at previous More>> prompt
 Qt: the "paper doll" inventory subset can be controlled via the "Qt Settings"
 	dialog box ("Preferences..." on OSX)
 Qt: draw a border around each tile in the paper doll inventory; when BUC is
@@ -1316,6 +1332,8 @@ tiles: male and female variations in monsters.txt; tested only with tile2bmp
 	conversion utility so far; also supported by tilemap utility to
 	generate tile.c
 tty: use bright colors directly on supporting terminals
+tty: if a message is marked urgent, override message suppression initiated
+	by user having typed ESC at previous --More-- prompt
 Unix: can define NOSUSPEND in config.h or src/Makefile's CFLAGS to prevent
 	unixconf.h from enabling SUSPEND without need to modify unixconf.h
 X11: implement 'selectsaved', restore via menu of saved games

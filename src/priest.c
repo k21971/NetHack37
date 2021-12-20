@@ -73,7 +73,7 @@ move_special(struct monst *mtmp, boolean in_his_shop, schar appr,
     }
 
 #define GDIST(x, y) (dist2(x, y, gx, gy))
-pick_move:
+ pick_move:
     chcnt = 0;
     for (i = 0; i < cnt; i++) {
         nx = poss[i].x;
@@ -213,14 +213,18 @@ pri_move(struct monst *priest)
 
 /* exclusively for mktemple() */
 void
-priestini(d_level *lvl, struct mkroom *sroom, int sx, int sy,
-          boolean sanctum) /* is it the seat of the high priest? */
+priestini(
+    d_level *lvl,
+    struct mkroom *sroom,
+    int sx, int sy,
+    boolean sanctum) /* is it the seat of the high priest? */
 {
     struct monst *priest;
     struct obj *otmp;
     int cnt;
     int px = 0, py = 0, i, si = rn2(N_DIRS);
-    struct permonst *prim = &mons[sanctum ? PM_HIGH_CLERIC : PM_ALIGNED_CLERIC];
+    struct permonst *prim = &mons[sanctum ? PM_HIGH_CLERIC
+                                          : PM_ALIGNED_CLERIC];
 
     for (i = 0; i < N_DIRS; i++) {
         px = sx + xdir[DIR_CLAMP(i+si)];
@@ -232,7 +236,7 @@ priestini(d_level *lvl, struct mkroom *sroom, int sx, int sy,
         px = sx, py = sy;
 
     if (MON_AT(px, py))
-        (void) rloc(m_at(px, py), FALSE); /* insurance */
+        (void) rloc(m_at(px, py), RLOC_NOMSG); /* insurance */
 
     priest = makemon(prim, px, py, MM_EPRI);
     if (priest) {
@@ -675,7 +679,7 @@ mk_roamer(struct permonst *ptr, aligntyp alignment, xchar x, xchar y,
 #endif
 
     if (MON_AT(x, y))
-        (void) rloc(m_at(x, y), FALSE); /* insurance */
+        (void) rloc(m_at(x, y), RLOC_NOMSG); /* insurance */
 
     if (!(roamer = makemon(ptr, x, y, MM_ADJACENTOK | MM_EMIN)))
         return (struct monst *) 0;
@@ -710,8 +714,9 @@ reset_hostility(struct monst *roamer)
 }
 
 boolean
-in_your_sanctuary(struct monst *mon, /* if non-null, <mx,my> overrides <x,y> */
-                  xchar x, xchar y)
+in_your_sanctuary(
+    struct monst *mon, /* if non-null, <mx,my> overrides <x,y> */
+    xchar x, xchar y)
 {
     register char roomno;
     register struct monst *priest;

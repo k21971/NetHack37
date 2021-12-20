@@ -507,7 +507,8 @@ use_magic_whistle(struct obj *obj)
                 if (M_AP_TYPE(mtmp))
                     seemimic(mtmp);
                 omx = mtmp->mx, omy = mtmp->my;
-                mnexto(mtmp);
+                if (distu(omx, omy) > 2)
+                    mnexto(mtmp, RLOC_MSG);
                 if (mtmp->mx != omx || mtmp->my != omy) {
                     mtmp->mundetected = 0; /* reveal non-mimic hider */
                     if (canspotmon(mtmp))
@@ -732,7 +733,7 @@ next_to_u(void)
             continue;
         if (mtmp->mleashed) {
             if (distu(mtmp->mx, mtmp->my) > 2)
-                mnexto(mtmp);
+                mnexto(mtmp, RLOC_NOMSG);
             if (distu(mtmp->mx, mtmp->my) > 2) {
                 for (otmp = g.invent; otmp; otmp = otmp->nobj)
                     if (otmp->otyp == LEASH
@@ -979,8 +980,8 @@ use_mirror(struct obj *obj)
         if (vis)
             pline("%s confuses itself!", Monnam(mtmp));
         mtmp->mconf = 1;
-    } else if (monable &&
-               (mlet == S_NYMPH || mtmp->data == &mons[PM_AMOROUS_DEMON])) {
+    } else if (monable && (mlet == S_NYMPH
+                           || mtmp->data == &mons[PM_AMOROUS_DEMON])) {
         if (vis) {
             char buf[BUFSZ]; /* "She" or "He" */
 
@@ -994,7 +995,7 @@ use_mirror(struct obj *obj)
         freeinv(obj);
         (void) mpickobj(mtmp, obj);
         if (!tele_restrict(mtmp))
-            (void) rloc(mtmp, TRUE);
+            (void) rloc(mtmp, RLOC_MSG);
     } else if (!is_unicorn(mtmp->data) && !humanoid(mtmp->data)
                && (!mtmp->minvis || perceives(mtmp->data)) && rn2(5)) {
         boolean do_react = TRUE;
@@ -1545,8 +1546,8 @@ light_cocktail(struct obj **optr)
     *optr = obj;
 }
 
-/* getobj callback for object to be rubbed - not selecting a secondary object to
- * rub on a gray stone or rub jelly on */
+/* getobj callback for object to be rubbed - not selecting a secondary object
+   to rub on a gray stone or rub jelly on */
 static int
 rub_ok(struct obj *obj)
 {
@@ -3629,12 +3630,12 @@ do_break_wand(struct obj *obj)
                                   ? (char *) 0
                                   : "Some holes are quickly filled with %s!");
                     fillmsg = TRUE;
-                } else
-                    digactualhole(x, y, BY_OBJECT, (rn2(obj->spe) < 3
-                                                    || (!Can_dig_down(&u.uz)
-                                                        && !levl[x][y].candig))
-                                                      ? PIT
-                                                      : HOLE);
+                } else {
+                    digactualhole(x, y, BY_OBJECT,
+                                  (rn2(obj->spe) < 3
+                                   || (!Can_dig_down(&u.uz)
+                                       && !levl[x][y].candig)) ? PIT : HOLE);
+                }
             }
             continue;
         } else if (obj->otyp == WAN_CREATE_MONSTER) {

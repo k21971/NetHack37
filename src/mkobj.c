@@ -8,6 +8,7 @@
 static void mkbox_cnts(struct obj *);
 static unsigned nextoid(struct obj *, struct obj *);
 static int item_on_ice(struct obj *);
+static void shrinking_glob_gone(struct obj *);
 static void obj_timer_checks(struct obj *, xchar, xchar, int);
 static void container_weight(struct obj *);
 static struct obj *save_mtraits(struct obj *, struct monst *);
@@ -282,6 +283,7 @@ mkbox_cnts(struct obj *box)
             if (otmp->timed) {
                 (void) stop_timer(ROT_CORPSE, obj_to_any(otmp));
                 (void) stop_timer(REVIVE_MON, obj_to_any(otmp));
+                (void) stop_timer(SHRINK_GLOB, obj_to_any(otmp));
             }
         } else {
             register int tprob;
@@ -873,8 +875,15 @@ mksobj(int otyp, boolean init, boolean artif)
                 break;
             }
             if (Is_pudding(otmp)) {
-                otmp->quan = 1L; /* for emphasis; glob quantity is always 1 */
                 otmp->globby = 1;
+                /* for emphasis; glob quantity is always 1 and weight varies
+                   when other globs coallesce with it or this one shrinks */
+                otmp->quan = 1L;
+                /* 3.7: globs in 3.6.x left owt as 0 and let weight() fix
+                   that up during 'obj->owt = weight(obj)' below, but now
+                   we initialize glob->owt explicitly so weight() doesn't
+                   need to perform any fix up and returns glob->owt as-is */
+                otmp->owt = objects[otmp->otyp].oc_weight;
                 otmp->known = otmp->dknown = 1;
                 otmp->corpsenm = PM_GRAY_OOZE
                                  + (otmp->otyp - GLOB_OF_GRAY_OOZE);
@@ -1328,7 +1337,9 @@ start_glob_timeout(
 /* globs have quantity 1 and size which varies by multiples of 20 in owt;
    they don't become tainted with age, but every 25 turns this timer runs
    and reduces owt by 1; when it hits 0, destroy the glob (if some other
-   part of the program destroys it, the timer will be cancelled) */
+   part of the program destroys it, the timer will be cancelled);
+   note: timer keeps going if an object gets buried or scheduled to
+   migrate to another level and can delete the glob in those states */
 void
 shrink_glob(
     anything *arg,    /* glob (in arg->a_obj) */
@@ -1361,7 +1372,7 @@ shrink_glob(
         /* number of units of weight to remove */
         long delta = (g.moves - expire_time + 24L) / 25L,
              /* leftover amount to use for new timer */
-            moddelta = 25L - (delta % 25L);
+             moddelta = 25L - (delta % 25L);
 
         if (globloc == SET_ON_ICE)
             delta = (delta + 2L) / 3L;
@@ -1369,14 +1380,15 @@ shrink_glob(
         if (delta >= (long) obj->owt) {
             /* gone; no newsym() or message here--forthcoming map update for
                level arrival is all that's needed */
-            obj_extract_self(obj); /* if contained, also updates container's
-                                    * weight (recursively when nested) */
-            obfree(obj, (struct obj *) 0);
+            obj->owt = 0; /* not required; accurately reflects obj's state */
+            shrinking_glob_gone(obj);
         } else {
             /* shrank but not gone; reduce remaining weight */
             obj->owt -= (unsigned) delta;
-            /* won't be in container carried by hero but might be in floor one
-               or one carried by monster; if so, update container's weight */
+            /* when contained, update container's weight (recursively if
+               nested); won't be in a container carried by hero (since
+               catching up for lost time never applies in that situation)
+               but might be in one on floor or one carried by a monster */
             if (contnr)
                 container_weight(contnr);
             /* resume regular shrinking */
@@ -1447,15 +1459,8 @@ shrink_glob(
         /* obj's weight has been reduced, but weight(s) of enclosing
            container(s) haven't been adjusted for that yet */
         old_top_owt = topcontnr->owt;
-        /* update those weights now; recursively updates nested containers
-           (extracting from a container does that automatically); if obj->owt
-           has dropped to 0, weight() will assume that this is a brand new
-           glob and use 20 instead; that would yield an incorrect total
-           weight for enclosing container(s), so take 'gone' glob out now */
-        if (gone)
-            obj_extract_self(obj);
-        else
-            container_weight(contnr);
+        /* update those weights now; recursively updates nested containers */
+        container_weight(contnr);
 
         if (topcontnr->where == OBJ_INVENT) {
             /* for regular containers, the weight will always be reduced
@@ -1486,11 +1491,8 @@ shrink_glob(
                          && get_obj_location(obj, &ox, &oy, 0)
                          && cansee(ox, oy));
 
-        /* weight has been reduced to 0 so destroy the glob; if it was
-           contained, it has already been removed from its container above */
-        if (obj->where != OBJ_FREE)
-            obj_extract_self(obj);
-        obfree(obj, (struct obj *) 0);
+        /* weight has been reduced to 0 so destroy the glob */
+        shrinking_glob_gone(obj);
 
         if (seeit) {
             newsym(ox, oy);
@@ -1507,6 +1509,34 @@ shrink_glob(
     if (updinv) {
         update_inventory();
         (void) encumber_msg();
+    }
+}
+
+/* a glob has shrunk away to nothing; handle owornmask, then delete glob */
+static void
+shrinking_glob_gone(struct obj *obj)
+{
+    if (obj->where == OBJ_INVENT) {
+        if (obj->owornmask) {
+            remove_worn_item(obj, FALSE);
+            stop_occupation();
+        }
+        useupall(obj); /* freeinv()+obfree() */
+    } else {
+        if (obj->where == OBJ_MIGRATING) {
+            /* destination flag overloads owornmask; clear it so obfree()'s
+               check for freeing a worn object doesn't get a false hit */
+            obj->owornmask = 0L;
+        } else if (obj->where == OBJ_MINVENT) {
+            /* monsters don't wield globs so this isn't strictly needed */
+            if (obj->owornmask && obj == MON_WEP(obj->ocarry))
+                setmnotwielded(obj->ocarry, obj); /* clears owornmask */
+        }
+        /* remove the glob from whatever list it's on and then delete it;
+           if it's contained, obj_extract_self() will update the container's
+           weight and if nested, the enclosing containers' weights too */
+        obj_extract_self(obj);
+        obfree(obj, (struct obj *) 0);
     }
 }
 
@@ -1689,22 +1719,35 @@ set_bknown(
  *  Note:  It is possible to end up with an incorrect weight if some part
  *         of the code messes with a contained object and doesn't update the
  *         container's weight.
+ *
+ *  Note too: obj->owt is an unsigned int and objects[].oc_weight an
+ *         unsigned short int, so weight() should probably be changed to
+ *         use and return unsigned int instead of signed int.
  */
 int
 weight(struct obj *obj)
 {
-    int wt = (int) objects[obj->otyp].oc_weight;
+    int wt = (int) objects[obj->otyp].oc_weight; /* weight of 1 'otyp' */
 
     if (obj->quan < 1L) {
         impossible("Calculating weight of %ld %s?",
                    obj->quan, simpleonames(obj));
         return 0;
     }
-    /* glob absorpsion means that merging globs accumulates weight while
-       quantity stays 1, so update 'wt' to reflect that, unless owt is 0,
-       when we assume this is a brand new glob so use objects[].oc_weight */
-    if (obj->globby && obj->owt > 0)
-        wt = obj->owt;
+    /* glob absorpsion means that merging globs combines their weight
+       while quantity stays 1; mksobj(), obj_absorb(), and shrink_glob()
+       manage glob->owt and there is nothing for weight() to do except
+       return the current value as-is */
+    if (obj->globby) {
+        /* 3.7: in 3.6.x this checked for owt==0 and then used
+           owt as-is when non-zero or objects[].oc_weight if zero;
+           we don't do that anymore because it confused calculating
+           the weight of a container when a glob inside shrank down
+           to 0 and was about to be deleted [mksobj() now initializes
+           owt for globs sooner and the subsequent o->owt = weight(o)
+           general initialization is benignly redundant for globs] */
+        return (int) obj->owt;
+    }
     if (Is_container(obj) || obj->otyp == STATUE) {
         struct obj *contents;
         register int cwt = 0;

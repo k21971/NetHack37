@@ -60,7 +60,7 @@ mkcavepos(xchar x, xchar y, int dist, boolean waslit, boolean rockit)
             return;                   /* don't cover the portal */
         if ((mtmp = m_at(x, y)) != 0) /* make sure crucial monsters survive */
             if (!passes_walls(mtmp->data))
-                (void) rloc(mtmp, TRUE);
+                (void) rloc(mtmp, RLOC_NOMSG);
     } else if (lev->typ == ROOM)
         return;
 
@@ -230,9 +230,9 @@ dig_check(struct monst *madeby, boolean verbose, int x, int y)
 static int
 dig(void)
 {
-    register struct rm *lev;
-    register xchar dpx = g.context.digging.pos.x, dpy = g.context.digging.pos.y;
-    register boolean ispick = uwep && is_pick(uwep);
+    struct rm *lev;
+    xchar dpx = g.context.digging.pos.x, dpy = g.context.digging.pos.y;
+    boolean ispick = uwep && is_pick(uwep);
     const char *verb = (!uwep || is_pick(uwep)) ? "dig into" : "chop through";
 
     lev = &levl[dpx][dpy];
@@ -451,7 +451,7 @@ dig(void)
             b_trapped("door", 0);
             newsym(dpx, dpy);
         }
-    cleanup:
+ cleanup:
         g.context.digging.lastdigtime = g.moves;
         g.context.digging.quiet = FALSE;
         g.context.digging.level.dnum = 0;
@@ -1471,7 +1471,8 @@ zap_dig(void)
             coord cc;
             struct trap *adjpit = t_at(zx, zy);
 
-            if ((diridx != DIR_ERR) && !conjoined_pits(adjpit, trap_with_u, FALSE)) {
+            if (diridx != DIR_ERR
+                && !conjoined_pits(adjpit, trap_with_u, FALSE)) {
                 digdepth = 0; /* limited to the adjacent location only */
                 if (!(adjpit && is_pit(adjpit->ttyp))) {
                     char buf[BUFSZ];
@@ -1996,19 +1997,13 @@ rot_corpse(anything *arg, long timeout)
             Your("%s%s %s away%c", obj == uwep ? "wielded " : "", cname,
                  otense(obj, "rot"), obj == uwep ? '!' : '.');
         }
-        if (obj == uwep) {
-            uwepgone(); /* now bare handed */
-            stop_occupation();
-        } else if (obj == uswapwep) {
-            uswapwepgone();
-            stop_occupation();
-        } else if (obj == uquiver) {
-            uqwepgone();
+        if (obj->owornmask) {
+            remove_worn_item(obj, TRUE);
             stop_occupation();
         }
-    } else if (obj->where == OBJ_MINVENT && obj->owornmask) {
-        if (obj == MON_WEP(obj->ocarry))
-            setmnotwielded(obj->ocarry, obj);
+    } else if (obj->where == OBJ_MINVENT) {
+        if (obj->owornmask && obj == MON_WEP(obj->ocarry))
+            setmnotwielded(obj->ocarry, obj); /* clears owornmask */
     } else if (obj->where == OBJ_MIGRATING) {
         /* clear destination flag so that obfree()'s check for
            freeing a worn object doesn't get a false hit */

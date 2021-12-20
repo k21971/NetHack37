@@ -204,7 +204,7 @@ vpline(const char *line, va_list the_args)
     }
     iflags.msg_is_alert = FALSE;
 
-pline_done:
+ pline_done:
     --in_pline;
 }
 

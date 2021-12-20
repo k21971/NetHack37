@@ -190,8 +190,8 @@ getpos_help(boolean force, const char *goal)
         if (iflags.cmdassist) { /* assisting the '/' command, I suppose... */
             Sprintf(sbuf,
                     (iflags.getpos_coords == GPCOORDS_NONE)
-         ? "(Set 'whatis_coord' option to include coordinates with '%s' text.)"
-         : "(Reset 'whatis_coord' option to omit coordinates from '%s' text.)",
+        ? "(Set 'whatis_coord' option to include coordinates with '%s' text.)"
+        : "(Reset 'whatis_coord' option to omit coordinates from '%s' text.)",
                     visctrl(g.Cmd.spkeys[NHKF_GETPOS_AUTODESC]));
         }
         /* disgusting hack; the alternate selection characters work for any
@@ -211,7 +211,7 @@ getpos_help(boolean force, const char *goal)
         putstr(tmpwin, 0, sbuf);
         if (doing_what_is) {
             Sprintf(sbuf,
-       "  '%s' describe current spot, show 'more info', move to another spot.",
+      "  '%s' describe current spot, show 'more info', move to another spot.",
                     visctrl(g.Cmd.spkeys[NHKF_GETPOS_PICK_V]));
             putstr(tmpwin, 0, sbuf);
             Sprintf(sbuf,
@@ -370,8 +370,8 @@ gather_locs_interesting(int x, int y, int gloc)
         /* unlike '/M', this skips monsters revealed by
            warning glyphs and remembered unseen ones */
         return (glyph_is_monster(glyph)
-                && glyph != monnum_to_glyph(PM_LONG_WORM_TAIL,MALE) &&
-                   glyph != monnum_to_glyph(PM_LONG_WORM_TAIL, FEMALE));
+                && glyph != monnum_to_glyph(PM_LONG_WORM_TAIL,MALE)
+                && glyph != monnum_to_glyph(PM_LONG_WORM_TAIL, FEMALE));
     case GLOC_OBJS:
         return (glyph_is_object(glyph)
                 && glyph != objnum_to_glyph(BOULDER)
@@ -532,7 +532,7 @@ coord_desc(int x, int y, char *outbuf, char cmode)
            than Nx999 or 999xM will still work, but not line up like normal
            when displayed in a column setting.
 
-	   The (100) is placed in brackets below to mark the [: "03"] as
+           The (100) is placed in brackets below to mark the [: "03"] as
            explicit compile-time dead code for clang */
         if (!*screen_fmt)
             Sprintf(screen_fmt, "[%%%sd,%%%sd]",
@@ -955,7 +955,7 @@ getpos(coord *ccp, boolean force, const char *goal)
                                         goto foundc;
                                 }
                                 continue;
-                            foundc:
+ foundc:
                                 cx = tx, cy = ty;
                                 if (msg_given) {
                                     clear_nhwindow(WIN_MESSAGE);
@@ -992,7 +992,7 @@ getpos(coord *ccp, boolean force, const char *goal)
             result = 0; /* not -1 */
             break;
         }
-    nxtc:
+ nxtc:
         ;
 #ifdef CLIPPING
         cliparound(cx, cy);
@@ -1027,7 +1027,7 @@ new_mgivenname(struct monst *mon,
         if (!mon->mextra)
             mon->mextra = newmextra();
         else
-            free_mgivenname(mon); /* already has mextra, might also have name */
+            free_mgivenname(mon); /* has mextra, might also have name */
         MGIVENNAME(mon) = (char *) alloc((unsigned) lth);
     } else {
         /* zero length: the new name is empty; get rid of the old name */
@@ -1097,7 +1097,7 @@ christen_monst(struct monst *mtmp, const char *name)
     int lth;
     char buf[PL_PSIZ];
 
-    /* g.dogname & g.catname are PL_PSIZ arrays; object names have same limit */
+    /* dogname & catname are PL_PSIZ arrays; object names have same limit */
     lth = (name && *name) ? ((int) strlen(name) + 1) : 0;
     if (lth > PL_PSIZ) {
         lth = PL_PSIZ;
@@ -1107,11 +1107,14 @@ christen_monst(struct monst *mtmp, const char *name)
     new_mgivenname(mtmp, lth); /* removes old name if one is present */
     if (lth)
         Strcpy(MGIVENNAME(mtmp), name);
+    /* if 'mtmp' is leashed, persistent inventory window needs updating */
+    if (mtmp->mleashed)
+        update_inventory(); /* x - leash (attached to Fido) */
     return mtmp;
 }
 
 /* check whether user-supplied name matches or nearly matches an unnameable
-   monster's name; if so, give an alternate reject message for do_mgivenname() */
+   monster's name; if so, give alternate reject message for do_mgivenname() */
 static boolean
 alreadynamed(struct monst *mtmp, char *monnambuf, char *usrbuf)
 {
@@ -1582,7 +1585,8 @@ namefloorobj(void)
        been moved off the hero's '@' yet, but there's no way to adjust
        the help text once getpos() has started */
     Sprintf(buf, "object on map (or '.' for one %s you)",
-            (u.uundetected && hides_under(g.youmonst.data)) ? "over" : "under");
+            (u.uundetected && hides_under(g.youmonst.data))
+              ? "over" : "under");
     if (getpos(&cc, FALSE, buf) < 0 || cc.x <= 0)
         return;
     if (cc.x == u.ux && cc.y == u.uy) {
@@ -1663,7 +1667,8 @@ static const char *const ghostnames[] = {
 const char *
 rndghostname(void)
 {
-    return rn2(7) ? ghostnames[rn2(SIZE(ghostnames))] : (const char *) g.plname;
+    return rn2(7) ? ghostnames[rn2(SIZE(ghostnames))]
+                  : (const char *) g.plname;
 }
 
 /*
@@ -2078,9 +2083,11 @@ mon_nam_too(struct monst *mon, struct monst *other_mon)
 /* construct "<monnamtext> <verb> <othertext> {him|her|it}self" which might
    be distorted by Hallu; if that's plural, adjust monnamtext and verb */
 char *
-monverbself(struct monst *mon,
-            char *monnamtext, /* modifiable 'mbuf' with adequare room at end */
-            const char *verb, const char *othertext)
+monverbself(
+    struct monst *mon,
+    char *monnamtext, /* modifiable 'mbuf' with adequate room at end */
+    const char *verb,
+    const char *othertext)
 {
     char *verbs, selfbuf[40]; /* sizeof "themselves" suffices */
 
@@ -2331,7 +2338,8 @@ static NEARDATA const char *const hliquids[] = {
 
 /* if hallucinating, return a random liquid instead of 'liquidpref' */
 const char *
-hliquid(const char *liquidpref) /* use as-is when not hallucinating (unless empty) */
+hliquid(
+    const char *liquidpref) /* use as-is when not hallucintg (unless empty) */
 {
     if (Hallucination || !liquidpref || !*liquidpref) {
         int indx, count = SIZE(hliquids);
@@ -2422,7 +2430,9 @@ christen_orc(struct monst *mtmp, const char *gang, const char *other)
     return mtmp;
 }
 
-/* make sure "The Colour of Magic" remains the first entry in here */
+/* Discworld novel titles, in the order that they were published; a subset
+   of them have index macros used for variant spellings; if the titles are
+   reordered for some reason, make sure that those get renumbered to match */
 static const char *const sir_Terry_novels[] = {
     "The Colour of Magic", "The Light Fantastic", "Equal Rites", "Mort",
     "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!", "Eric",
@@ -2436,6 +2446,11 @@ static const char *const sir_Terry_novels[] = {
     "Making Money", "Unseen Academicals", "I Shall Wear Midnight", "Snuff",
     "Raising Steam", "The Shepherd's Crown"
 };
+#define NVL_COLOUR_OF_MAGIC 0
+#define NVL_SOURCERY 4
+#define NVL_MASKERADE 17
+#define NVL_AMAZING_MAURICE 27
+#define NVL_THUD 33
 
 const char *
 noveltitle(int *novidx)
@@ -2465,15 +2480,15 @@ lookup_novel(const char *lookname, int *idx)
      * _Sourcery_ is a joke rather than British spelling of "sorcery".
      */
     if (!strcmpi(The(lookname), "The Color of Magic"))
-        lookname = sir_Terry_novels[0];
+        lookname = sir_Terry_novels[NVL_COLOUR_OF_MAGIC];
     else if (!strcmpi(lookname, "Sorcery"))
-        lookname = "Sourcery"; /* [4] */
+        lookname = sir_Terry_novels[NVL_SOURCERY];
     else if (!strcmpi(lookname, "Masquerade"))
-        lookname = "Maskerade"; /* [17] */
+        lookname = sir_Terry_novels[NVL_MASKERADE];
     else if (!strcmpi(The(lookname), "The Amazing Maurice"))
-        lookname = "The Amazing Maurice and His Educated Rodents"; /* [27] */
+        lookname = sir_Terry_novels[NVL_AMAZING_MAURICE];
     else if (!strcmpi(lookname, "Thud"))
-        lookname = "Thud!"; /* [33] */
+        lookname = sir_Terry_novels[NVL_THUD];
 
     for (k = 0; k < SIZE(sir_Terry_novels); ++k) {
         if (!strcmpi(lookname, sir_Terry_novels[k])
