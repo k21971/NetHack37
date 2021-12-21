@@ -30,6 +30,7 @@ static int Gloves_on(void);
 static void wielding_corpse(struct obj *, boolean);
 static int Shield_on(void);
 static int Shirt_on(void);
+static void dragon_armor_handling(struct obj *, boolean);
 static void Amulet_on(void);
 static void learnring(struct obj *, boolean);
 static void Ring_off_or_gone(struct obj *, boolean);
@@ -691,16 +692,100 @@ Shirt_off(void)
     return 0;
 }
 
+/* handle extra abilities for hero wearing dragon scale armor */
+static void
+dragon_armor_handling(struct obj *otmp, boolean puton)
+{
+    if (!otmp)
+        return;
+
+    switch (otmp->otyp) {
+        /* grey: no extra effect */
+        /* silver: no extra effect */
+    case BLACK_DRAGON_SCALES:
+    case BLACK_DRAGON_SCALE_MAIL:
+        if (puton) {
+            EDrain_resistance |= W_ARM;
+        } else {
+            EDrain_resistance &= ~W_ARM;
+        }
+        break;
+    case BLUE_DRAGON_SCALES:
+    case BLUE_DRAGON_SCALE_MAIL:
+        if (puton) {
+            if (!Very_fast)
+                pline("You speed up%s.", Fast ? " a bit more" : "");
+            EFast |= W_ARM;
+        } else {
+            EFast &= ~W_ARM;
+            if (!Very_fast && !g.context.takeoff.cancelled_don)
+                pline("You slow down.");
+        }
+        break;
+    case GREEN_DRAGON_SCALES:
+    case GREEN_DRAGON_SCALE_MAIL:
+        if (puton) {
+            ESick_resistance |= W_ARM;
+        } else {
+            ESick_resistance &= ~W_ARM;
+        }
+        break;
+    case RED_DRAGON_SCALES:
+    case RED_DRAGON_SCALE_MAIL:
+        if (puton) {
+            EInfravision |= W_ARM;
+        } else {
+            EInfravision &= ~W_ARM;
+        }
+        see_monsters();
+        break;
+    case GOLD_DRAGON_SCALES:
+    case GOLD_DRAGON_SCALE_MAIL:
+        (void) make_hallucinated((long) !puton,
+                                 g.program_state.restoring ? FALSE : TRUE,
+                                 W_ARM);
+        break;
+    case ORANGE_DRAGON_SCALES:
+    case ORANGE_DRAGON_SCALE_MAIL:
+        if (puton) {
+            Free_action |= W_ARM;
+        } else {
+            Free_action &= ~W_ARM;
+        }
+        break;
+    case YELLOW_DRAGON_SCALES:
+    case YELLOW_DRAGON_SCALE_MAIL:
+        if (puton) {
+            EStone_resistance |= W_ARM;
+        } else {
+            EStone_resistance &= ~W_ARM;
+        }
+        break;
+    case WHITE_DRAGON_SCALES:
+    case WHITE_DRAGON_SCALE_MAIL:
+        if (puton) {
+            ESlow_digestion |= W_ARM;
+        } else {
+            ESlow_digestion &= ~W_ARM;
+        }
+        break;
+    default:
+        break;
+    }
+}
+
 static int
 Armor_on(void)
 {
-    /*
-     * Gold DSM requires special handling since it emits light when worn.
-     */
     if (!uarm) /* no known instances of !uarm here but play it safe */
         return 0;
     uarm->known = 1; /* suit's +/- evident because of status line AC */
 
+    dragon_armor_handling(uarm, TRUE);
+
+    /*
+     * Gold DSM requires special handling since it emits light when worn.
+     */
     if (artifact_light(uarm) && !uarm->lamplit) {
         begin_burn(uarm, FALSE);
         if (!Blind)
@@ -720,6 +805,8 @@ Armor_off(void)
     g.context.takeoff.mask &= ~W_ARM;
     setworn((struct obj *) 0, W_ARM);
     g.context.takeoff.cancelled_don = FALSE;
+
+    dragon_armor_handling(otmp, FALSE);
 
     if (was_arti_light && !artifact_light(otmp)) {
         end_burn(otmp, FALSE);
@@ -744,6 +831,8 @@ Armor_gone(void)
     g.context.takeoff.mask &= ~W_ARM;
     setnotworn(uarm);
     g.context.takeoff.cancelled_don = FALSE;
+
+    dragon_armor_handling(otmp, FALSE);
 
     if (was_arti_light && !artifact_light(otmp)) {
         end_burn(otmp, FALSE);
@@ -2782,7 +2871,14 @@ menu_remarm(int retry)
 int
 destroy_arm(register struct obj *atmp)
 {
-    register struct obj *otmp;
+    struct obj *otmp;
+    /*
+     * Note: if there were any artifact cloaks, the 90% chance of
+     * resistance here means that the cloak could survive and then
+     * the suit or shirt underneath could be destroyed.  Likewise for
+     * artifact suit over a shirt.  That would be a bug.  Since there
+     * aren't any, we'll just look the other way.
+     */
 #define DESTROY_ARM(o)                            \
     ((otmp = (o)) != 0 && (!atmp || atmp == otmp) \
              && (!obj_resists(otmp, 0, 90))       \
@@ -2792,48 +2888,57 @@ destroy_arm(register struct obj *atmp)
     if (DESTROY_ARM(uarmc)) {
         if (donning(otmp))
             cancel_don();
-        Your("%s crumbles and turns to dust!", cloak_simple_name(uarmc));
+        urgent_pline("Your %s crumbles and turns to dust!",
+                     /* cloak/robe/apron/smock (ID'd apron)/wrapping */
+                     cloak_simple_name(uarmc));
         (void) Cloak_off();
         useup(otmp);
     } else if (DESTROY_ARM(uarm)) {
+        const char *suit = suit_simple_name(uarm);
+
         if (donning(otmp))
             cancel_don();
         /* for gold DSM, we don't want Armor_gone() to report that it
            stops shining _after_ we've been told that it is destroyed */
         if (otmp->lamplit)
             end_burn(otmp, FALSE);
-        Your("armor turns to dust and falls to the %s!", surface(u.ux, u.uy));
+        urgent_pline("Your %s %s to dust and %s to the %s!",
+                     /* suit might be "dragon scales" so vtense() is needed */
+                     suit, vtense(suit, "turn"), vtense(suit, "fall"),
+                     surface(u.ux, u.uy));
         (void) Armor_gone();
         useup(otmp);
     } else if (DESTROY_ARM(uarmu)) {
         if (donning(otmp))
             cancel_don();
-        Your("shirt crumbles into tiny threads and falls apart!");
+        urgent_pline("Your %s crumbles into tiny threads and falls apart!",
+                     shirt_simple_name(uarmu)); /* always "shirt" */
         (void) Shirt_off();
         useup(otmp);
     } else if (DESTROY_ARM(uarmh)) {
         if (donning(otmp))
             cancel_don();
-        Your("%s turns to dust and is blown away!", helm_simple_name(uarmh));
+        urgent_pline("Your %s turns to dust and is blown away!",
+                     helm_simple_name(uarmh)); /* "helm" or "hat" */
         (void) Helmet_off();
         useup(otmp);
     } else if (DESTROY_ARM(uarmg)) {
         if (donning(otmp))
             cancel_don();
-        Your("gloves vanish!");
+        urgent_pline("Your %s vanish!", gloves_simple_name(uarmg));
         (void) Gloves_off();
         useup(otmp);
         selftouch("You");
     } else if (DESTROY_ARM(uarmf)) {
         if (donning(otmp))
             cancel_don();
-        Your("boots disintegrate!");
+        urgent_pline("Your %s disintegrate!", boots_simple_name(uarmf));
         (void) Boots_off();
         useup(otmp);
     } else if (DESTROY_ARM(uarms)) {
         if (donning(otmp))
             cancel_don();
-        Your("shield crumbles away!");
+        urgent_pline("Your %s crumbles away!", shield_simple_name(uarms));
         (void) Shield_off();
         useup(otmp);
     } else {

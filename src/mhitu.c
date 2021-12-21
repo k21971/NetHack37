@@ -1121,11 +1121,11 @@ gulpmu(struct monst *mtmp, struct attack *mattk)
              * like horses for now :-)
              */
             Strcpy(buf, mon_nam(u.usteed));
-            pline("%s lunges forward and plucks you off %s!", Monnam(mtmp),
-                  buf);
+            urgent_pline("%s lunges forward and plucks you off %s!",
+                         Monnam(mtmp), buf);
             dismount_steed(DISMOUNT_ENGULFED);
         } else {
-            pline("%s engulfs you!", Monnam(mtmp));
+            urgent_pline("%s engulfs you!", Monnam(mtmp));
         }
         stop_occupation();
         reset_occupations(); /* behave as if you had moved */
@@ -1495,7 +1495,7 @@ gazemu(struct monst *mtmp, struct attack *mattk)
             stop_occupation();
             if (poly_when_stoned(g.youmonst.data) && polymon(PM_STONE_GOLEM))
                 break;
-            You("turn to stone...");
+            urgent_pline("You turn to stone...");
             g.killer.format = KILLED_BY;
             Strcpy(g.killer.name, pmname(mtmp->data, Mgender(mtmp)));
             done(STONING);
@@ -1838,12 +1838,11 @@ doseduce(struct monst *mon)
     }
 
     naked = (!uarmc && !uarmf && !uarmg && !uarms && !uarmh && !uarmu);
-    custompline(URGENT_MESSAGE,
-                "%s %s%s.", Who,
-                Deaf ? "seems to murmur into your ear"
-                : naked ? "murmurs sweet nothings into your ear"
-                  : "murmurs in your ear",
-                naked ? "" : ", while helping you undress");
+    urgent_pline("%s %s%s.", Who,
+                 Deaf ? "seems to murmur into your ear"
+                 : naked ? "murmurs sweet nothings into your ear"
+                   : "murmurs in your ear",
+                 naked ? "" : ", while helping you undress");
     mayberem(mon, Who, uarmc, cloak_simple_name(uarmc));
     if (!uarmc)
         mayberem(mon, Who, uarm, suit_simple_name(uarm));
@@ -1894,9 +1893,9 @@ doseduce(struct monst *mon)
         adjalign(1);
 
     /* by this point you have discovered mon's identity, blind or not... */
-    custompline(URGENT_MESSAGE,
+    urgent_pline(
              "Time stands still while you and %s lie in each other's arms...",
-                noit_mon_nam(mon));
+                 noit_mon_nam(mon));
     /* 3.6.1: a combined total for charisma plus intelligence of 35-1
        used to guarantee successful outcome; now total maxes out at 32
        as far as deciding what will happen; chance for bad outcome when
