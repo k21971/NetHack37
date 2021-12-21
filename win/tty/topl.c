@@ -221,7 +221,7 @@ more(void)
         standoutbeg();
     if (iflags.msg_is_alert) {
         term_start_color(CLR_ORANGE);
-        putsyms("<TAB>");
+        putsyms(" <TAB>");
         term_end_color();
         xwaitforspace("\t");
     } else {
@@ -230,8 +230,6 @@ more(void)
     }
     if (flags.standout)
         standoutend();
-
-    xwaitforspace("\033 ");
 
     if (morc == '\033') {
         if (!(cw->flags & WIN_NOSTOP))
