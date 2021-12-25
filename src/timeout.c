@@ -11,6 +11,7 @@ static void choke_dialogue(void);
 static void levitation_dialogue(void);
 static void slime_dialogue(void);
 static void slimed_to_death(struct kinfo *);
+static void sickness_dialogue(void);
 static void phaze_dialogue(void);
 static void done_timeout(int, int);
 static void slip_or_trip(void);
@@ -114,7 +115,7 @@ static NEARDATA const char *const stoned_texts[] = {
 static void
 stoned_dialogue(void)
 {
-    register long i = (Stoned & TIMEOUT);
+    long i = (Stoned & TIMEOUT);
 
     if (i > 0L && i <= SIZE(stoned_texts)) {
         char buf[BUFSZ];
@@ -122,7 +123,7 @@ stoned_dialogue(void)
         Strcpy(buf, stoned_texts[SIZE(stoned_texts) - i]);
         if (nolimbs(g.youmonst.data) && strstri(buf, "limbs"))
             (void) strsubst(buf, "limbs", "extremities");
-        pline1(buf);
+        urgent_pline("%s", buf);
     }
     switch ((int) i) {
     case 5: /* slowing down */
@@ -260,21 +261,53 @@ static NEARDATA const char *const choke_texts2[] = {
 static void
 choke_dialogue(void)
 {
-    register long i = (Strangled & TIMEOUT);
+    long i = (Strangled & TIMEOUT);
 
     if (i > 0 && i <= SIZE(choke_texts)) {
         if (Breathless || !rn2(50)) {
-            pline(choke_texts2[SIZE(choke_texts2) - i], body_part(NECK));
+            urgent_pline(choke_texts2[SIZE(choke_texts2) - i],
+                         body_part(NECK));
         } else {
             const char *str = choke_texts[SIZE(choke_texts) - i];
 
             if (index(str, '%'))
-                pline(str, hcolor(NH_BLUE));
+                urgent_pline(str, hcolor(NH_BLUE));
             else
-                pline1(str);
+                urgent_pline("%s", str);
         }
     }
     exercise(A_STR, FALSE);
+}
+
+static NEARDATA const char *const sickness_texts[] = {
+    "Your illness feels worse.",
+    "Your illness is severe.",
+    "You are at Death's door.",
+};
+
+static void
+sickness_dialogue(void)
+{
+    long j = (Sick & TIMEOUT), i = j / 2L;
+
+    if (i > 0L && i <= SIZE(sickness_texts) && (j % 2) != 0) {
+        char buf[BUFSZ], pronounbuf[40];
+
+        Strcpy(buf, sickness_texts[SIZE(sickness_texts) - i]);
+        /* change the message slightly for food poisoning */
+        if ((u.usick_type & SICK_NONVOMITABLE) == 0)
+            (void) strsubst(buf, "illness", "sickness");
+        if (Hallucination && strstri(buf, "Death's door")) {
+            /* youmonst: for Hallucination, mhe()'s mon argument isn't used */
+            Strcpy(pronounbuf, mhe(&g.youmonst));
+            Sprintf(eos(buf), "  %s %s inviting you in.",
+                    /* upstart() modifies its argument but vtense() doesn't
+                       care whether or not that has already happened */
+                    upstart(pronounbuf), vtense(pronounbuf, "are"));
+        }
+        urgent_pline("%s", buf);
+    }
+    exercise(A_CON, FALSE);
 }
 
 static NEARDATA const char *const levi_texts[] = {
@@ -302,8 +335,8 @@ levitation_dialogue(void)
             boolean danger = (is_pool_or_lava(u.ux, u.uy)
                               && !Is_waterlevel(&u.uz));
 
-            pline(s, danger ? "over" : "in",
-                  danger ? surface(u.ux, u.uy) : "air");
+            urgent_pline(s, danger ? "over" : "in",
+                         danger ? surface(u.ux, u.uy) : "air");
         } else
             pline1(s);
     }
@@ -343,13 +376,13 @@ slime_dialogue(void)
         if (index(buf, '%')) {
             if (i == 4L) {  /* "you are turning green" */
                 if (!Blind) /* [what if you're already green?] */
-                    pline(buf, hcolor(NH_GREEN));
+                    urgent_pline(buf, hcolor(NH_GREEN));
             } else {
-                pline(buf,
-                      an(Hallucination ? rndmonnam(NULL) : "green slime"));
+                urgent_pline(buf, an(Hallucination ? rndmonnam(NULL)
+                                                   : "green slime"));
             }
         } else {
-            pline1(buf);
+            urgent_pline("%s", buf);
         }
     }
 
@@ -529,6 +562,8 @@ nh_timeout(void)
         vomiting_dialogue();
     if (Strangled)
         choke_dialogue();
+    if (Sick)
+        sickness_dialogue();
     if (HLevitation & TIMEOUT)
         levitation_dialogue();
     if (HPasses_walls & TIMEOUT)

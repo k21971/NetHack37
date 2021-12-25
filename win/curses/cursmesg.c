@@ -21,6 +21,11 @@ extern char erase_char, kill_char;
    for the current move; but hero might get more than one move per turn,
    so the input routines need to be able to cancel this */
 long curs_mesg_suppress_turn = -1L;
+/* if a message is marked urgent, existing suppression will be overridden
+   so that messages resume being shown; this is used in case the urgent
+   message triggers More>> for the previous message and the player responds
+   with ESC; we need to avoid initiating suppression in that situation */
+boolean curs_mesg_suppress_suppression = FALSE;
 
 /* Message window routines for curses interface */
 
@@ -109,9 +114,10 @@ curses_message_win_puts(const char *message, boolean recursed)
             /* bottom of message win */
             if (++turn_lines > height
                 || (turn_lines == height && mx > border_space)) {
-                /* Pause until key is hit - Esc suppresses any further
-                   messages that turn */
-                if (curses_more() == '\033') {
+                 /* pause until key is hit - ESC suppresses further messages
+                    this turn unless an urgent message is being delivered */
+                if (curses_more() == '\033'
+                    && !curs_mesg_suppress_suppression) {
                     curs_mesg_suppress_turn = g.moves;
                     return;
                 }
@@ -380,13 +386,14 @@ curses_prev_mesg(void)
 
     for (count = 0; count < num_messages; ++count) {
         mesg = get_msg_line(do_lifo, count);
-        if (turn != mesg->turn && count != 0) {
-            curses_add_menu(wid, &nul_glyphinfo, &Id, 0, 0,
-                            A_NORMAL, "---", MENU_ITEMFLAGS_NONE);
+        if (mesg->turn != turn) {
+            if (count > 0) /* skip separator for first line */
+                curses_add_menu(wid, &nul_glyphinfo, &Id, 0, 0,
+                                A_NORMAL, "---", MENU_ITEMFLAGS_NONE);
+            turn = mesg->turn;
         }
         curses_add_menu(wid, &nul_glyphinfo, &Id, 0, 0,
                         A_NORMAL, mesg->str, MENU_ITEMFLAGS_NONE);
-        turn = mesg->turn;
     }
     if (!count)
         curses_add_menu(wid, &nul_glyphinfo, &Id, 0, 0,
@@ -795,6 +802,7 @@ mesg_add_line(const char *mline)
             current_mesg->str = dupstr(mline);
         }
     }
+    current_mesg->turn = g.moves;
 
     if (num_messages == 0) {
         /* very first message; set up head */
