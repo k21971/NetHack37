@@ -52,6 +52,7 @@ extern boolean catch_lit(struct obj *);
 extern void use_unicorn_horn(struct obj **);
 extern boolean tinnable(struct obj *);
 extern void reset_trapset(void);
+extern int use_pole(struct obj *, boolean);
 extern void fig_transform(union any *, long);
 extern int unfixable_trouble_count(boolean);
 
@@ -1506,6 +1507,7 @@ extern struct attack *attacktype_fordmg(struct permonst *, int, int);
 extern boolean attacktype(struct permonst *, int);
 extern boolean noattacks(struct permonst *);
 extern boolean poly_when_stoned(struct permonst *);
+extern boolean defended(struct monst *, int);
 extern boolean resists_drli(struct monst *);
 extern boolean resists_magm(struct monst *);
 extern boolean resists_blnd(struct monst *);

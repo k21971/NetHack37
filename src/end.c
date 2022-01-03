@@ -342,7 +342,7 @@ done2(void)
             u.uinvulnerable = FALSE; /* avoid ctrl-C bug -dlc */
             u.usleep = 0;
         }
-        return 0;
+        return ECMD_OK;
     }
 #if (defined(UNIX) || defined(VMS) || defined(LATTICE))
     if (wizard) {
@@ -371,7 +371,7 @@ done2(void)
 #ifndef LINT
     done(QUIT);
 #endif
-    return 0;
+    return ECMD_OK;
 }
 
 #ifndef NO_SIGNAL

@@ -1,4 +1,4 @@
-/* NetHack 3.7	options.c	$NHDT-Date: 1613723080 2021/02/19 08:24:40 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.508 $ */
+/* NetHack 3.7	options.c	$NHDT-Date: 1640991743 2021/12/31 23:02:23 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.522 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Michael Allison, 2008. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -65,7 +65,7 @@ static struct allopt_t allopt_init[] = {
 #undef NHOPT_PARSE
 
 
-#ifdef DEFAULT_WC_TILED_MAP
+#if defined(USE_TILES) && defined(DEFAULT_WC_TILED_MAP)
 #define PREFER_TILED TRUE
 #else
 #define PREFER_TILED FALSE
@@ -7272,7 +7272,7 @@ longest_option_name(int startpass, int endpass)
     return longest_name_len;
 }
 
-/* the 'O' command */
+/* the #options command */
 int
 doset(void) /* changing options via menu by Per Liboriussen */
 {
@@ -7462,7 +7462,7 @@ doset(void) /* changing options via menu by Per Liboriussen */
     if (g.context.botl || g.context.botlx) {
         bot();
     }
-    return 0;
+    return ECMD_OK;
 }
 
 /* doset('O' command) menu entries for compound options */
@@ -7721,7 +7721,7 @@ dotogglepickup(void)
         Strcpy(buf, "OFF");
     }
     pline("Autopickup: %s.", buf);
-    return 0;
+    return ECMD_OK;
 }
 
 int
@@ -8319,12 +8319,6 @@ set_option_mod_status(const char *optnam, int status)
     if (SET__IS_VALUE_VALID(status)) {
         impossible("set_option_mod_status: status out of range %d.", status);
         return;
-    }
-    for (k = 0; allopt[k].name; k++) {
-        if (!strncmpi(allopt[k].name, optnam, strlen(optnam))) {
-            allopt[k].setwhere = status;
-            return;
-        }
     }
     for (k = 0; allopt[k].name; k++) {
         if (!strncmpi(allopt[k].name, optnam, strlen(optnam))) {

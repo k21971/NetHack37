@@ -1397,7 +1397,7 @@ call_ok(struct obj *obj)
     return GETOBJ_SUGGEST;
 }
 
-/* C and #name commands - player can name monster or object or type of obj */
+/* #call / #name command - player can name monster or object or type of obj */
 int
 docallcmd(void)
 {
@@ -1488,7 +1488,7 @@ docallcmd(void)
         donamelevel();
         break;
     }
-    return 0;
+    return ECMD_OK;
 }
 
 /* for use by safe_qbuf() */
@@ -1737,7 +1737,7 @@ x_monnam(
     do_invis = mtmp->minvis && !(suppress & SUPPRESS_INVISIBLE);
     do_it = !canspotmon(mtmp) && article != ARTICLE_YOUR
             && !g.program_state.gameover && mtmp != u.usteed
-            && !(u.uswallow && mtmp == u.ustuck) && !(suppress & SUPPRESS_IT);
+            && !engulfing_u(mtmp) && !(suppress & SUPPRESS_IT);
     do_saddle = !(suppress & SUPPRESS_SADDLE);
     do_name = !(suppress & SUPPRESS_NAME) || type_is_pname(mdat);
     augment_it = (suppress & AUGMENT_IT) != 0;
@@ -2304,6 +2304,7 @@ static NEARDATA const char *const hcolors[] = {
     "dancing", "singing", "loving", "loudy", "noisy", "clattery", "silent",
     "apocyan", "infra-pink", "opalescent", "violant", "tuneless",
     "viridian", "aureolin", "cinnabar", "purpurin", "gamboge", "madder",
+    "bistre", "ecru", "fulvous", "tekhelet", "selective yellow",
 };
 
 const char *
@@ -2333,6 +2334,7 @@ static NEARDATA const char *const hliquids[] = {
     "caramel sauce", "ink", "aqueous humour", "milk substitute",
     "fruit juice", "glowing lava", "gastric acid", "mineral water",
     "cough syrup", "quicksilver", "sweet vitriol", "grey goo", "pink slime",
+    "cosmic latte",
     /* "new coke (tm)", --better not */
 };
 

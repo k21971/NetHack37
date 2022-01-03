@@ -2331,7 +2331,7 @@ learn_unseen_invent(void)
         return; /* sanity check */
 
     for (otmp = g.invent; otmp; otmp = otmp->nobj) {
-        if (otmp->dknown)
+        if (otmp->dknown && (otmp->bknown || !Role_if(PM_CLERIC)))
             continue; /* already seen */
         /* set dknown, perhaps bknown (for priest[ess]) */
         (void) xname(otmp);
@@ -2363,7 +2363,7 @@ update_inventory(void)
     (*windowprocs.win_update_inventory)(0);
 }
 
-/* '|' command - call interface's persistent inventory manipulation routine */
+/* the #perminv command - call interface's persistent inventory routine */
 int
 doperminv(void)
 {
@@ -2407,7 +2407,7 @@ doperminv(void)
 
     } /* iflags.perm_invent */
 
-    return 0;
+    return ECMD_OK;
 }
 
 /* should of course only be called for things in invent */
@@ -2483,12 +2483,12 @@ xprname(struct obj *obj,
 
 RESTORE_WARNING_FORMAT_NONLITERAL
 
-/* the 'i' command */
+/* the #inventory command */
 int
 ddoinv(void)
 {
     (void) display_inventory((char *) 0, FALSE);
-    return 0;
+    return ECMD_OK;
 }
 
 /*
@@ -3132,7 +3132,7 @@ this_type_only(struct obj *obj)
     return res;
 }
 
-/* the 'I' command */
+/* the #inventtype command */
 int
 dotypeinv(void)
 {
@@ -3148,7 +3148,7 @@ dotypeinv(void)
 
     if (!g.invent && !billx) {
         You("aren't carrying anything.");
-        return 0;
+        return ECMD_OK;
     }
     unpaid_count = count_unpaid(g.invent);
     tally_BUCX(g.invent, FALSE, &bcnt, &ucnt, &ccnt, &xcnt, &ocnt, &jcnt);
@@ -3173,7 +3173,7 @@ dotypeinv(void)
             i |= INCLUDE_VENOM;
             n = query_category(prompt, g.invent, i, &pick_list, PICK_ONE);
             if (!n)
-                return 0;
+                return ECMD_OK;
             g.this_type = c = pick_list[0].item.a_int;
             free((genericptr_t) pick_list);
         }
@@ -3228,7 +3228,7 @@ dotypeinv(void)
             savech(c);
             if (c == '\0') {
                 clear_nhwindow(WIN_MESSAGE);
-                return 0;
+                return ECMD_OK;
             }
         } else {
             /* only one thing to itemize */
@@ -3246,14 +3246,14 @@ dotypeinv(void)
         else
             pline("No used-up objects%s.",
                   unpaid_count ? " on your shopping bill" : "");
-        return 0;
+        return ECMD_OK;
     }
     if (c == 'u' || (c == 'U' && unpaid_count && !ucnt)) {
         if (unpaid_count)
             dounpaid();
         else
             You("are not carrying any unpaid objects.");
-        return 0;
+        return ECMD_OK;
     }
     if (traditional) {
         if (index("BUCXP", c))
@@ -3294,7 +3294,7 @@ dotypeinv(void)
                 break;
             }
             You("have no %sobjects%s.", before, after);
-            return 0;
+            return ECMD_OK;
         }
         g.this_type = oclass;
     }
@@ -3303,7 +3303,7 @@ dotypeinv(void)
                        | INVORDER_SORT | INCLUDE_VENOM),
                       &pick_list, PICK_NONE, this_type_only) > 0)
         free((genericptr_t) pick_list);
-    return 0;
+    return ECMD_OK;
 }
 
 /* return a string describing the dungeon feature at <x,y> if there
@@ -3434,7 +3434,7 @@ look_here(int obj_cnt, /* obj_cnt > 0 implies that autopickup is in progress */
         } else {
             You("%s no objects here.", verb);
         }
-        return !!Blind;
+        return (!!Blind ? ECMD_TIME : ECMD_OK);
     }
     if (!skip_objects && (trap = t_at(u.ux, u.uy)) && trap->tseen)
         There("is %s here.", an(trapname(trap->ttyp, FALSE)));
@@ -3466,7 +3466,7 @@ look_here(int obj_cnt, /* obj_cnt > 0 implies that autopickup is in progress */
         trap = t_at(u.ux, u.uy);
         if (!can_reach_floor(trap && is_pit(trap->ttyp))) {
             pline("But you can't reach it!");
-            return 0;
+            return ECMD_OK;
         }
     }
 
@@ -3480,7 +3480,7 @@ look_here(int obj_cnt, /* obj_cnt > 0 implies that autopickup is in progress */
         read_engr_at(u.ux, u.uy); /* Eric Backus */
         if (!skip_objects && (Blind || !dfeature))
             You("%s no objects here.", verb);
-        return !!Blind;
+        return (!!Blind ? ECMD_TIME : ECMD_OK);
     }
     /* we know there is something here */
 
@@ -3550,10 +3550,10 @@ look_here(int obj_cnt, /* obj_cnt > 0 implies that autopickup is in progress */
             feel_cockatrice(otmp, FALSE);
         read_engr_at(u.ux, u.uy); /* Eric Backus */
     }
-    return !!Blind;
+    return (!!Blind ? ECMD_TIME : ECMD_OK);
 }
 
-/* the ':' command - explicitly look at what is here, including all objects */
+/* #look command - explicitly look at what is here, including all objects */
 int
 dolook(void)
 {
@@ -3718,23 +3718,45 @@ mergable(register struct obj *otmp, register struct obj *obj)
         return FALSE;
 }
 
-/* the '$' command */
+/* the #showgold command */
 int
 doprgold(void)
 {
-    /* the messages used to refer to "carrying gold", but that didn't
-       take containers into account */
+    /* Command takes containers into account. */
     long umoney = money_cnt(g.invent);
 
-    if (!umoney)
-        Your("wallet is empty.");
-    else
-        Your("wallet contains %ld %s.", umoney, currency(umoney));
+    /* Only list the money you know about.  Guards and shopkeepers
+       can somehow tell if there is any gold anywhere on your
+       person, but you have no such preternatural gold-sense. */
+    long hmoney = hidden_gold(FALSE);
+
+    if (flags.verbose) {
+        if (!umoney && !hmoney)
+            Your("wallet is empty.");
+        else if (umoney && !hmoney)
+            Your("wallet contains %ld %s.", umoney, currency(umoney));
+        else if (!umoney && hmoney)
+            Your("wallet is empty, but there %s %ld %s stashed away in "
+                 "your pack.",
+                 (hmoney == 1) ?  "is" : "are",
+                 hmoney, currency(hmoney));
+        else if (umoney && hmoney)
+            Your("wallet contains %ld %s, and there %s %ld more stashed "
+                 "away in your pack.", umoney, currency(umoney),
+                 (hmoney == 1) ? "is" : "are",
+                 hmoney);
+    } else {
+        long total = umoney + hmoney;
+        if (total)
+            You("are carrying a total of %ld %s.", total, currency(total));
+        else
+            You("have no money.");
+    }
     shopper_financial_report();
-    return 0;
+    return ECMD_OK;
 }
 
-/* the ')' command */
+/* the #seeweapon command */
 int
 doprwep(void)
 {
@@ -3745,7 +3767,7 @@ doprwep(void)
         if (u.twoweap)
             prinv((char *) 0, uswapwep, 0L);
     }
-    return 0;
+    return ECMD_OK;
 }
 
 /* caller is responsible for checking !wearing_armor() */
@@ -3771,7 +3793,7 @@ noarmor(boolean report_uskin)
     }
 }
 
-/* the '[' command */
+/* the #seearmor command */
 int
 doprarm(void)
 {
@@ -3803,10 +3825,10 @@ doprarm(void)
         lets[ct] = 0;
         (void) display_inventory(lets, FALSE);
     }
-    return 0;
+    return ECMD_OK;
 }
 
-/* the '=' command */
+/* the #seerings command */
 int
 doprring(void)
 {
@@ -3823,10 +3845,10 @@ doprring(void)
         lets[ct] = 0;
         (void) display_inventory(lets, FALSE);
     }
-    return 0;
+    return ECMD_OK;
 }
 
-/* the '"' command */
+/* the #seeamulet command */
 int
 dopramulet(void)
 {
@@ -3834,7 +3856,7 @@ dopramulet(void)
         You("are not wearing an amulet.");
     else
         prinv((char *) 0, uamul, 0L);
-    return 0;
+    return ECMD_OK;
 }
 
 /* is 'obj' a tool that's in use?  can't simply check obj->owornmask */
@@ -3849,7 +3871,7 @@ tool_being_used(struct obj *obj)
                       || (obj->otyp == LEASH && obj->leashmon));
 }
 
-/* the '(' command */
+/* the #seetools command */
 int
 doprtool(void)
 {
@@ -3870,10 +3892,10 @@ doprtool(void)
         You("are not using any tools.");
     else
         (void) display_inventory(lets, FALSE);
-    return 0;
+    return ECMD_OK;
 }
 
-/* '*' command; combines the ')' + '[' + '=' + '"' + '(' commands;
+/* the #seeall command; combines the ')' + '[' + '=' + '"' + '(' commands;
    show inventory of all currently wielded, worn, or used objects */
 int
 doprinuse(void)
@@ -3895,7 +3917,7 @@ doprinuse(void)
         You("are not wearing or wielding anything.");
     else
         (void) display_inventory(lets, FALSE);
-    return 0;
+    return ECMD_OK;
 }
 
 /*
@@ -4140,7 +4162,7 @@ doorganize(void) /* inventory organizer by Del Lamb */
                       && g.invent->invlet == GOLD_SYM && !g.invent->nobj)) {
         You("aren't carrying anything %s.",
             !g.invent ? "to adjust" : "adjustable");
-        return 0;
+        return ECMD_OK;
     }
 
     if (!flags.invlet_constant)
@@ -4152,7 +4174,7 @@ doorganize(void) /* inventory organizer by Del Lamb */
     /* get object the user wants to organize (the 'from' slot) */
     obj = getobj("adjust", adjust_filter, GETOBJ_PROMPT | GETOBJ_ALLOWCNT);
     if (!obj)
-        return 0;
+        return ECMD_OK;
     /* can only be gold if check_invent_gold() found a problem:  multiple '$'
        stacks and/or gold in some other slot, otherwise (*adjust_filter)()
        won't allow gold to be picked; if player has picked any stack of gold
@@ -4226,7 +4248,7 @@ doorganize(void) /* inventory organizer by Del Lamb */
                 (void) merged(&splitting, &obj);
             if (!ever_mind)
                 pline1(Never_mind);
-            return 0;
+            return ECMD_OK;
         } else if (let == GOLD_SYM && obj->oclass != COIN_CLASS) {
             pline("Only gold coins may be moved into the '%c' slot.",
                   GOLD_SYM);
@@ -4303,7 +4325,7 @@ doorganize(void) /* inventory organizer by Del Lamb */
                     (void) merged(&splitting, &obj); /* undo split */
                     /* "knapsack cannot accommodate any more items" */
                     Your("pack is too full.");
-                    return 0;
+                    return ECMD_OK;
                 } else {
                     bumped = otmp;
                     extract_nobj(bumped, &g.invent);
@@ -4338,7 +4360,7 @@ doorganize(void) /* inventory organizer by Del Lamb */
     if (splitting)
         clear_splitobjs(); /* reset splitobj context */
     update_inventory();
-    return 0;
+    return ECMD_OK;
 }
 
 /* common to display_minventory and display_cinventory */
@@ -4406,7 +4428,7 @@ display_minventory(struct monst *mon, int dflags, char *title)
     int n;
     menu_item *selected = 0;
     int do_all = (dflags & MINV_ALL) != 0,
-        incl_hero = (do_all && u.uswallow && mon == u.ustuck),
+        incl_hero = (do_all && engulfing_u(mon)),
         have_inv = (mon->minvent != 0), have_any = (have_inv || incl_hero),
         pickings = (dflags & MINV_PICKMASK);
 

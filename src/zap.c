@@ -140,7 +140,7 @@ bhitm(struct monst *mtmp, struct obj *otmp)
     boolean disguised_mimic = (mtmp->data->mlet == S_MIMIC
                                && M_AP_TYPE(mtmp) != M_AP_NOTHING);
 
-    if (u.uswallow && mtmp == u.ustuck)
+    if (engulfing_u(mtmp))
         reveal_invis = FALSE;
 
     g.notonhead = (mtmp->mx != g.bhitpos.x || mtmp->my != g.bhitpos.y);
@@ -177,7 +177,7 @@ bhitm(struct monst *mtmp, struct obj *otmp)
                 seemimic(mtmp);
             mon_adjust_speed(mtmp, -1, otmp);
             m_dowear(mtmp, FALSE); /* might want speed boots */
-            if (u.uswallow && (mtmp == u.ustuck) && is_whirly(mtmp->data)) {
+            if (engulfing_u(mtmp) && is_whirly(mtmp->data)) {
                 You("disrupt %s!", mon_nam(mtmp));
                 pline("A huge hole opens up...");
                 expels(mtmp, mtmp->data, TRUE);
@@ -229,7 +229,7 @@ bhitm(struct monst *mtmp, struct obj *otmp)
             boolean polyspot = (otyp != POT_POLYMORPH),
                     give_msg = (!Hallucination
                                 && (canseemon(mtmp)
-                                    || (u.uswallow && mtmp == u.ustuck)));
+                                    || engulfing_u(mtmp)));
 
             /* dropped inventory (due to death by system shock,
                or loss of wielded weapon and/or worn armor due to
@@ -258,7 +258,7 @@ bhitm(struct monst *mtmp, struct obj *otmp)
                            && newcham(mtmp, &mons[mtmp->cham],
                                       polyspot, give_msg) != 0)) {
                 if (give_msg && (canspotmon(mtmp)
-                                 || (u.uswallow && mtmp == u.ustuck)))
+                                 || engulfing_u(mtmp)))
                     learn_it = TRUE;
             }
 
@@ -529,7 +529,7 @@ probe_monster(struct monst *mtmp)
                                   (char *) 0);
     } else {
         pline("%s is not carrying anything%s.", noit_Monnam(mtmp),
-              (u.uswallow && mtmp == u.ustuck) ? " besides you" : "");
+              engulfing_u(mtmp) ? " besides you" : "");
     }
 }
 
@@ -2366,7 +2366,7 @@ zap_ok(struct obj *obj)
     return GETOBJ_EXCLUDE;
 }
 
-/* 'z' command (or 'y' if numbed_pad==-1) */
+/* #zap command, 'z' (or 'y' if numbed_pad==-1) */
 int
 dozap(void)
 {
@@ -2375,13 +2375,13 @@ dozap(void)
 
     if (nohands(g.youmonst.data)) {
         You("aren't able to zap anything in your current form.");
-        return 0;
+        return ECMD_OK;
     }
     if (check_capacity((char *) 0))
-        return 0;
+        return ECMD_OK;
     obj = getobj("zap", zap_ok, GETOBJ_NOFLAGS);
     if (!obj)
-        return 0;
+        return ECMD_OK;
 
     check_unpaid(obj);
 
@@ -2393,7 +2393,7 @@ dozap(void)
         exercise(A_STR, FALSE);
         /* 'obj' is gone; skip update_inventory() because
            backfire() -> useupall() -> freeinv() did it */
-        return 1;
+        return ECMD_TIME;
     } else if (need_dir && !getdir((char *) 0)) {
         if (!Blind)
             pline("%s glows and fades.", The(xname(obj)));
@@ -2422,7 +2422,7 @@ dozap(void)
         useupall(obj); /* calls freeinv() -> update_inventory() */
     } else
         update_inventory(); /* maybe used a charge */
-    return 1;
+    return ECMD_TIME;
 }
 
 /* Lock or unlock all boxes in inventory */
@@ -3309,7 +3309,7 @@ hit(const char *str, struct monst *mtmp,
     const char *force) /* usually either "." or "!" */
 {
     if ((!cansee(g.bhitpos.x, g.bhitpos.y) && !canspotmon(mtmp)
-         && !(u.uswallow && mtmp == u.ustuck)) || !flags.verbose)
+         && !engulfing_u(mtmp)) || !flags.verbose)
         pline("%s %s it.", The(str), vtense(str, "hit"));
     else
         pline("%s %s %s%s", The(str), vtense(str, "hit"),
@@ -3758,7 +3758,7 @@ zhitm(
     *ootmp = (struct obj *) 0;
     switch (abstype) {
     case ZT_MAGIC_MISSILE:
-        if (resists_magm(mon)) {
+        if (resists_magm(mon) || defended(mon, AD_MAGM)) {
             sho_shieldeff = TRUE;
             break;
         }
@@ -3767,7 +3767,7 @@ zhitm(
             tmp = spell_damage_bonus(tmp);
         break;
     case ZT_FIRE:
-        if (resists_fire(mon)) {
+        if (resists_fire(mon) || defended(mon, AD_FIRE)) {
             sho_shieldeff = TRUE;
             break;
         }
@@ -3789,7 +3789,7 @@ zhitm(
         }
         break;
     case ZT_COLD:
-        if (resists_cold(mon)) {
+        if (resists_cold(mon) || defended(mon, AD_COLD)) {
             sho_shieldeff = TRUE;
             break;
         }
@@ -3802,6 +3802,7 @@ zhitm(
             (void) destroy_mitem(mon, POTION_CLASS, AD_COLD);
         break;
     case ZT_SLEEP:
+        /* possibly resistance and shield effect handled by sleep_monst() */
         tmp = 0;
         (void) sleep_monst(mon, d(nd, 25),
                            type == ZT_WAND(ZT_SLEEP) ? WAND_CLASS : '\0');
@@ -3826,18 +3827,18 @@ zhitm(
         } else {
             struct obj *otmp2;
 
-            if (resists_disint(mon)) {
+            if (resists_disint(mon) || defended(mon, AD_DISN)) {
                 sho_shieldeff = TRUE;
             } else if (mon->misc_worn_check & W_ARMS) {
                 /* destroy shield; victim survives */
                 *ootmp = which_armor(mon, W_ARMS);
             } else if (mon->misc_worn_check & W_ARM) {
-                /* destroy body armor, also cloak if present */
+                /* destroy suit, also cloak if present */
                 *ootmp = which_armor(mon, W_ARM);
                 if ((otmp2 = which_armor(mon, W_ARMC)) != 0)
                     m_useup(mon, otmp2);
             } else {
-                /* no body armor, victim dies; destroy cloak
+                /* no suit, victim dies; destroy cloak
                    and shirt now in case target gets life-saved */
                 tmp = MAGIC_COOKIE;
                 if ((otmp2 = which_armor(mon, W_ARMC)) != 0)
@@ -3851,7 +3852,7 @@ zhitm(
         tmp = mon->mhp + 1;
         break;
     case ZT_LIGHTNING:
-        if (resists_elec(mon)) {
+        if (resists_elec(mon) || defended(mon, AD_ELEC)) {
             sho_shieldeff = TRUE;
             tmp = 0;
             /* can still blind the monster */
@@ -3860,7 +3861,7 @@ zhitm(
         if (spellcaster)
             tmp = spell_damage_bonus(tmp);
         if (!resists_blnd(mon)
-            && !(type > 0 && u.uswallow && mon == u.ustuck)) {
+            && !(type > 0 && engulfing_u(mon))) {
             register unsigned rnd_tmp = rnd(50);
             mon->mcansee = 0;
             if ((mon->mblinded + rnd_tmp) > 127)
@@ -3875,14 +3876,14 @@ zhitm(
             (void) destroy_mitem(mon, RING_CLASS, AD_ELEC);
         break;
     case ZT_POISON_GAS:
-        if (resists_poison(mon)) {
+        if (resists_poison(mon) || defended(mon, AD_DRST)) {
             sho_shieldeff = TRUE;
             break;
         }
         tmp = d(nd, 6);
         break;
     case ZT_ACID:
-        if (resists_acid(mon)) {
+        if (resists_acid(mon) || defended(mon, AD_ACID)) {
             sho_shieldeff = TRUE;
             break;
         }

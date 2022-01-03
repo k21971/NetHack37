@@ -544,7 +544,7 @@ void NetHackQtExtCmdRequestor::keyPressEvent(QKeyEvent *event)
             // <return> or <space> without a pending exact match; cancel
             reject();
         } else if (matches >= 2
-                   || promptstr.midRef(1, len) == rest.leftRef(len)) {
+                   || promptstr.mid(1, len) == rest.left(len)) {
             // update the text-so-far
             prompt->setText(promptstr);
         } else if (saveexactmatchindx != xcmdNoMatch) {

@@ -1341,6 +1341,7 @@ consume_offering(struct obj *otmp)
     exercise(A_WIS, TRUE);
 }
 
+/* the #offer command - sacrifice something to the gods */
 int
 dosacrifice(void)
 {
@@ -1353,14 +1354,14 @@ dosacrifice(void)
 
     if (!on_altar() || u.uswallow) {
         You("are not standing on an altar.");
-        return 0;
+        return ECMD_OK;
     }
     highaltar = ((Is_astralevel(&u.uz) || Is_sanctum(&u.uz))
                  && (levl[u.ux][u.uy].altarmask & AM_SHRINE));
 
     otmp = floorfood("sacrifice", 1);
     if (!otmp)
-        return 0;
+        return ECMD_OK;
     /*
      * Was based on nutritional value and aging behavior (< 50 moves).
      * Sacrificing a food ration got you max luck instantly, making the
@@ -1387,7 +1388,7 @@ dosacrifice(void)
          */
         feel_cockatrice(otmp, TRUE);
         if (rider_corpse_revival(otmp, FALSE))
-            return 1;
+            return ECMD_TIME;
 
         if (otmp->corpsenm == PM_ACID_BLOB
             || (g.moves <= peek_at_iced_corpse_age(otmp) + 50)) {
@@ -1471,7 +1472,7 @@ dosacrifice(void)
                 useup(otmp);
             else
                 useupf(otmp, 1L);
-            return 1;
+            return ECMD_TIME;
         } else if (has_omonst(otmp)
                    && (mtmp = get_mtraits(otmp, FALSE)) != 0
                    && mtmp->mtame) {
@@ -1546,7 +1547,7 @@ dosacrifice(void)
                                ? "an urge to return to the surface"
                                /* else headed towards celestial disgrace */
                                : "ashamed");
-            return 1;
+            return ECMD_TIME;
         } else {
             /* The final Test.  Did you win? */
             if (uamul == otmp)
@@ -1611,7 +1612,7 @@ dosacrifice(void)
                 Hallucination ? "boo-boo" : "mistake");
             otmp->known = TRUE;
             change_luck(-1);
-            return 1;
+            return ECMD_TIME;
         } else {
             /* don't you dare try to fool the gods */
             if (Deaf)
@@ -1625,7 +1626,7 @@ dosacrifice(void)
 
     if (value == 0) {
         pline1(nothing_happens);
-        return 1;
+        return ECMD_TIME;
     }
 
     if (altaralign != u.ualign.type && highaltar) {
@@ -1673,7 +1674,7 @@ dosacrifice(void)
                     if (!Inhell)
                         angrygods(u.ualign.type);
                 }
-                return 1;
+                return ECMD_TIME;
             } else {
                 consume_offering(otmp);
                 You("sense a conflict between %s and %s.", u_gname(),
@@ -1714,7 +1715,7 @@ dosacrifice(void)
                         && rnd(u.ualign.record) > (7 * ALIGNLIM) / 8)
                         summon_minion(altaralign, TRUE);
                 }
-                return 1;
+                return ECMD_TIME;
             }
         }
 
@@ -1807,7 +1808,7 @@ dosacrifice(void)
                         makeknown(otmp->otyp);
                         discover_artifact(otmp->oartifact);
                     }
-                    return 1;
+                    return ECMD_TIME;
                 }
             }
             change_luck((value * LUCKMAX) / (MAXVALUE * 2));
@@ -1825,7 +1826,7 @@ dosacrifice(void)
             }
         }
     }
-    return 1;
+    return ECMD_TIME;
 }
 
 /* determine prayer results in advance; also used for enlightenment */
@@ -1887,7 +1888,7 @@ dopray(void)
 {
     /* Confirm accidental slips of Alt-P */
     if (ParanoidPray && yn("Are you sure you want to pray?") != 'y')
-        return 0;
+        return ECMD_OK;
 
     if (!u.uconduct.gnostic++)
         /* breaking conduct should probably occur in can_pray() at
@@ -1899,7 +1900,7 @@ dopray(void)
 
     /* set up p_type and p_alignment */
     if (!can_pray(TRUE))
-        return 0;
+        return ECMD_OK;
 
     if (wizard && g.p_type >= 0) {
         if (yn("Force the gods to be pleased?") == 'y') {
@@ -1925,7 +1926,7 @@ dopray(void)
         u.uinvulnerable = TRUE;
     }
 
-    return 1;
+    return ECMD_TIME;
 }
 
 static int
@@ -2022,7 +2023,7 @@ doturn(void)
                 return spelleffects(sp_no, FALSE);
         }
         You("don't know how to turn undead!");
-        return 0;
+        return ECMD_OK;
     }
     if (!u.uconduct.gnostic++)
         livelog_write_string(LL_CONDUCT, "rejected atheism by turning undead");
@@ -2036,7 +2037,7 @@ doturn(void)
         /* violates agnosticism due to intent; conduct tracking is not
            supposed to affect play but we make an exception here:  use a
            move if this is the first time agnostic conduct has been broken */
-        return (u.uconduct.gnostic == 1);
+        return (u.uconduct.gnostic == 1) ? ECMD_TIME : ECMD_OK;
     }
 
     if ((u.ualign.type != A_CHAOTIC
@@ -2046,7 +2047,7 @@ doturn(void)
         pline("For some reason, %s seems to ignore you.", Gname);
         aggravate();
         exercise(A_WIS, FALSE);
-        return 1;
+        return ECMD_TIME;
     }
     if (Inhell) {
         pline("Since you are in Gehennom, %s %s help you.",
@@ -2054,7 +2055,7 @@ doturn(void)
                  phrasing anyway if hallucinatory feedback says it's him */
               Gname, !strcmp(Gname, Moloch) ? "won't" : "can't");
         aggravate();
-        return 1;
+        return ECMD_TIME;
     }
     pline("Calling upon %s, you chant an arcane formula.", Gname);
     exercise(A_WIS, TRUE);
@@ -2141,7 +2142,7 @@ doturn(void)
     nomul(-(5 - ((u.ulevel - 1) / 6))); /* -5 .. -1 */
     g.multi_reason = "trying to turn the monsters";
     g.nomovemsg = You_can_move_again;
-    return 1;
+    return ECMD_TIME;
 }
 
 int
