@@ -711,7 +711,9 @@ extend 3.6.1 fix to explicitly use name of unseen shopkeeper instead of "It"
 fix some inconsistencies with applied bullwhip vs monster
 polymorphing while wearing an amulet of strangulation from a form that wasn't
 	vulnerable to one that was gave wrong message ("still constricts")
-for accessibility reasons, give a message when monster teleports
+for accessibility reasons, give a message when monster teleports and
+	when a monster is created during gameplay (for the cases that
+	did not have their own custom message)
 if a gremlin stole intrinsic 'see invisible' the map wasn't updated properly
 mark some messages as urgent ("You die*.", having equipment stolen, being
 	caught in a magical explosion)
@@ -729,6 +731,10 @@ allow fire-command to automatically use a polearm, if wielding it
 make '$' command also count gold carried inside containers
 fleeing leprechauns bury their gold after teleporting
 allow #tipping container contents directly into another container
+when one leg is wounded, have ^X report which (already used plural if both)
+wand of probing used on steed ('z >') didn't include wounded leg(s) feedback
+getting wounded in one leg when the other was already wounded miraculously
+	healed old leg and kept longer of their recovery timeouts for new one
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -947,6 +953,8 @@ if a glob which has just shrunk away to nothing was wielded or quivered,
 after changes to gender tracking for corpses and statues, when a unique
 	monster got turned into a statue if was erroneouly flagged as female
 	rather than 'historic'
+changing engraving to an occupation resulted in not dulling a weapon used to
+	engrave a single character
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -968,6 +976,8 @@ Qt: searching a text window for something that wasn't found and then searching
 	for some other target could crash
 Qt: changes in glyph handling in the core introduced a bug in the "paper doll"
 	display for inventory subset
+Qt: during role selection, icons for role and race showed giant ant tile after
+	the glyph overhaul changes
 tty: redraw unexplored locations as S_unexplored rather than <space> after
 	map has been partially overwritten by popup menu or text display
 tty: previous change resulted in remnants of previous level being shown on
@@ -1107,6 +1117,9 @@ Qt: while a text window was shown (such as the "things that are here" popup
 Qt: if player's run-time options specified a tiles file and it couldn't be
 	loaded, Qt was falling back to x11tiles just like when the default
 	can't be loaded; fallback to player's file plus explicit path instead
+Qt: force the 'toptenwin' option On so that high scores display at end of game
+	is shown in a text window instead of being written to stdout where it
+	might not be seen (note: doesn't apply to 'nethack -s')
 Qt: {maybe just Qt+OSX:} when viewing a text window ('V' to look at 'history'
 	for instance), clicking on [Search], entering a search target in the
 	resulting popup and clicking on [Okay] or typing <return>, the text
@@ -1132,6 +1145,9 @@ Unix: when user name is used as default character name, keep hyphenated value
 	intact instead stripping off dash and whatever follows as if that
 	specified role/race/&c (worked once upon a time; broken since 3.3.0)
 Unix: add "ec2-user" to the list of user names 'sysconf' classifies as generic
+Unix: work-around a build issue in ubuntu 21.10 by using ifdef to skip the
+	define of warn_unused_result to empty string in tradstdc.h whenever
+	__linux__ is defined during build unless GCC_URWARN is also defined
 user_sounds: move the message hook from inside individual window display ports
 	to the core where it allows MSGTYP_NOSHOW msgtyp's to still trigger
 	sounds to correct a reported github issue; also fixes a past reported
@@ -1312,6 +1328,10 @@ track peak maximum HP and peak maximum energy/power; no noticeable effect
 give some dragon armor extra effects when worn
 issue messages during last stage of food poisoning/terminal illness countdown
 	when hero's demise is imminent
+drinking blessed potion of full healing heals wounded legs, either hero's or
+	steed's (when riding, wounded leg injury applies to steed, not hero)
+drinking uncursed potion of full healing or blessed potion of extra healing
+	heal hero's wounded legs when not riding; no effect on steed if riding
 
 
 Platform- and/or Interface-Specific New Features

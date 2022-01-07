@@ -52,6 +52,7 @@ extern boolean catch_lit(struct obj *);
 extern void use_unicorn_horn(struct obj **);
 extern boolean tinnable(struct obj *);
 extern void reset_trapset(void);
+extern int use_whip(struct obj *);
 extern int use_pole(struct obj *, boolean);
 extern void fig_transform(union any *, long);
 extern int unfixable_trouble_count(boolean);
@@ -2182,6 +2183,7 @@ extern boolean create_particular(void);
 /* ### rect.c ### */
 
 extern void init_rect(void);
+extern void free_rect(void);
 extern NhRect *get_rect(NhRect *);
 extern NhRect *rnd_rect(void);
 extern void remove_rect(NhRect *);

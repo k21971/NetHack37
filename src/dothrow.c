@@ -382,6 +382,8 @@ autoquiver(void)
             /* Ordinary weapon */
             if (objects[otmp->otyp].oc_skill == P_DAGGER && !omissile)
                 omissile = otmp;
+            else if (otmp->otyp == AKLYS)
+                continue;
             else
                 omisc = otmp;
         }
@@ -449,6 +451,9 @@ dofire(void)
                 /* if we're wielding a polearm, apply it */
                 if (uwep && is_pole(uwep))
                     return use_pole(uwep, TRUE);
+                /* if we're wielding a bullwhip, apply it */
+                else if (uwep && uwep->otyp == BULLWHIP)
+                    return use_whip(uwep);
                 else if (iflags.fireassist
                          && uswapwep && is_pole(uswapwep)
                          && !(uswapwep->cursed && uswapwep->bknown)) {
@@ -2110,7 +2115,7 @@ release_camera_demon(struct obj *obj, xchar x, xchar y)
     struct monst *mtmp;
     if (!rn2(3)
         && (mtmp = makemon(&mons[rn2(3) ? PM_HOMUNCULUS : PM_IMP], x, y,
-                           NO_MM_FLAGS)) != 0) {
+                           MM_NOMSG)) != 0) {
         if (canspotmon(mtmp))
             pline("%s is released!", Hallucination
                                          ? An(rndmonnam(NULL))

@@ -465,7 +465,7 @@ self_invis_message(void)
 static void
 ghost_from_bottle(void)
 {
-    struct monst *mtmp = makemon(&mons[PM_GHOST], u.ux, u.uy, NO_MM_FLAGS);
+    struct monst *mtmp = makemon(&mons[PM_GHOST], u.ux, u.uy, MM_NOMSG);
 
     if (!mtmp) {
         pline("This bottle turns out to be empty.");
@@ -1074,6 +1074,10 @@ peffect_extra_healing(struct obj *otmp)
     (void) make_hallucinated(0L, TRUE, 0L);
     exercise(A_CON, TRUE);
     exercise(A_STR, TRUE);
+    /* blessed potion also heals wounded legs unless riding (where leg
+       wounds apply to the steed rather than to the hero) */
+    if (Wounded_legs && (otmp->blessed && !u.usteed))
+        heal_legs(0);
 }
 
 static void
@@ -1091,6 +1095,10 @@ peffect_full_healing(struct obj *otmp)
     (void) make_hallucinated(0L, TRUE, 0L);
     exercise(A_STR, TRUE);
     exercise(A_CON, TRUE);
+    /* blessed potion heals wounded legs even when riding (so heals steed's
+       legs--it's magic); uncursed potion heals hero's legs unless riding */
+    if (Wounded_legs && (otmp->blessed || (!otmp->cursed && !u.usteed)))
+        heal_legs(0);
 }
 
 static void
@@ -2560,7 +2568,7 @@ djinni_from_bottle(struct obj *obj)
     struct monst *mtmp;
     int chance;
 
-    if (!(mtmp = makemon(&mons[PM_DJINNI], u.ux, u.uy, NO_MM_FLAGS))) {
+    if (!(mtmp = makemon(&mons[PM_DJINNI], u.ux, u.uy, MM_NOMSG))) {
         pline("It turns out to be empty.");
         return;
     }

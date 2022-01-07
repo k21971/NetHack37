@@ -93,6 +93,7 @@ extern int dozap(void);              /**/
 extern int doorganize(void);         /**/
 #endif /* DUMB */
 
+static const char *ecname_from_fn(int (*)(void));
 static int dosuspend_core(void);
 static int dosh_core(void);
 static int doherecmdmenu(void);
@@ -145,7 +146,7 @@ static void mon_chain(winid, const char *, struct monst *, boolean, long *,
                       long *);
 static void contained_stats(winid, const char *, long *, long *);
 static void misc_stats(winid, long *, long *);
-static boolean accept_menu_prefix(int (*)(void));
+static boolean accept_menu_prefix(const struct ext_func_tab *);
 
 static void add_herecmd_menuitem(winid, int (*)(void), const char *);
 static char here_cmd_menu(boolean);
@@ -359,7 +360,7 @@ can_do_extcmd(const struct ext_func_tab *extcmd)
     int ecflags = extcmd->flags;
 
     if (!wizard && (ecflags & WIZMODECMD)) {
-        You_cant("do that!");
+        pline(unavailcmd, extcmd->ef_txt);
         return FALSE;
     } else if (u.uburied && !(ecflags & IFBURIED)) {
         You_cant("do that while you are buried!");
@@ -386,7 +387,7 @@ doextcmd(void)
         func = extcmdlist[idx].ef_funct;
         if (!can_do_extcmd(&extcmdlist[idx]))
             return 0;
-        if (iflags.menu_requested && !accept_menu_prefix(func)) {
+        if (iflags.menu_requested && !accept_menu_prefix(&extcmdlist[idx])) {
             pline("'%s' prefix has no effect for the %s command.",
                   visctrl(g.Cmd.spkeys[NHKF_REQMENU]),
                   extcmdlist[idx].ef_txt);
@@ -420,7 +421,7 @@ doc_extcmd_flagstr(winid menuwin,
                  MENU_ITEMFLAGS_NONE);
         return (char *) 0;
     } else {
-        boolean mprefix = accept_menu_prefix(efp->ef_funct),
+        boolean mprefix = accept_menu_prefix(efp),
                 autocomplete = (efp->flags & AUTOCOMPLETE) != 0;
         char *p = Abuf;
 
@@ -860,7 +861,7 @@ wiz_wish(void) /* Unlimited wishes for debug mode by Paul Polderman */
         flags.verbose = save_verbose;
         (void) encumber_msg();
     } else
-        pline(unavailcmd, visctrl((int) cmd_from_func(wiz_wish)));
+        pline(unavailcmd, ecname_from_fn(wiz_wish));
     return ECMD_OK;
 }
 
@@ -880,7 +881,7 @@ wiz_identify(void)
         (void) display_inventory((char *) 0, FALSE);
         iflags.override_ID = 0;
     } else
-        pline(unavailcmd, visctrl((int) cmd_from_func(wiz_identify)));
+        pline(unavailcmd, ecname_from_fn(wiz_identify));
     return ECMD_OK;
 }
 
@@ -999,7 +1000,7 @@ wiz_makemap(void)
         mklev();
         makemap_prepost(FALSE, was_in_W_tower);
     } else {
-        pline(unavailcmd, "#wizmakemap");
+        pline(unavailcmd, ecname_from_fn(wiz_makemap));
     }
     return ECMD_OK;
 }
@@ -1021,7 +1022,7 @@ wiz_map(void)
         HConfusion = save_Hconf;
         HHallucination = save_Hhallu;
     } else
-        pline(unavailcmd, visctrl((int) cmd_from_func(wiz_map)));
+        pline(unavailcmd, ecname_from_fn(wiz_map));
     return ECMD_OK;
 }
 
@@ -1032,7 +1033,7 @@ wiz_genesis(void)
     if (wizard)
         (void) create_particular();
     else
-        pline(unavailcmd, visctrl((int) cmd_from_func(wiz_genesis)));
+        pline(unavailcmd, ecname_from_fn(wiz_genesis));
     return ECMD_OK;
 }
 
@@ -1043,7 +1044,7 @@ wiz_where(void)
     if (wizard)
         (void) print_dungeon(FALSE, (schar *) 0, (xchar *) 0);
     else
-        pline(unavailcmd, visctrl((int) cmd_from_func(wiz_where)));
+        pline(unavailcmd, ecname_from_fn(wiz_where));
     return ECMD_OK;
 }
 
@@ -1054,7 +1055,7 @@ wiz_detect(void)
     if (wizard)
         (void) findit();
     else
-        pline(unavailcmd, visctrl((int) cmd_from_func(wiz_detect)));
+        pline(unavailcmd, ecname_from_fn(wiz_detect));
     return ECMD_OK;
 }
 
@@ -1073,7 +1074,7 @@ wiz_load_lua(void)
             strcat(buf, ".lua");
         (void) load_lua(buf);
     } else
-        pline("Unavailable command 'wiz_load_lua'.");
+        pline(unavailcmd, ecname_from_fn(wiz_load_lua));
     return ECMD_OK;
 }
 
@@ -1096,7 +1097,7 @@ wiz_load_splua(void)
         lspo_finalize_level(NULL);
 
     } else
-        pline("Unavailable command 'wiz_load_splua'.");
+        pline(unavailcmd, ecname_from_fn(wiz_load_splua));
     return ECMD_OK;
 }
 
@@ -1107,7 +1108,7 @@ wiz_level_tele(void)
     if (wizard)
         level_tele();
     else
-        pline(unavailcmd, visctrl((int) cmd_from_func(wiz_level_tele)));
+        pline(unavailcmd, ecname_from_fn(wiz_level_tele));
     return ECMD_OK;
 }
 
@@ -1738,7 +1739,7 @@ wiz_intrinsic(void)
             free((genericptr_t) pick_list);
         doredraw();
     } else
-        pline(unavailcmd, visctrl((int) cmd_from_func(wiz_intrinsic)));
+        pline(unavailcmd, ecname_from_fn(wiz_intrinsic));
     return ECMD_OK;
 }
 
@@ -1851,15 +1852,15 @@ doterrain(void)
    such as ^O/#overview and C/N/#name */
 struct ext_func_tab extcmdlist[] = {
     { '#',    "#", "perform an extended command",
-              doextcmd, IFBURIED | GENERALCMD, NULL },
+              doextcmd, IFBURIED | GENERALCMD | CMD_M_PREFIX, NULL },
     { M('?'), "?", "list all extended commands",
-              doextlist, IFBURIED | AUTOCOMPLETE | GENERALCMD, NULL },
+              doextlist, IFBURIED | AUTOCOMPLETE | GENERALCMD | CMD_M_PREFIX, NULL },
     { M('a'), "adjust", "adjust inventory letters",
               doorganize, IFBURIED | AUTOCOMPLETE, NULL },
     { M('A'), "annotate", "name current level",
               donamelevel, IFBURIED | AUTOCOMPLETE, NULL },
     { 'a',    "apply", "apply (use) a tool (pick-axe, key, lamp...)",
-              doapply, 0, NULL },
+              doapply, CMD_M_PREFIX, NULL },
     { C('x'), "attributes", "show your attributes",
               doattributes, IFBURIED, NULL },
     { '@',    "autopickup", "toggle the 'autopickup' option on/off",
@@ -1883,7 +1884,7 @@ struct ext_func_tab extcmdlist[] = {
     { 'D',    "droptype", "drop specific item types",
               doddrop, 0, NULL },
     { 'e',    "eat", "eat something",
-              doeat, 0, NULL },
+              doeat, CMD_M_PREFIX, NULL },
     { 'E',    "engrave", "engrave writing on the floor",
               doengrave, 0, NULL },
     { M('e'), "enhance", "advance or check weapon and spell skills",
@@ -1915,9 +1916,9 @@ struct ext_func_tab extcmdlist[] = {
     { C('d'), "kick", "kick something",
               dokick, 0, NULL },
     { '\\',   "known", "show what object types have been discovered",
-              dodiscovered, IFBURIED | GENERALCMD, NULL },
+              dodiscovered, IFBURIED | GENERALCMD | CMD_M_PREFIX, NULL },
     { '`',    "knownclass", "show discovered types for one class of objects",
-              doclassdisco, IFBURIED | GENERALCMD, NULL },
+              doclassdisco, IFBURIED | GENERALCMD | CMD_M_PREFIX, NULL },
     { '\0',   "levelchange", "change experience level",
               wiz_level_change, IFBURIED | AUTOCOMPLETE | WIZMODECMD, NULL },
     { '\0',   "lightsources", "show mobile light sources",
@@ -1925,7 +1926,7 @@ struct ext_func_tab extcmdlist[] = {
     { ':',    "look", "look at what is here",
               dolook, IFBURIED, NULL },
     { M('l'), "loot", "loot a box on the floor",
-              doloot, AUTOCOMPLETE, NULL },
+              doloot, AUTOCOMPLETE | CMD_M_PREFIX, NULL },
 #ifdef DEBUG_MIGRATING_MONS
     { '\0',   "migratemons", "migrate N random monsters",
               wiz_migrate_mons, IFBURIED | AUTOCOMPLETE | WIZMODECMD, NULL },
@@ -1935,7 +1936,7 @@ struct ext_func_tab extcmdlist[] = {
     { 'N',    "name", "same as call; name a monster or object or object type",
               docallcmd, IFBURIED | AUTOCOMPLETE, NULL },
     { M('o'), "offer", "offer a sacrifice to the gods",
-              dosacrifice, AUTOCOMPLETE, NULL },
+              dosacrifice, AUTOCOMPLETE | CMD_M_PREFIX, NULL },
     { 'o',    "open", "open a door",
               doopen, 0, NULL },
     { 'O',    "options", "show option settings, possibly change them",
@@ -1952,7 +1953,7 @@ struct ext_func_tab extcmdlist[] = {
     { '|',    "perminv", "scroll persistent inventory display",
               doperminv, IFBURIED | GENERALCMD | NOFUZZERCMD, NULL },
     { ',',    "pickup", "pick up things at the current location",
-              dopickup, 0, NULL },
+              dopickup, CMD_M_PREFIX, NULL },
     { '\0',   "polyself", "polymorph self",
               wiz_polyself, IFBURIED | AUTOCOMPLETE | WIZMODECMD, NULL },
     { M('p'), "pray", "pray to the gods for help",
@@ -1983,7 +1984,7 @@ struct ext_func_tab extcmdlist[] = {
     { 'S',    "save", "save the game and exit",
               dosave, IFBURIED | GENERALCMD | NOFUZZERCMD, NULL },
     { 's',    "search", "search for traps and secret doors",
-              dosearch, IFBURIED, "searching" },
+              dosearch, IFBURIED | CMD_M_PREFIX, "searching" },
     { '*',    "seeall", "show all equipment in use",
               doprinuse, IFBURIED, NULL },
     { AMULET_SYM, "seeamulet", "show the amulet currently worn",
@@ -2026,7 +2027,7 @@ struct ext_func_tab extcmdlist[] = {
     { 'A',    "takeoffall", "remove all armor",
               doddoremarm, 0, NULL },
     { C('t'), "teleport", "teleport around the level",
-              dotelecmd, IFBURIED, NULL },
+              dotelecmd, IFBURIED | CMD_M_PREFIX, NULL },
     /* \177 == <del> aka <delete> aka <rubout>; some terminals have an
        option to swap it with <backspace> so if there's a key labeled
        <delete> it may or may not actually invoke the #terrain command */
@@ -2042,9 +2043,9 @@ struct ext_func_tab extcmdlist[] = {
     { '\0',   "timeout", "look at timeout queue and hero's timed intrinsics",
               wiz_timeout_queue, IFBURIED | AUTOCOMPLETE | WIZMODECMD, NULL },
     { M('T'), "tip", "empty a container",
-              dotip, AUTOCOMPLETE, NULL },
+              dotip, AUTOCOMPLETE | CMD_M_PREFIX, NULL },
     { '_',    "travel", "travel to a specific location on the map",
-              dotravel, 0, NULL },
+              dotravel, CMD_M_PREFIX, NULL },
     { M('t'), "turn", "turn undead away",
               doturn, IFBURIED | AUTOCOMPLETE, NULL },
     { 'X',    "twoweapon", "toggle two-weapon combat",
@@ -2063,7 +2064,7 @@ struct ext_func_tab extcmdlist[] = {
     { '\0',   "vision", "show vision array",
               wiz_show_vision, IFBURIED | AUTOCOMPLETE | WIZMODECMD, NULL },
     { '.',    "wait", "rest one move while doing nothing",
-              donull, IFBURIED, "waiting" },
+              donull, IFBURIED | CMD_M_PREFIX, "waiting" },
     { 'W',    "wear", "wear a piece of armor",
               dowear, 0, NULL },
     { '&',    "whatdoes", "tell what a command does",
@@ -2092,7 +2093,7 @@ struct ext_func_tab extcmdlist[] = {
     { '\0',   "wizintrinsic", "set an intrinsic",
               wiz_intrinsic, IFBURIED | AUTOCOMPLETE | WIZMODECMD, NULL },
     { C('v'), "wizlevelport", "teleport to another level",
-              wiz_level_tele, IFBURIED | WIZMODECMD, NULL },
+              wiz_level_tele, IFBURIED | WIZMODECMD | CMD_M_PREFIX, NULL },
     { '\0',   "wizloaddes", "load and execute a des-file lua script",
               wiz_load_splua, IFBURIED | WIZMODECMD | NOFUZZERCMD, NULL },
     { '\0',   "wizloadlua", "load and execute a lua script",
@@ -2554,6 +2555,19 @@ cmd_from_func(int (*fn)(void))
     return '\0';
 }
 
+static const char *
+ecname_from_fn(int (*fn)(void))
+{
+    const struct ext_func_tab *extcmd, *cmdptr = 0;
+
+    for (extcmd = extcmdlist; extcmd->ef_txt; ++extcmd)
+        if (extcmd->ef_funct == fn) {
+            cmdptr = extcmd;
+            return cmdptr->ef_txt;
+        }
+    return (char *) 0;
+}
+
 /* return extended command name (without leading '#') for command (*fn)() */
 const char *
 cmdname_from_func(int (*fn)(void), char outbuf[],
@@ -3001,7 +3015,7 @@ wiz_migrate_mons(void)
         else
             get_level(&tolevel, depth(&u.uz) + 1);
         ptr = rndmonst();
-        mtmp = makemon(ptr, 0, 0, NO_MM_FLAGS);
+        mtmp = makemon(ptr, 0, 0, MM_NOMSG);
         if (mtmp)
             migrate_to_level(mtmp, ledger_no(&tolevel), MIGR_RANDOM,
                              (coord *) 0);
@@ -3282,28 +3296,9 @@ reset_commands(boolean initial)
 
 /* non-movement commands which accept 'm' prefix to request menu operation */
 static boolean
-accept_menu_prefix(int (*cmd_func)(void))
+accept_menu_prefix(const struct ext_func_tab *ec)
 {
-    if (cmd_func == dopickup || cmd_func == dotip
-        /* eat, #offer, and apply tinning-kit all use floorfood() to pick
-           an item on floor or in invent; 'm' skips picking from floor
-           (ie, inventory only) rather than request use of menu operation */
-        || cmd_func == doeat || cmd_func == dosacrifice || cmd_func == doapply
-        /* 'm' for removing saddle from adjacent monster without checking
-           for containers at <u.ux,u.uy> */
-        || cmd_func == doloot
-        /* offer menu to choose discoveries sort order */
-        || cmd_func == dodiscovered || cmd_func == doclassdisco
-        /* travel: pop up a menu of interesting targets in view */
-        || cmd_func == dotravel
-        /* wait and search: allow even if next to a hostile monster */
-        || cmd_func == donull || cmd_func == dosearch
-        /* wizard mode ^V and ^T */
-        || cmd_func == wiz_level_tele || cmd_func == dotelecmd
-        /* 'm' prefix allowed for some extended commands */
-        || cmd_func == doextcmd || cmd_func == doextlist)
-        return TRUE;
-    return FALSE;
+    return (ec && ((ec->flags & CMD_M_PREFIX) != 0));
 }
 
 char
@@ -3537,7 +3532,7 @@ rhack(char *cmd)
         const struct ext_func_tab *ft = g.Cmd.commands[cmd[1] & 0xff];
         int (*func)(void) = ft ? ((struct ext_func_tab *) ft)->ef_funct : 0;
 
-        if (func && accept_menu_prefix(func)) {
+        if (func && accept_menu_prefix(ft)) {
             iflags.menu_requested = TRUE;
             ++cmd;
             prefix_seen = FALSE;

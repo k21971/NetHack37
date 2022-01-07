@@ -28,7 +28,6 @@ static void use_trap(struct obj *);
 static int touchstone_ok(struct obj *);
 static void use_stone(struct obj *);
 static int set_trap(void); /* occupation callback */
-static int use_whip(struct obj *);
 static void display_polearm_positions(int);
 static int use_cream_pie(struct obj *);
 static int jelly_ok(struct obj *);
@@ -1051,7 +1050,7 @@ use_bell(struct obj **optr)
             && !(g.mvitals[PM_WOOD_NYMPH].mvflags & G_GONE)
             && !(g.mvitals[PM_WATER_NYMPH].mvflags & G_GONE)
             && !(g.mvitals[PM_MOUNTAIN_NYMPH].mvflags & G_GONE)
-            && (mtmp = makemon(mkclass(S_NYMPH, 0), u.ux, u.uy, NO_MINVENT))
+            && (mtmp = makemon(mkclass(S_NYMPH, 0), u.ux, u.uy, NO_MINVENT|MM_NOMSG))
                    != 0) {
             You("summon %s!", a_monnam(mtmp));
             if (!obj_resists(obj, 93, 100)) {
@@ -2689,7 +2688,7 @@ set_trap(void)
     return 0;
 }
 
-static int
+int
 use_whip(struct obj *obj)
 {
     char buf[BUFSZ];
