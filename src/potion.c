@@ -353,6 +353,8 @@ toggle_blindness(void)
         learn_unseen_invent();
 }
 
+DISABLE_WARNING_FORMAT_NONLITERAL
+
 boolean
 make_hallucinated(
     long xtime,   /* nonzero if this is an attempt to turn on hallucination */
@@ -424,6 +426,8 @@ make_hallucinated(
     }
     return changed;
 }
+
+RESTORE_WARNING_FORMAT_NONLITERAL
 
 void
 make_deaf(long xtime, boolean talk)
@@ -534,7 +538,7 @@ dodrink(void)
 
     otmp = getobj("drink", drink_ok, GETOBJ_NOFLAGS);
     if (!otmp)
-        return ECMD_OK;
+        return ECMD_CANCEL;
 
     /* quan > 1 used to be left to useup(), but we need to force
        the current potion to be unworn, and don't want to do
@@ -594,6 +598,8 @@ dopotion(struct obj *otmp)
     return ECMD_TIME;
 }
 
+/* potion or spell of restore ability; for spell, otmp is a temporary
+   spellbook object that will be blessed if hero is skilled in healing */
 static void
 peffect_restore_ability(struct obj *otmp)
 {
@@ -604,11 +610,13 @@ peffect_restore_ability(struct obj *otmp)
     } else {
         int i, ii;
 
-        /* unlike unicorn horn, overrides Fixed_abil */
+        /* unlike unicorn horn, overrides Fixed_abil;
+           does not recover temporary strength loss due to hunger
+           or temporary dexterity loss due to wounded legs */
         pline("Wow!  This makes you feel %s!",
-              (otmp->blessed)
-              ? (unfixable_trouble_count(FALSE) ? "better" : "great")
-              : "good");
+              (!otmp->blessed) ? "good"
+              : unfixable_trouble_count(FALSE) ? "better"
+                : "great");
         i = rn2(A_MAX); /* start at a random point */
         for (ii = 0; ii < A_MAX; ii++) {
             int lim = AMAX(i);
@@ -1019,6 +1027,8 @@ peffect_blindness(struct obj *otmp)
                  (boolean) !Blind);
 }
 
+DISABLE_WARNING_FORMAT_NONLITERAL
+
 static void
 peffect_gain_level(struct obj *otmp)
 {
@@ -1054,6 +1064,8 @@ peffect_gain_level(struct obj *otmp)
     if (otmp->blessed)
         u.uexp = rndexp(TRUE);
 }
+
+RESTORE_WARNING_FORMAT_NONLITERAL
 
 static void
 peffect_healing(struct obj *otmp)
@@ -2142,7 +2154,7 @@ dodip(void)
     const char *shortestname; /* last resort obj name for prompt */
 
     if (!(obj = getobj("dip", dip_ok, GETOBJ_PROMPT)))
-        return ECMD_OK;
+        return ECMD_CANCEL;
     if (inaccessible_equipment(obj, "dip", FALSE))
         return ECMD_OK;
 
@@ -2198,7 +2210,7 @@ dodip(void)
              flags.verbose ? obuf : shortestname);
     potion = getobj(qbuf, drink_ok, GETOBJ_NOFLAGS);
     if (!potion)
-        return ECMD_OK;
+        return ECMD_CANCEL;
     if (potion == obj && potion->quan == 1L) {
         pline("That is a potion bottle, not a Klein bottle!");
         return ECMD_OK;

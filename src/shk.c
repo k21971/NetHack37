@@ -344,14 +344,9 @@ call_kops(register struct monst* shkp, register boolean nearshop)
 
     {
         coord mm;
-        stairway *stway = g.stairs;
+        xchar sx = 0, sy = 0;
 
-        while (stway) {
-            if (!stway->isladder && !stway->up
-                && stway->tolev.dnum == u.uz.dnum)
-                break;
-            stway = stway->next;
-        }
+        choose_stairs(&sx, &sy, TRUE);
 
         if (nearshop) {
             /* Create swarm around you, if you merely "stepped out" */
@@ -365,9 +360,11 @@ call_kops(register struct monst* shkp, register boolean nearshop)
         if (flags.verbose)
             pline_The("Keystone Kops are after you!");
         /* Create swarm near down staircase (hinders return to level) */
-        mm.x = stway->sx;
-        mm.y = stway->sy;
-        makekops(&mm);
+        if (isok(sx, sy)) {
+            mm.x = sx;
+            mm.y = sy;
+            makekops(&mm);
+        }
         /* Create swarm near shopkeeper (hinders return to shop) */
         mm.x = shkp->mx;
         mm.y = shkp->my;
@@ -1299,7 +1296,7 @@ dopay(void)
         cc.x = u.ux;
         cc.y = u.uy;
         if (getpos(&cc, TRUE, "the creature you want to pay") < 0)
-            return ECMD_OK; /* player pressed ESC */
+            return ECMD_CANCEL; /* player pressed ESC */
         cx = cc.x;
         cy = cc.y;
         if (cx < 0) {
@@ -2547,6 +2544,8 @@ bill_box_content(
     }
 }
 
+DISABLE_WARNING_FORMAT_NONLITERAL
+
 /* shopkeeper tells you what you bought or sold, sometimes partly IDing it */
 static void
 shk_names_obj(
@@ -2582,6 +2581,8 @@ shk_names_obj(
         You(fmt, obj_name, amt, plur(amt), arg);
     }
 }
+
+RESTORE_WARNING_FORMAT_NONLITERAL
 
 /* decide whether a shopkeeper thinks an item belongs to her */
 boolean
@@ -4425,6 +4426,8 @@ shk_embellish(register struct obj* itm, long cost)
     return ".";
 }
 
+DISABLE_WARNING_FORMAT_NONLITERAL
+
 /* First 4 supplied by Ronen and Tamar, remainder by development team */
 const char *Izchak_speaks[] = {
     "%s says: 'These shopping malls give me a headache.'",
@@ -4513,6 +4516,8 @@ shk_chat(struct monst* shkp)
     }
 }
 
+RESTORE_WARNING_FORMAT_NONLITERAL
+
 static void
 kops_gone(boolean silent)
 {
@@ -4588,6 +4593,8 @@ cost_per_charge(
     return tmp;
 }
 
+DISABLE_WARNING_FORMAT_NONLITERAL
+
 /* Charge the player for partial use of an unpaid object.
  *
  * Note that bill_dummy_object() should be used instead
@@ -4638,6 +4645,8 @@ check_unpaid_usage(struct obj* otmp, boolean altusage)
     }
     ESHK(shkp)->debit += tmp;
 }
+
+RESTORE_WARNING_FORMAT_NONLITERAL
 
 /* for using charges of unpaid objects "used in the normal manner" */
 void

@@ -1,4 +1,4 @@
-NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.630 $ $NHDT-Date: 1629928191 2021/08/25 21:49:51 $
+NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.734 $ $NHDT-Date: 1641673963 2022/01/08 20:32:43 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -735,6 +735,9 @@ when one leg is wounded, have ^X report which (already used plural if both)
 wand of probing used on steed ('z >') didn't include wounded leg(s) feedback
 getting wounded in one leg when the other was already wounded miraculously
 	healed old leg and kept longer of their recovery timeouts for new one
+when parsing config file entry "BINDINGS=key1:cmd1,key2:cmd2,key3:cmd3" allow
+	keyN to be either a naked comma or backslash+comma instead requiring
+	that comma's numeric value be used to bind comma to a command
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -955,6 +958,9 @@ after changes to gender tracking for corpses and statues, when a unique
 	rather than 'historic'
 changing engraving to an occupation resulted in not dulling a weapon used to
 	engrave a single character
+a change to wounded legs handling resulted in not recovering lost dexterity
+	or receiving the "leg(s) feel better" message if wound time expired
+	rather than having legs be explicitly healed
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1120,6 +1126,8 @@ Qt: if player's run-time options specified a tiles file and it couldn't be
 Qt: force the 'toptenwin' option On so that high scores display at end of game
 	is shown in a text window instead of being written to stdout where it
 	might not be seen (note: doesn't apply to 'nethack -s')
+Qt: during role/race/&c selection, update role titles with their icons, and
+	also Valk eligibility, when gender is toggled
 Qt: {maybe just Qt+OSX:} when viewing a text window ('V' to look at 'history'
 	for instance), clicking on [Search], entering a search target in the
 	resulting popup and clicking on [Okay] or typing <return>, the text

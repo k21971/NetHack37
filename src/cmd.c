@@ -415,8 +415,8 @@ doc_extcmd_flagstr(winid menuwin,
 
         add_menu(menuwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
                  "[A] Command autocompletes", MENU_ITEMFLAGS_NONE);
-        Sprintf(qbuf, "[m] Command accepts '%c' prefix",
-                g.Cmd.spkeys[NHKF_REQMENU]);
+        Sprintf(qbuf, "[m] Command accepts '%s' prefix",
+                visctrl(g.Cmd.spkeys[NHKF_REQMENU]));
         add_menu(menuwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE, qbuf,
                  MENU_ITEMFLAGS_NONE);
         return (char *) 0;
@@ -1567,7 +1567,7 @@ wiz_smell(void)
         pline("Pick a monster to smell.");
         ans = getpos(&cc, TRUE, "a monster");
         if (ans < 0 || cc.x < 0) {
-            return ECMD_OK; /* done */
+            return ECMD_CANCEL; /* done */
         }
         /* Convert the glyph at the selected position to a mndxbol. */
         glyph = glyph_at(cc.x, cc.y);
@@ -3606,6 +3606,11 @@ rhack(char *cmd)
                     set_occupation(func, tlist->f_text, g.multi);
                 res = (*func)(); /* perform the command */
             }
+            if ((res & ECMD_CANCEL)) {
+                /* command was canceled by user, maybe they declined to
+                   pick an object to act on. */
+                cmdq_clear();
+            }
             if (!(res & ECMD_TIME)) {
                 g.context.move = FALSE;
                 g.multi = 0;
@@ -4042,7 +4047,7 @@ dotherecmdmenu(void)
     char ch;
 
     if (!getdir((const char *) 0) || !isok(u.ux + u.dx, u.uy + u.dy))
-        return ECMD_OK;
+        return ECMD_CANCEL;
 
     if (u.dx || u.dy)
         ch = there_cmd_menu(TRUE, u.ux + u.dx, u.uy + u.dy);
@@ -4702,7 +4707,7 @@ dotravel(void)
         if (getpos(&cc, TRUE, "the desired destination") < 0) {
             /* user pressed ESC */
             iflags.getloc_travelmode = FALSE;
-            return ECMD_OK;
+            return ECMD_CANCEL;
         }
     }
     iflags.travelcc.x = u.tx = cc.x;

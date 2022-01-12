@@ -726,6 +726,8 @@ digactualhole(int x, int y, struct monst *madeby, int ttyp)
     }
 }
 
+DISABLE_WARNING_FORMAT_NONLITERAL
+
 /*
  * Called from dighole(), but also from do_break_wand()
  * in apply.c.
@@ -759,6 +761,8 @@ liquid_flow(xchar x, xchar y, schar typ, struct trap *ttmp,
         (void) minliquid(mon);
     }
 }
+
+RESTORE_WARNING_FORMAT_NONLITERAL
 
 /* return TRUE if digging succeeded, FALSE otherwise */
 boolean
@@ -1016,7 +1020,7 @@ use_pick_axe(struct obj *obj)
     *dsp = 0;
     Sprintf(qbuf, "In what direction do you want to %s? [%s]", verb, dirsyms);
     if (!getdir(qbuf))
-        return res;
+        return (res|ECMD_CANCEL);
 
     return use_pick_axe2(obj);
 }

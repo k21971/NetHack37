@@ -2290,7 +2290,8 @@ fpostfx(struct obj *otmp)
             heal_legs(0);
         break;
     case EGG:
-        if (otmp->corpsenm >= LOW_PM && flesh_petrifies(&mons[otmp->corpsenm])) {
+        if (otmp->corpsenm >= LOW_PM
+            && flesh_petrifies(&mons[otmp->corpsenm])) {
             if (!Stone_resistance
                 && !(poly_when_stoned(g.youmonst.data)
                      && polymon(PM_STONE_GOLEM))) {
@@ -2867,7 +2868,7 @@ use_tin_opener(struct obj *obj)
 
     otmp = getobj("open", tinopen_ok, GETOBJ_NOFLAGS);
     if (!otmp)
-        return res;
+        return (res|ECMD_CANCEL);
 
     start_tin(otmp);
     return ECMD_TIME;

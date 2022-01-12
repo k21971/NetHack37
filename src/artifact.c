@@ -1130,6 +1130,8 @@ Mb_hit(struct monst *magr, /* attacker */
     return result;
 }
 
+DISABLE_WARNING_FORMAT_NONLITERAL
+
 /* Function used when someone attacks someone else with an artifact
  * weapon.  Only adds the special (artifact) damage, and returns a 1 if it
  * did something special (in which case the caller won't print the normal
@@ -1404,6 +1406,8 @@ artifact_hit(struct monst *magr, struct monst *mdef, struct obj *otmp,
     return FALSE;
 }
 
+RESTORE_WARNING_FORMAT_NONLITERAL
+
 /* getobj callback for object to be invoked */
 static int
 invoke_ok(struct obj *obj)
@@ -1434,7 +1438,7 @@ doinvoke(void)
 
     obj = getobj("invoke", invoke_ok, GETOBJ_PROMPT);
     if (!obj)
-        return ECMD_OK;
+        return ECMD_CANCEL;
     if (!retouch_object(&obj, FALSE))
         return ECMD_TIME;
     return arti_invoke(obj);
@@ -1532,7 +1536,7 @@ arti_invoke(struct obj *obj)
 
             if (!otmp) {
                 obj->age = 0;
-                return ECMD_OK;
+                return ECMD_CANCEL;
             }
             b_effect = (obj->blessed && (oart->role == Role_switch
                                          || oart->role == NON_PM));

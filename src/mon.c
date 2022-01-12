@@ -1415,6 +1415,8 @@ meatcorpse(struct monst* mtmp) /* for purple worms and other voracious monsters 
     return 0;
 }
 
+DISABLE_WARNING_FORMAT_NONLITERAL
+
 /* Maybe give an intrinsic to a monster from eating a corpse that confers it. */
 void
 mon_givit(struct monst* mtmp, struct permonst* ptr)
@@ -1475,6 +1477,8 @@ mon_givit(struct monst* mtmp, struct permonst* ptr)
     if (vis && msg)
         pline(msg, Monnam(mtmp));
 }
+
+RESTORE_WARNING_FORMAT_NONLITERAL
 
 void
 mpickgold(register struct monst* mtmp)
@@ -2417,6 +2421,8 @@ lifesaved_monster(struct monst* mtmp)
     }
 }
 
+DISABLE_WARNING_FORMAT_NONLITERAL
+
 void
 mondead(register struct monst* mtmp)
 {
@@ -2625,6 +2631,8 @@ mondead(register struct monst* mtmp)
         unmap_object(mtmp->mx, mtmp->my);
     m_detach(mtmp, mptr);
 }
+
+RESTORE_WARNING_FORMAT_NONLITERAL
 
 /* TRUE if corpse might be dropped, magr may die if mon was swallowed */
 boolean

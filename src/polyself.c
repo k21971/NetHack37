@@ -165,6 +165,8 @@ check_strangling(boolean on)
     }
 }
 
+DISABLE_WARNING_FORMAT_NONLITERAL
+
 /* make a (new) human out of the player */
 static void
 polyman(const char *fmt, const char *arg)
@@ -232,6 +234,8 @@ polyman(const char *fmt, const char *arg)
 
     see_monsters();
 }
+
+RESTORE_WARNING_FORMAT_NONLITERAL
 
 void
 change_sex(void)
@@ -1199,7 +1203,7 @@ dobreathe(void)
     g.context.botl = 1;
 
     if (!getdir((char *) 0))
-        return ECMD_OK;
+        return ECMD_CANCEL;
 
     mattk = attacktype_fordmg(g.youmonst.data, AT_BREA, AD_ANY);
     if (!mattk)
@@ -1219,7 +1223,7 @@ dospit(void)
     struct attack *mattk;
 
     if (!getdir((char *) 0))
-        return ECMD_OK;
+        return ECMD_CANCEL;
     mattk = attacktype_fordmg(g.youmonst.data, AT_SPIT, AD_ANY);
     if (!mattk) {
         impossible("bad spit attack?");

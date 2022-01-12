@@ -1,4 +1,4 @@
-/* NetHack 3.7	uhitm.c	$NHDT-Date: 1625838649 2021/07/09 13:50:49 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.312 $ */
+/* NetHack 3.7	uhitm.c	$NHDT-Date: 1641668224 2022/01/08 18:57:04 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.328 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -511,10 +511,16 @@ do_attack(struct monst *mtmp)
 
 /* really hit target monster; returns TRUE if it still lives */
 static boolean
-known_hitum(struct monst *mon, struct obj *weapon, int *mhit, int rollneeded,
-            int armorpenalty, /* for monks */
-            struct attack *uattk,
-            int dieroll)
+known_hitum(
+    struct monst *mon,  /* target */
+    struct obj *weapon, /* uwep or uswapwep */
+    int *mhit,          /* *mhit is 1 or 0; hit (1) gets changed to miss (0)
+                         * for decapitation attack against headless target */
+    int rollneeded,     /* rollneeded and armorpenalty are used for monks  +*/
+    int armorpenalty,   /*+ wearing suits so miss message can vary for missed
+                         *  because of penalty vs would have missed anyway  */
+    struct attack *uattk,
+    int dieroll)
 {
     boolean malive = TRUE,
             /* hmon() might destroy weapon; remember aspect for cutworm */
@@ -657,9 +663,10 @@ hitum(struct monst *mon, struct attack *uattk)
 {
     boolean malive, wep_was_destroyed = FALSE;
     struct obj *wepbefore = uwep;
-    int armorpenalty, attknum = 0, x = u.ux + u.dx, y = u.uy + u.dy,
-                      tmp = find_roll_to_hit(mon, uattk->aatyp, uwep,
-                                             &attknum, &armorpenalty);
+    int armorpenalty, attknum = 0,
+        x = u.ux + u.dx, y = u.uy + u.dy,
+        tmp = find_roll_to_hit(mon, uattk->aatyp, uwep,
+                               &attknum, &armorpenalty);
     int dieroll = rnd(20);
     int mhit = (tmp > dieroll || u.uswallow);
 
@@ -716,6 +723,8 @@ hmon(struct monst *mon,
         (void) angry_guards(!!Deaf);
     return result;
 }
+
+DISABLE_WARNING_FORMAT_NONLITERAL
 
 /* guts of hmon() */
 static boolean
@@ -1479,6 +1488,8 @@ shade_aware(struct obj *obj)
         return TRUE;
     return FALSE;
 }
+
+RESTORE_WARNING_FORMAT_NONLITERAL
 
 /* used for hero vs monster and monster vs monster; also handles
    monster vs hero but that won't happen because hero can't be a shade */
@@ -4539,9 +4550,8 @@ hmonas(struct monst *mon)
     struct attack *mattk, alt_attk;
     struct obj *weapon, **originalweapon;
     boolean altwep = FALSE, weapon_used = FALSE, odd_claw = TRUE;
-    int i, tmp, armorpenalty, sum[NATTK], nsum = MM_MISS,
-        dhit = 0, attknum = 0;
-    int dieroll, multi_claw = 0;
+    int i, tmp, dieroll, armorpenalty, sum[NATTK],
+        dhit = 0, attknum = 0, multi_claw = 0;
     boolean monster_survived;
 
     /* not used here but umpteen mhitm_ad_xxxx() need this */
@@ -4905,11 +4915,9 @@ hmonas(struct monst *mon)
         if (sum[i] == MM_DEF_DIED) {
             /* defender dead */
             (void) passive(mon, weapon, 1, 0, mattk->aatyp, FALSE);
-            nsum = MM_MISS; /* return value below used to be 'nsum > 0' */
         } else {
             (void) passive(mon, weapon, (sum[i] != MM_MISS), 1,
                            mattk->aatyp, FALSE);
-            nsum |= sum[i];
         }
 
         /* don't use sum[i] beyond this point;
@@ -5264,6 +5272,8 @@ passive_obj(struct monst *mon,
         update_inventory();
 }
 
+DISABLE_WARNING_FORMAT_NONLITERAL
+
 /* Note: caller must ascertain mtmp is mimicking... */
 void
 stumble_onto_mimic(struct monst *mtmp)
@@ -5306,6 +5316,8 @@ stumble_onto_mimic(struct monst *mtmp)
         && !glyph_is_invisible(levl[mtmp->mx][mtmp->my].glyph))
         map_invisible(mtmp->mx, mtmp->my);
 }
+
+RESTORE_WARNING_FORMAT_NONLITERAL
 
 static void
 nohandglow(struct monst *mon)

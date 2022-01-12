@@ -324,6 +324,8 @@ read_ok(struct obj* obj)
     return GETOBJ_DOWNPLAY;
 }
 
+DISABLE_WARNING_FORMAT_NONLITERAL
+
 /* the #read command; read a scroll or spell book or various other things */
 int
 doread(void)
@@ -356,7 +358,7 @@ doread(void)
 
     scroll = getobj("read", read_ok, GETOBJ_PROMPT);
     if (!scroll)
-        return ECMD_OK;
+        return ECMD_CANCEL;
     otyp = scroll->otyp;
 
     /* outrumor has its own blindness check */
@@ -623,6 +625,8 @@ doread(void)
     }
     return ECMD_TIME;
 }
+
+RESTORE_WARNING_FORMAT_NONLITERAL
 
 static void
 stripspe(register struct obj* obj)
