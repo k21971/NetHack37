@@ -745,6 +745,8 @@ when two or more shops share a wall and hero uses Passes_walls to carry an
 when two or more shops share a wall and hero uses Passes_walls to carry an
 	unpaid item through the shared wall into another shop, theft of that
 	unpaid item from the first shop wasn't noticed
+redo the unpaid_cost fix to handle shop items inside hero-owned container
+flyers shouldn't fall on arrival when going down holes or trap doors
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1578,4 +1580,6 @@ map_glyphinfo() now simply references an internal array that maps each unique
 	in-game that could have an impact on the mappings, but they remain
 	stable between those events
 added MG_MALE glyphflag to complement the MG_FEMALE glyphflag that was there
+remove obsolete roles[].femalenum and rename roles[].malenum to roles[].mnum;
+	likewise for races[]
 

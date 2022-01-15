@@ -2423,7 +2423,8 @@ unpaid_cost(
     boolean include_contents)
 {
     struct bill_x *bp = (struct bill_x *) 0;
-    struct monst *shkp;
+    struct monst *shkp = 0;
+    char *shop;
     long amt = 0L;
 
 #if 0   /* if two shops share a wall, this might find wrong shk */
@@ -2433,22 +2434,28 @@ unpaid_cost(
         ox = u.ux, oy = u.uy; /* (shouldn't happen) */
     if ((shkp = shop_keeper(*in_rooms(ox, oy, SHOPBASE))) != 0) {
         bp = onbill(unp_obj, shkp, TRUE);
-    } else /* didn't find shk?  try searching bills */
+    } else {
+        /* didn't find shk?  try searching bills */
+        for (shkp = next_shkp(fmon, TRUE); shkp;
+             shkp = next_shkp(shkp->nmon, TRUE))
+            if ((bp = onbill(unp_obj, shkp, TRUE)) != 0)
+                break;
+    }
 #endif
-    for (shkp = next_shkp(fmon, TRUE); shkp;
-         shkp = next_shkp(shkp->nmon, TRUE))
-        if ((bp = onbill(unp_obj, shkp, TRUE)) != 0)
-            break;
+    for (shop = u.ushops; *shop; shop++) {
+        if ((shkp = shop_keeper(*shop))) {
+            if ((bp = onbill(unp_obj, shkp, TRUE)))
+                amt = unp_obj->quan * bp->price;
+            if (include_contents && Has_contents(unp_obj))
+                amt = contained_cost(unp_obj, shkp, amt, FALSE, TRUE);
+            if (bp || (!unp_obj->unpaid && amt))
+                break;
+        }
+    }
 
     /* onbill() gave no message if unexpected problem occurred */
-    if (!shkp || (unp_obj->unpaid && !bp)) {
+    if (!shkp || (unp_obj->unpaid && !bp))
         impossible("unpaid_cost: object wasn't on any bill.");
-    } else {
-        if (bp)
-            amt = unp_obj->quan * bp->price;
-        if (include_contents && Has_contents(unp_obj))
-            amt = contained_cost(unp_obj, shkp, amt, FALSE, TRUE);
-    }
     return amt;
 }
 
