@@ -747,6 +747,10 @@ when two or more shops share a wall and hero uses Passes_walls to carry an
 	unpaid item from the first shop wasn't noticed
 redo the unpaid_cost fix to handle shop items inside hero-owned container
 flyers shouldn't fall on arrival when going down holes or trap doors
+change movement keys and some special keys into extended commands
+"WHAMMM!!!" feedback when kicking a door suggests noise so if hero is deaf an
+	alternate message should be given
+fix typo in message shown when hero sees a monster's wet towel become drier
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1293,8 +1297,6 @@ include an indication of monsters' health during farlook feedback (including
 	/M and autodescribe); also include it in death reason when killed by
 	a monster: "killed by {an uninjured newt,a heavily injured mumak}"
 [later: suppress the indication of monsters' health]
-make DOAGAIN (^A) become unconditional; commenting it out in config.h makes
-	it be bound to NUL, a no-op, but allows BIND=k:repeat to set it to k
 add support for a single monster species to have distinct male, female,
 	and gender-neutral naming terms
 add support for a single monster species to have distinct male and female
@@ -1387,6 +1389,7 @@ Qt: [later] augment extended command selection dialog's Filter to add a
 	fourth subset, those commands which autocomplete when typed for tty,
 	typically commands with no keystroke or only meta character keystroke;
 	that makes Filter useful in normal mode (much shorter list of choices)
+Qt: add '#' as "Extended-commands" to the 'game' dropdown menu
 tiles: male and female variations in monsters.txt; tested only with tile2bmp
 	conversion utility so far; also supported by tilemap utility to
 	generate tile.c

@@ -580,11 +580,13 @@ NetHackQtMainWindow::NetHackQtMainWindow(NetHackQtKeyBuffer& ks) :
 
     enum { OnDesktop=1, OnHandhelds=2 };
     struct Macro {
-	QMenu* menu;
-	const char* name;
-	int flags;
+        QMenu *menu;
+        const char *name;
+        int flags;         // 1 desktop, 2 handheld, 3 either/both
         int (*funct)(void);
     } item[] = {
+        { game,    0, 3},
+        { game,    "Extended-commands",  3, doextcmd },
         { game,    0, 3},
         { game,    "Version",            3, doversion},
         { game,    "Compilation",        3, doextversion},
@@ -829,9 +831,7 @@ NetHackQtMainWindow::NetHackQtMainWindow(NetHackQtKeyBuffer& ks) :
     QSignalMapper* sm = new QSignalMapper(this);
     connect(sm, SIGNAL(mapped(const QString&)),
             this, SLOT(doKeys(const QString&)));
-    // 'donull' is a placeholder here; AddToolButton() will fix it up;
-    // button will be omitted if DOAGAIN is bound to '\0'
-    AddToolButton(toolbar, sm, "Again", donull, QPixmap(again_xpm));
+    AddToolButton(toolbar, sm, "Again", do_repeat, QPixmap(again_xpm));
     // this used to be called "Get" which is confusing to experienced players
     AddToolButton(toolbar, sm, "Pick up", dopickup, QPixmap(pickup_xpm));
     AddToolButton(toolbar, sm, "Drop", doddrop, QPixmap(drop_xpm));
@@ -927,11 +927,7 @@ void NetHackQtMainWindow::AddToolButton(QToolBar *toolbar, QSignalMapper *sm,
     char actchar[2];
     uchar key;
 
-    // the ^A command is just a keystroke, not a full blown command function
-    if (!strcmp(name, "Again")) {
-        key = ::g.Cmd.spkeys[NHKF_DOAGAIN];
-    } else
-        key = (uchar) cmd_from_func(func);
+    key = (uchar) cmd_from_func(func);
 
     // if key is valid, add a button for it; otherwise omit the command
     // (won't work as intended if a different command is bound to same key)
