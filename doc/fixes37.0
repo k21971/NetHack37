@@ -720,7 +720,8 @@ mark some messages as urgent ("You die*.", having equipment stolen, being
 if a leashed pet changed name (#name m) or an unnamed pet changed type
 	(polymorph or grow-up) and perm_invent was On, persistent inventory
 	display didn't get updated to show the leash's changed information
-attack feedback when using a bullwhip said "swing"; change to "lash"
+attack feedback when using a bullwhip said "swing"; change to "lash";
+	use "lash" for hero hitting with wet towel too
 attack feedback for monster using polearm when adjacent said "thrust"; change
 	to "bash"
 apply runmode delay to multiturn actions, not just running
@@ -751,6 +752,11 @@ change movement keys and some special keys into extended commands
 "WHAMMM!!!" feedback when kicking a door suggests noise so if hero is deaf an
 	alternate message should be given
 fix typo in message shown when hero sees a monster's wet towel become drier
+for hero with slippery fingers, enlightenment reports "slippery fingers" or
+	"slippery gloves" but self-probing described it as "slippery hands"
+when hitting with wet towel causes it to lose some wetness, defer "your towel
+	dries" until after the hit message
+do some extra damage when hitting an iron golem with a wet towel
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -974,6 +980,8 @@ changing engraving to an occupation resulted in not dulling a weapon used to
 a change to wounded legs handling resulted in not recovering lost dexterity
 	or receiving the "leg(s) feel better" message if wound time expired
 	rather than having legs be explicitly healed
+turning movement into commands broke the rest_on_space option; it also
+	interfered with using pick-axe plus autodig in downward direction
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1042,6 +1050,7 @@ curses: sometimes entering a count during menu selection caused the menu to
 	more digits typed followed by non-digit); in-out menu was still active
 	but no longer displayed
 curses: support backspace/delete when entering a count during menu selection
+curses: make extended command prompt behave more sensibly
 macOS: Xcode project was failing to build if the path to the NetHack source
 	tree contained a space; the issue was within some shell script code
 	contained within the project

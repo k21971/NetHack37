@@ -1,4 +1,4 @@
-/* NetHack 3.7	cmd.c	$NHDT-Date: 1629928192 2021/08/25 21:49:52 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.483 $ */
+/* NetHack 3.7	cmd.c	$NHDT-Date: 1642630919 2022/01/19 22:21:59 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.500 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -385,7 +385,7 @@ doextcmd(void)
 
         func = extcmdlist[idx].ef_funct;
         if (!can_do_extcmd(&extcmdlist[idx]))
-            return 0;
+            return ECMD_OK;
         if (iflags.menu_requested && !accept_menu_prefix(&extcmdlist[idx])) {
             pline("'%s' prefix has no effect for the %s command.",
                   visctrl(cmd_from_func(do_reqmenu)),
@@ -2449,6 +2449,58 @@ static const struct {
 
 int extcmdlist_length = SIZE(extcmdlist) - 1;
 
+/* get entry i in the extended commands list. for windowport use. */
+struct ext_func_tab *
+extcmds_getentry(int i)
+{
+    if (i < 0 || i > extcmdlist_length)
+        return 0;
+    return &extcmdlist[i];
+}
+
+/* find extended command entries matching findstr.
+   if findstr is NULL, returns all available entries.
+   returns: number of matching extended commands,
+            and the entry indexes in matchlist.
+   for windowport use. */
+int
+extcmds_match(const char *findstr, int ecmflags, int **matchlist)
+{
+    static int retmatchlist[SIZE(extcmdlist)] = DUMMY;
+    int i, mi = 0;
+    int fslen = findstr ? strlen(findstr) : 0;
+    boolean ignoreac = (ecmflags & ECM_IGNOREAC) != 0;
+    boolean exactmatch = (ecmflags & ECM_EXACTMATCH) != 0;
+    boolean no1charcmd = (ecmflags & ECM_NO1CHARCMD) != 0;
+
+    for (i = 0; extcmdlist[i].ef_txt; i++) {
+        if (extcmdlist[i].flags & (CMD_NOT_AVAILABLE|INTERNALCMD))
+            continue;
+        if (!wizard && (extcmdlist[i].flags & WIZMODECMD))
+            continue;
+        if (!ignoreac && !(extcmdlist[i].flags & AUTOCOMPLETE))
+            continue;
+        if (no1charcmd && (strlen(extcmdlist[i].ef_txt) == 1))
+            continue;
+        if (!findstr) {
+            retmatchlist[mi++] = i;
+        } else if (exactmatch) {
+            if (!strcmpi(findstr, extcmdlist[i].ef_txt)) {
+                retmatchlist[mi++] = i;
+            }
+        } else {
+            if (!strncmpi(findstr, extcmdlist[i].ef_txt, fslen)) {
+                retmatchlist[mi++] = i;
+            }
+        }
+    }
+
+    if (matchlist)
+        *matchlist = retmatchlist;
+
+    return mi;
+}
+
 const char *
 key2extcmddesc(uchar key)
 {
@@ -2574,9 +2626,10 @@ commands_init(void)
     (void) bind_key(M('2'), "twoweapon");
     (void) bind_key(M('n'), "name");
     (void) bind_key(M('N'), "name");
-
-    /* wait_on_space */
+#if 0
+    /* don't do this until the rest_on_space option is set or cleared */
     (void) bind_key(' ',    "wait");
+#endif
 }
 
 static boolean
@@ -2856,8 +2909,10 @@ ecname_from_fn(int (*fn)(void))
 
 /* return extended command name (without leading '#') for command (*fn)() */
 const char *
-cmdname_from_func(int (*fn)(void), char outbuf[],
-                  boolean fullname) /* False: just enough to disambiguate */
+cmdname_from_func(
+    int (*fn)(void),  /* function whose command name is wanted */
+    char outbuf[],    /* place to store the result */
+    boolean fullname) /* False: just enough to disambiguate */
 {
     const struct ext_func_tab *extcmd, *cmdptr = 0;
     const char *res = 0;
@@ -3571,6 +3626,34 @@ reset_commands(boolean initial)
             (void) bind_key_fn(M(g.Cmd.dirchars[i]), move_funcs[i][MV_RUSH]);
         }
     }
+    update_rest_on_space();
+}
+
+/* called when 'rest_on_space' is toggled, also called by reset_commands()
+   from initoptions_init() which takes place before key bindings have been
+   processed, and by initoptions_finish() after key bindings so that we
+   can remember anything bound to <space> in 'unrestonspace' */
+void
+update_rest_on_space(void)
+{
+    /* cloned from extcmdlist['.'], then slightly modified to be distinct;
+       donull is all that's needed for it to operate; command name and
+       description get shown by help menu's "Info on what a given key does"
+       (which runs the '&' command) and "Full list of keyboard commands" */
+    static const struct ext_func_tab restonspace = {
+        ' ', "wait", "rest one move via 'rest_on_space' option",
+        donull, (IFBURIED | CMD_M_PREFIX), "waiting"
+    };
+    static const struct ext_func_tab *unrestonspace = 0;
+    const struct ext_func_tab *bound_f = g.Cmd.commands[' '];
+
+    /* when 'rest_on_space' is On, <space> will run the #wait command;
+       when it is Off, <space> will use 'unrestonspace' which will either
+       be Null and elicit "Unknown command ' '." or have some non-Null
+       command bound in player's RC file */
+    if (bound_f != 0 && bound_f != &restonspace)
+        unrestonspace = bound_f;
+    g.Cmd.commands[' '] = flags.rest_on_space ? &restonspace : unrestonspace;
 }
 
 /* commands which accept 'm' prefix to request menu operation */

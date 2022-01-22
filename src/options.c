@@ -1,4 +1,4 @@
-/* NetHack 3.7	options.c	$NHDT-Date: 1641673953 2022/01/08 20:32:33 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.525 $ */
+/* NetHack 3.7	options.c	$NHDT-Date: 1642630919 2022/01/19 22:21:59 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.528 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Michael Allison, 2008. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -262,7 +262,6 @@ static int count_menucolors(void);
 static boolean parse_role_opts(int, boolean, const char *,
                                char *, char **);
 static unsigned int longest_option_name(int, int);
-static void explain_O_command(void);
 static void doset_add_menu(winid, const char *, int, int);
 static int handle_add_list_remove(const char *, int);
 static void remove_autopickup_exception(struct autopickup_exception *);
@@ -4226,6 +4225,9 @@ optfn_boolean(int optidx, int req, boolean negated, char *opts, char *op)
         case opt_mention_decor:
             iflags.prev_decor = STONE;
             break;
+        case opt_rest_on_space:
+            update_rest_on_space();
+            break;
         }
 
         /* boolean value has been toggled but some option changes can
@@ -5910,6 +5912,7 @@ initoptions_finish(void)
         }
     }
 #endif
+    update_rest_on_space();
     g.opt_initial = FALSE;
     return;
 }
@@ -7292,68 +7295,6 @@ longest_option_name(int startpass, int endpass)
     return longest_name_len;
 }
 
-/* text to optionally insert at the beginning of #options command's menu,
-   briefly describing how it works; [brevity is in the eye of the beholder
-   or perhaps a pig; it was brief when this comment was first written...] */
-static const char *const optmenu[] = {
-    "How dynamically setting options works:",
-    "",
-    "The options menu shows the current value for all options and lets",
-    "you pick ones that you'd like to change.  Picking them doesn't make",
-    "any immediate changes though.  That will take place once you close",
-    "the menu.  For most of NetHack's interfaces, closing the menu is",
-    "done by pressing the <enter> key or <return> key; others might",
-    "require clicking on [ok].  Pressing the <escape> key or clicking",
-    "on [cancel] will close the menu and discard any pending changes.",
-    "",
-    "The options menu is too long to fit on one screen.  Some interfaces",
-    "paginate menus; use the '>' key to advance a page or '<' to back",
-    "up.  They typically re-use selection letters (a-z) on each page.",
-    "Others use one long page and you need to use a scrollbar; once",
-    "past a-z and A-Z they'll have entries without selection letters.",
-    "Those can be selected by clicking on them.",
-    "",
-    "For toggling boolean (True/False or On/Off) options, selecting",
-    "them is all that is needed.  For compound options (below, after",
-    "the boolean ones), you will be prompted to supply a new value.",
-    "",
-    "At the start of each of the two sections are the values of some",
-    "unselectable options which can only be set before the game starts.",
-    "After the compound section are some \"other\" options which take a",
-    "set of multiple values and tend to be more complex to deal with.",
-    "",
-    "Some changes will only last until you save (or quit) the current",
-    "game.  Usually those are for things that might not be appropriate",
-    "if you were to restore the saved game on another computer with",
-    "different capabilities.  Other options will be included in this",
-    "game's save file and retain their settings after restore.  None set",
-    "here will affect other games, either already saved or new ones.",
-    "For that, you need to update your run-time configuration file and",
-    "specify the desired options settings there.  Even then, restoring",
-    "existing games that contain saved option values will use those.",
-    "",
-    NULL
-};
-
-/* display the optmenu[] explanatory text in a popup text window */
-static void
-explain_O_command(void)
-{
-    anything any;
-    winid Ohlp;
-    char buf[BUFSZ];
-    int i;
-
-    Ohlp = create_nhwindow(NHW_TEXT);
-    any = cg.zeroany;
-    for (i = 0; optmenu[i]; ++i) {
-        Sprintf(buf, "  %.75s ", optmenu[i]);
-        putstr(Ohlp, ATR_NONE, buf);
-    }
-    display_nhwindow(Ohlp, TRUE);
-    destroy_nhwindow(Ohlp);
-}
-
 /* the #options command */
 int
 doset(void) /* changing options via menu by Per Liboriussen */
@@ -7368,7 +7309,7 @@ doset(void) /* changing options via menu by Per Liboriussen */
     menu_item *pick_list;
     int indexoffset, startpass, endpass;
     boolean setinitial = FALSE, fromfile = FALSE,
-            skiphelp = !iflags.cmdassist;
+            gavehelp = FALSE, skiphelp = !iflags.cmdassist;
 
     /* if we offer '?' as a choice and it is the only thing chosen,
        we'll end up coming back here after showing the explanatory text */
@@ -7383,7 +7324,7 @@ doset(void) /* changing options via menu by Per Liboriussen */
             "the next menu choice, then press <enter> or <return>.",
             NULL,
         }, *const helpepilog[] = {
-            "[To suppress this menu help, toggle off the 'cmdaddist' option.]",
+            "[To suppress this menu help, toggle off the 'cmdassist' option.]",
             "",
             NULL,
         };
@@ -7518,20 +7459,6 @@ doset(void) /* changing options via menu by Per Liboriussen */
     g.opt_need_redraw = FALSE;
     g.opt_need_glyph_reset = FALSE;
     if ((pick_cnt = select_menu(tmpwin, PICK_ANY, &pick_list)) > 0) {
-        if (pick_list[0].item.a_int - 1 == '?') {
-            /* player chose the special '?' entry */
-            explain_O_command();
-            /* if '?' was the only thing selected, go back and pick all
-               over again without it as an available choice this time;
-               however, if any other stuff was also chosen, just continue
-               on below and perform the other requested option settings */
-            if (pick_cnt == 1) {
-                free((genericptr_t) pick_list), pick_list = (menu_item *) 0;
-                destroy_nhwindow(tmpwin);
-                skiphelp = TRUE;
-                goto rerun;
-            }
-        }
         /*
          * Walk down the selection list and either invert the booleans
          * or prompt for new values. In most cases, call parseoptions()
@@ -7540,6 +7467,11 @@ doset(void) /* changing options via menu by Per Liboriussen */
          */
         for (pick_idx = 0; pick_idx < pick_cnt; ++pick_idx) {
             opt_indx = pick_list[pick_idx].item.a_int - 1;
+            if (opt_indx == '?') {
+                display_file(OPTMENUHELP, FALSE);
+                gavehelp = TRUE;
+                continue; /* just handled '?'; there might be more picks */
+            }
             if (opt_indx < -1)
                 opt_indx++; /* -1 offset for select_menu() */
             opt_indx -= indexoffset;
@@ -7579,6 +7511,15 @@ doset(void) /* changing options via menu by Per Liboriussen */
     }
 
     destroy_nhwindow(tmpwin);
+
+    if (pick_cnt == 1 && gavehelp) {
+        /* when '?' is only the thing selected, go back and pick all
+           over again without it as an available choice second time */
+        skiphelp = TRUE;
+        gavehelp = FALSE; /* currently True; reset for second pass */
+        goto rerun;
+    }
+
     if (g.opt_need_glyph_reset) {
         reset_glyphmap(gm_optionchange);
     }
