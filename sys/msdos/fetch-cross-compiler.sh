@@ -1,10 +1,10 @@
 #!/bin/sh
 set -x
 
-if [ -z "$TRAVIS_BUILD_DIR" ]; then
+if [ -z "$CI_BUILD_DIR" ]; then
 	export DJGPP_TOP=$(pwd)/lib/djgpp
 else
-	export DJGPP_TOP="$TRAVIS_BUILD_DIR/lib/djgpp"
+	export DJGPP_TOP="$CI_BUILD_DIR/lib/djgpp"
 fi
 
 if [ -z "$GCCVER" ]; then
@@ -12,7 +12,7 @@ if [ -z "$GCCVER" ]; then
 fi
 
 if [ -z "$LUA_VERSION" ]; then
-	export LUA_VERSION=5.4.3
+	export LUA_VERSION=5.4.4
 fi
 
 if [ ! -d "$(pwd)/lib" ]; then

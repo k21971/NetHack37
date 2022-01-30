@@ -24,7 +24,6 @@ static int nhl_doturn(lua_State *);
 static int nhl_debug_flags(lua_State *);
 static int nhl_test(lua_State *);
 static int nhl_getmap(lua_State *);
-static void nhl_add_table_entry_bool(lua_State *, const char *, boolean);
 static char splev_typ2chr(schar);
 static int nhl_gettrap(lua_State *);
 static int nhl_deltrap(lua_State *);
@@ -54,7 +53,7 @@ static void init_u_data(lua_State *);
 static int nhl_set_package_path(lua_State *, const char *);
 static int traceback_handler(lua_State *);
 
-static const char *nhcore_call_names[NUM_NHCORE_CALLS] = {
+static const char *const nhcore_call_names[NUM_NHCORE_CALLS] = {
     "start_new_game",
     "restore_old_game",
     "moveloop_turn",
@@ -222,6 +221,19 @@ nhl_add_table_entry_bool(lua_State *L, const char *name, boolean value)
 {
     lua_pushstring(L, name);
     lua_pushboolean(L, value);
+    lua_rawset(L, -3);
+}
+
+void
+nhl_add_table_entry_region(lua_State *L, const char *name,
+                           xchar x1, xchar y1, xchar x2, xchar y2)
+{
+    lua_pushstring(L, name);
+    lua_newtable(L);
+    nhl_add_table_entry_int(L, "x1", x1);
+    nhl_add_table_entry_int(L, "y1", y1);
+    nhl_add_table_entry_int(L, "x2", x2);
+    nhl_add_table_entry_int(L, "y2", y2);
     lua_rawset(L, -3);
 }
 

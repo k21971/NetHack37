@@ -1,4 +1,4 @@
-/* NetHack 3.7	options.c	$NHDT-Date: 1642630919 2022/01/19 22:21:59 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.528 $ */
+/* NetHack 3.7	options.c	$NHDT-Date: 1643491546 2022/01/29 21:25:46 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.535 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Michael Allison, 2008. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -20,7 +20,7 @@ NEARDATA struct instance_flags iflags; /* provide linkage */
 
 /*
  *  NOTE:  If you add (or delete) an option, please review the following:
- *             doc/options.doc
+ *             doc/options.txt
  *
  *         It contains how-to info and outlines some required/suggested
  *         updates that should accompany your change.
@@ -1787,7 +1787,7 @@ optfn_mouse_support(
 #define MOUSEFIX1 ", O/S adjusted"
 #define MOUSEFIX2 ", O/S unchanged"
 #endif
-        static const char *mousemodes[][2] = {
+        static const char *const mousemodes[][2] = {
             { "0=off", "" },
             { "1=on",  MOUSEFIX1 },
             { "2=on",  MOUSEFIX2 },
@@ -1979,7 +1979,7 @@ optfn_number_pad(int optidx, int req, boolean negated, char *opts, char *op)
         return optn_ok;
     }
     if (req == get_val) {
-        static const char *numpadmodes[] = {
+        static const char *const numpadmodes[] = {
             "0=off", "1=on", "2=on, MSDOS compatible",
             "3=on, phone-style layout",
             "4=on, phone layout, MSDOS compatible",
@@ -4359,7 +4359,7 @@ handler_disclose(void)
     char buf[BUFSZ];
     /* order of disclose_names[] must correspond to
        disclosure_options in decl.c */
-    static const char *disclosure_names[] = {
+    static const char *const disclosure_names[] = {
         "inventory", "attributes", "vanquished",
         "genocides", "conduct",    "overview",
     };
@@ -4515,7 +4515,7 @@ handler_number_pad(void)
     winid tmpwin;
     anything any;
     int i;
-    static const char *npchoices[] = {
+    static const char *const npchoices[] = {
         " 0 (off)", " 1 (on)", " 2 (on, MSDOS compatible)",
         " 3 (on, phone-style digit layout)",
         " 4 (on, phone-style layout, MSDOS compatible)",
@@ -6499,7 +6499,7 @@ query_msgtype(void)
 static boolean
 msgtype_add(int typ, char *pattern)
 {
-    static const char *re_error = "MSGTYPE regex error";
+    static const char *const re_error = "MSGTYPE regex error";
     struct plinemsg_type *tmp = (struct plinemsg_type *) alloc(sizeof *tmp);
 
     tmp->msgtype = typ;
@@ -7319,29 +7319,27 @@ doset(void) /* changing options via menu by Per Liboriussen */
 
     /* offer novices a chance to request helpful [sic] advice */
     if (!skiphelp) {
-        static const char *const helpintro[] = {
+        /* help text surrounding '?' choice should have exactly one NULL */
+        static const char *const helptext[] = {
             "For a brief explanation of how this works, type '?' to select",
             "the next menu choice, then press <enter> or <return>.",
-            NULL,
-        }, *const helpepilog[] = {
+            NULL, /* actual '?' menu entry gets inserted here */
             "[To suppress this menu help, toggle off the 'cmdassist' option.]",
             "",
-            NULL,
         };
         any = cg.zeroany;
-        for (i = 0; helpintro[i]; ++i) {
-            Sprintf(buf, "%4s%.75s", "", helpintro[i]);
-            add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, FALSE,
-                     buf, MENU_ITEMFLAGS_NONE);
-        }
-        any.a_int = '?' + 1; /* processing pick_list will subtract the 1 */
-        add_menu(tmpwin, &nul_glyphinfo, &any, '?', '?', ATR_NONE,
-                 "view help for options menu", MENU_ITEMFLAGS_NONE);
-        any.a_int = 0;
-        for (i = 0; helpepilog[i]; ++i) {
-            Sprintf(buf, "%4s%.75s", "", helpepilog[i]);
-            add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, FALSE,
-                     buf, MENU_ITEMFLAGS_NONE);
+        for (i = 0; i < SIZE(helptext); ++i) {
+            if (helptext[i]) {
+                Sprintf(buf, "%4s%.75s", "", helptext[i]);
+                any.a_int = 0;
+                add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, FALSE,
+                         buf, MENU_ITEMFLAGS_NONE);
+            } else {
+                any.a_int = '?' + 1; /* processing pick_list subtracts 1 */
+                add_menu(tmpwin, &nul_glyphinfo, &any, '?', '?', ATR_NONE,
+                         "view help for options menu",
+                         MENU_ITEMFLAGS_SKIPINVERT);
+            }
         }
     }
 
@@ -8062,7 +8060,7 @@ static const char *opt_intro[] = {
     (char *) 0
 };
 
-static const char *opt_epilog[] = {
+static const char *const opt_epilog[] = {
     "",
     "Some of the options can only be set before the game is started;",
     "those items will not be selectable in the 'O' command's menu.",
@@ -8548,8 +8546,8 @@ wc_set_window_colors(char *op)
     int j;
     char buf[BUFSZ];
     char *wn, *tfg, *tbg, *newop;
-    static const char *wnames[] = { "menu", "message", "status", "text" };
-    static const char *shortnames[] = { "mnu", "msg", "sts", "txt" };
+    static const char *const wnames[] = { "menu", "message", "status", "text" };
+    static const char *const shortnames[] = { "mnu", "msg", "sts", "txt" };
     static char **fgp[] = { &iflags.wc_foregrnd_menu,
                             &iflags.wc_foregrnd_message,
                             &iflags.wc_foregrnd_status,

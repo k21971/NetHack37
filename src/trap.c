@@ -346,7 +346,7 @@ maketrap(int x, int y, int typ)
     struct rm *lev = &levl[x][y];
 
     if ((ttmp = t_at(x, y)) != 0) {
-        if (ttmp->ttyp == MAGIC_PORTAL || ttmp->ttyp == VIBRATING_SQUARE)
+        if (undestroyable_trap(ttmp->ttyp))
             return (struct trap *) 0;
         oldplace = TRUE;
         if (u.utrap && x == u.ux && y == u.uy
@@ -1155,7 +1155,7 @@ trapeffect_sqky_board(
                 pline("A board beneath %s squeaks %s loudly.",
                       mon_nam(mtmp), trapnote(trap, FALSE));
                 seetrap(trap);
-            } else {
+            } else if (!mindless(mtmp->data)) {
                 pline("%s stops momentarily and appears to cringe.",
                       Monnam(mtmp));
             }
@@ -2441,7 +2441,7 @@ dotrap(register struct trap* trap, unsigned int trflags)
                 trapname(ttype, FALSE));
             return;
         }
-        if (!Fumbling && ttype != MAGIC_PORTAL && ttype != VIBRATING_SQUARE
+        if (!Fumbling && !undestroyable_trap(ttype)
             && ttype != ANTI_MAGIC && !forcebungle && !plunged
             && !conj_pit && !adj_pit
             && (!rn2(5) || (is_pit(ttype)
@@ -5944,7 +5944,7 @@ maybe_finish_sokoban(void)
 const char *
 trapname(int ttyp, boolean override)
 {
-    static const char *halu_trapnames[] = {
+    static const char *const halu_trapnames[] = {
         /* riffs on actual nethack traps */
         "bottomless pit", "polymorphism trap", "devil teleporter",
         "falling boulder trap", "anti-anti-magic field", "weeping gas trap",

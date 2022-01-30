@@ -320,7 +320,7 @@ put_lregion_here(
                It might still fail if there's a dungeon feature here. */
             struct trap *t = t_at(x, y);
 
-            if (t && t->ttyp != MAGIC_PORTAL && t->ttyp != VIBRATING_SQUARE)
+            if (t && !undestroyable_trap(t->ttyp))
                 deltrap(t);
             if (bad_location(x, y, nlx, nly, nhx, nhy))
                 return FALSE;
@@ -589,7 +589,7 @@ check_ransacked(char * s)
 }
 
 #define ORC_LEADER 1
-static const char *orcfruit[] = { "paddle cactus", "dwarven root" };
+static const char *const orcfruit[] = { "paddle cactus", "dwarven root" };
 
 static void
 migrate_orc(struct monst* mtmp, unsigned long mflags)

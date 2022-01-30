@@ -1,4 +1,4 @@
-NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.734 $ $NHDT-Date: 1641673963 2022/01/08 20:32:43 $
+NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.0 $ $NHDT-Date: 1643491497 2022/01/29 21:24:57 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -757,6 +757,11 @@ for hero with slippery fingers, enlightenment reports "slippery fingers" or
 when hitting with wet towel causes it to lose some wetness, defer "your towel
 	dries" until after the hit message
 do some extra damage when hitting an iron golem with a wet towel
+when already at level 30 and gaining another level--which doesn't increase
+	level further but does add more HP and Pw--throttle the increases
+don't stop running when next to a peaceful, unless it blocks the way
+mindless monsters shouldn't cringe stepping on squeaky boards
+falling down a hole or trapdoor will cause damage proportional to fall height
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1360,6 +1365,7 @@ drinking blessed potion of full healing heals wounded legs, either hero's or
 	steed's (when riding, wounded leg injury applies to steed, not hero)
 drinking uncursed potion of full healing or blessed potion of extra healing
 	heal hero's wounded legs when not riding; no effect on steed if riding
+cancellation explodes most magical traps
 
 
 Platform- and/or Interface-Specific New Features
@@ -1410,6 +1416,7 @@ Unix: can define NOSUSPEND in config.h or src/Makefile's CFLAGS to prevent
 X11: implement 'selectsaved', restore via menu of saved games
 X11: echo getline prompt and response (wishes, applying names) to message
 	window and dumplog message history
+X11: fix map expose area, no longer leaving black bars on the map
 
 
 NetHack Community Patches (or Variation) Included
@@ -1480,6 +1487,10 @@ use %lu, not %d, in format string in timer_sanity_check() (pr #617 by argrath)
 bad cast making sp_lev chameleon light source (pr #625 by entrez)
 add Ray Chason's adaptation of nethack's Qt5 interface to work with Qt6 (issue
 	#525 followup comment by chasonr)
+mingw32 build updates and replacement of sys/windows/Makefile.gcc with new
+	sys/windows/Makefile.mingw32 and sys/windows/Makefile.mingw32.depend
+	(pr #661 by feiyunw)
+mark various pointers to const char as const pointers (pr #624 by argrath)
 
 
 Code Cleanup and Reorganization
@@ -1510,7 +1521,7 @@ options overhaul: moved the option definitions into include/optlist.h;
 	combined the boolean and compound options into one allopt[] array;
 	each option has its own individual function for setting the option,
 	for retrieving the option value, and for processing the option
-	following its selection in the 'O' menu, added doc/options.doc file.
+	following its selection in the 'O' menu, added doc/options.txt file.
 function reglyph_darkroom() relocated from options.c to display.c
 resurrect 'makedefs -m' to be able to derive default mons[].diffculty values
 	suitable for assigning to new or changed monsters
