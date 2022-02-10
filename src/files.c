@@ -4812,6 +4812,8 @@ livelog_add(unsigned int ll_type, const char *str)
 
     if (!(ll_type & sysopt.livelog))
         return;
+    if ((ll_type == LL_CONDUCT) && (g.moves < sysopt.ll_conduct_turns))
+        return;
     if (lock_file(LIVELOGFILE, SCOREPREFIX, 10)) {
         if (!(livelogfile = fopen_datafile(LIVELOGFILE, "a", SCOREPREFIX))) {
             pline("Cannot open live log file!");
