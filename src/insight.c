@@ -2110,7 +2110,8 @@ show_conduct(int final)
  */
 
 static void
-show_achievements(int final) /* used "behind the curtain" by enl_foo() macros */
+show_achievements(
+    int final) /* 'final' is used "behind the curtain" by enl_foo() macros */
 {
     int i, achidx, absidx, acnt;
     char title[QBUFSZ], buf[QBUFSZ];
