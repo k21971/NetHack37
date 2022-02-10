@@ -147,7 +147,7 @@ typedef uchar nhsym;
 /* amiconf.h needs to be the last nested #include of config.h because
    'make depend' will turn it into a comment, hiding anything after it */
 #ifdef AMIGA
-/*#include "amiconf.h"*/
+#include "amiconf.h"
 #endif
 
 /* Displayable name of this port; don't redefine if defined in *conf.h */
@@ -463,8 +463,9 @@ extern struct nomakedefs_s nomakedefs;
 #define unctrl(c) ((c) <= C('z') ? (0x60 | (c)) : (c))
 #define unmeta(c) (0x7f & (c))
 
-/* LIVELOG message type flags */
-#define LL_WISH       0x0001 /* Report stuff people type at the wish prompt. */
+/* Game log message type flags */
+#define LL_NONE       0x0000 /* No message is livelogged */
+#define LL_WISH       0x0001 /* Report stuff people type at the wish prompt */
 #define LL_ACHIEVE    0x0002 /* Achievements bitfield + invocation, planes */
 #define LL_UMONST     0x0004 /* Kill, Bribe or otherwise dispatch unique monsters */
 #define LL_DIVINEGIFT 0x0008 /* Sacrifice gifts, crowning */

@@ -1,4 +1,4 @@
-# NetHack 3.7  linux.370 $NHDT-Date: 1599687610 2020/09/09 21:40:10 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.11 $
+# NetHack 3.7  cross-amiga
 # Copyright (c) Kenneth Lorber, Kensington, Maryland, 2007.
 # NetHack may be freely redistributed.  See license for details.
 #
@@ -13,7 +13,7 @@
 #
 
 #-PRE
-# linux.370 hints file provides a single-user build for Linux (such
+# cross-amiga hints file provides a single-user build for Linux (such
 # as Ubuntu focal).
 
 # note: '#-INCLUDE' is not just a comment
@@ -68,17 +68,6 @@ GAMEGRP  = games
 # you're reading this in Makefile augmented by hints, that may not be true).
 #
 
-ifeq "$(GIT)" "1"
-ifndef GITSUBMODULES
-GITSUBMODULES=1
-endif
-endif
-ifeq "$(git)" "1"
-ifndef GITSUBMODULES
-GITSUBMODULES=1
-endif
-endif
-
 #-INCLUDE multiw-2.370
 
 # compiler.370 contains compiler detection and adjustments common
@@ -103,8 +92,6 @@ NHCFLAGS+=-DCOMPRESS=\"/bin/gzip\" -DCOMPRESS_EXTENSION=\".gz\"
 #NHCFLAGS+=-DMSGHANDLER
 #NHCFLAGS+=-DTTY_TILES_ESCCODES
 #NHCFLAGS+=-DTTY_SOUND_ESCCODES
-#NHCFLAGS+=-DNO_CHRONICLE
-#NHCFLAGS+=-DLIVELOG
 
 CFLAGS+= $(WINCFLAGS)	  #WINCFLAGS set from multiw-2.370
 CFLAGS+= $(NHCFLAGS)
@@ -250,22 +237,10 @@ POSTINSTALL+= sed -i -e 's;^GDBPATH=/usr/bin/gdb;\#GDBPATH=/usr/bin/gdb;' \
 		-e 's;PANICTRACE_GDB=1;PANICTRACE_GDB=0;' $(INSTDIR)/sysconf;
 endif
 
-# Lua
 # when building liblua.a, avoid warning that use of tmpnam() should be
 # replaced by mkstemp(); the lua code doesn't use nethack's config.h so
 # this needs to be passed via make rather than defined in unixconf.h
-SYSCFLAGS=-DLUA_USE_LINUX
-ifdef GITSUBMODULES
-LUAFLAGS=CC='$(CC)' SYSCFLAGS='$(SYSCFLAGS)'
-ifneq "$(CCISCLANG)" ""
-# clang
-LUAFLAGS +=CWARNGCC=''
-endif   # clang
-override LUAHEADERS = submodules/lua
-override LUA2NHTOP = ../..
-override LUAMAKEFLAGS=$(LUAFLAGS)
-endif   # GITSUBMODULES
-DLLIB = -ldl
+SYSCFLAGS=-DLUA_USE_POSIX
 
 # Only needed for GLIBC stack trace:
 LFLAGS=-rdynamic
@@ -282,11 +257,11 @@ VARDIRPERM = 0755
 VARFILEPERM = 0600
 GAMEPERM = 0755
 #
-#-INCLUDE cross-pre.370
+#-INCLUDE cross-amiga-pre
 #
 #-POST
 #
-#-INCLUDE cross-post.370
+#-INCLUDE cross-amiga-post
 #
 ifdef WANT_LIBNH
 $(TARGETPFX)libnh.a: $(HOBJ) $(LIBNHSYSOBJ) ../lib/lua/liblua.a

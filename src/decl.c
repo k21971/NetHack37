@@ -231,6 +231,7 @@ const struct instance_globals g_init = {
     WIN_ERR, /* en_win */
     FALSE, /* en_via_menu */
     UNDEFINED_VALUE, /* last_command_count */
+    NULL, /* ext_tlist */
 
     /* dbridge.c */
     UNDEFINED_VALUES, /* occupants */
@@ -549,6 +550,7 @@ const struct instance_globals g_init = {
 #endif
     (char *) 0, /* you_buf */
     0, /* you_buf_siz */
+    NULL, /* gamelog */
 
     /* polyself.c */
     0, /* sex_change_ok */

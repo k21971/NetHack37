@@ -764,6 +764,16 @@ mindless monsters shouldn't cringe stepping on squeaky boards
 falling down a hole or trapdoor will cause damage proportional to fall height
 stinking gas clouds block line-of-sight
 covetous monsters will teleport to downstairs or upstairs to heal
+have fake player monsters use verbalize instead of pline when reacting to chat
+fix mention_walls distinguishing unseen walls from solid stone
+don't push unknown boulders when moving
+in flush_screen, reorder the code slightly to complete the bot() and
+	timebot() calls prior to the window port call to place the cursor
+        on the hero
+magic traps can toggle intrinsic invisibility
+Death attacking a monster does drain life attack
+add unique Rider revival messages
+don't dereference NULL u.ustuck in dobuzz() when hero has been swallowed
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -989,6 +999,16 @@ a change to wounded legs handling resulted in not recovering lost dexterity
 	rather than having legs be explicitly healed
 turning movement into commands broke the rest_on_space option; it also
 	interfered with using pick-axe plus autodig in downward direction
+cursed scroll of light had special message when wielding Sunsword that didn't
+	work for wearing gold dragon scales/mail
+giving a prefix keystroke other than 'm' prior to a command that doesn't use
+	prefixes was siliently ignored instead of being rejected
+prior revision broke all prefix usage
+movement command revamp broke 'm>' and 'm<' on stairs to avoid auto-pickup at
+	the destination
+when trapeffect_selector() returns 2 to caller mintrap(), meant to
+	signify that the monster was killed in the trap, ensure that
+	mintrap() returns that value too
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1368,6 +1388,10 @@ drinking blessed potion of full healing heals wounded legs, either hero's or
 drinking uncursed potion of full healing or blessed potion of extra healing
 	heal hero's wounded legs when not riding; no effect on steed if riding
 cancellation explodes most magical traps
+reading a blessed scroll of light has a chance to improve bless/curse state
+	of wielded Sunsword or worn gold dragon scales/mail similar to dipping
+	those into holy water; cursed scroll has chance to worsen the state
+added a chronicle of major events, and optional live logging of those
 
 
 Platform- and/or Interface-Specific New Features
@@ -1407,6 +1431,9 @@ Qt: [later] augment extended command selection dialog's Filter to add a
 	typically commands with no keystroke or only meta character keystroke;
 	that makes Filter useful in normal mode (much shorter list of choices)
 Qt: add '#' as "Extended-commands" to the 'game' dropdown menu
+Qt: add tool tips to the extended command selector's buttons to show command
+	descriptions
+Qt: add tool tips to the icons shown in the status window
 tiles: male and female variations in monsters.txt; tested only with tile2bmp
 	conversion utility so far; also supported by tilemap utility to
 	generate tile.c
@@ -1493,6 +1520,19 @@ mingw32 build updates and replacement of sys/windows/Makefile.gcc with new
 	sys/windows/Makefile.mingw32 and sys/windows/Makefile.mingw32.depend
 	(pr #661 by feiyunw)
 mark various pointers to const char as const pointers (pr #624 by argrath)
+function fill_special_room() in sp_lev.c was dereferencing a pointer
+	argument prior to a subsequent check for a NULL pointer that
+	resulted in an early function return (pr #669 by argrath)
+function repairable_damage() in shk.c was dereferencing a pointer
+	argument prior to a subsequent check for a NULL pointer that
+	resulted in an early function return (pr #671 by argrath)
+function savelev() in save.c was dereferencing a NHFILE pointer for
+	nhfp->mode prior to a subsequent check for nhfp being NULL
+	to trigger a call to panic() if it was; move the check for NULL
+	above that usage (pr #675 by argrath)
+function tin_details() in eat.c was passing an obj pointer to
+	tin_variety() where it was dereferenced; move the tin_details()
+	NULL check above that tin_variety() call (pr #676 by argrath)
 
 
 Code Cleanup and Reorganization
@@ -1607,4 +1647,5 @@ map_glyphinfo() now simply references an internal array that maps each unique
 added MG_MALE glyphflag to complement the MG_FEMALE glyphflag that was there
 remove obsolete roles[].femalenum and rename roles[].malenum to roles[].mnum;
 	likewise for races[]
-
+add git submodule support to the Makefiles by specifying git=1 or GIT=1 on the
+	make command

@@ -27,10 +27,6 @@ sys_early_init(void)
     sysopt.wizards = (char *) 0;
 #else
     sysopt.wizards = dupstr(WIZARD_NAME);
- #ifdef LIVELOGFILE
-    sysopt.livelog = LIVELOG_DETAIL;
-    sysopt.ll_conduct_turns = 0;
- #endif
 #endif
 #if defined(SYSCF) || !defined(DEBUGFILES)
     sysopt.debugfiles = (char *) 0;
@@ -50,7 +46,8 @@ sys_early_init(void)
     sysopt.genericusers = (char *) 0;
     sysopt.maxplayers = 0; /* XXX eventually replace MAX_NR_OF_PLAYERS */
     sysopt.bones_pools = 0;
-    sysopt.livelog = 0;
+    sysopt.livelog = LL_NONE;
+    sysopt.ll_conduct_turns = 0;
 
     /* record file */
     sysopt.persmax = max(PERSMAX, 1);

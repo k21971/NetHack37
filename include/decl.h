@@ -177,6 +177,14 @@ struct kinfo {
     char name[BUFSZ]; /* actual killer name */
 };
 
+/* game events log */
+struct gamelog_line {
+    long turn; /* turn when this happened */
+    long flags; /* LL_foo flags */
+    char *text;
+    struct gamelog_line *next;
+};
+
 enum movemodes {
     MV_ANY = -1,
     MV_WALK,
@@ -729,6 +737,7 @@ struct instance_globals {
     winid en_win;
     boolean en_via_menu;
     long last_command_count;
+    struct ext_func_tab *ext_tlist; /* info for rhack() from doextcmd() */
 
     /* dbridge.c */
     struct entity occupants[ENTITIES];
@@ -1082,6 +1091,7 @@ struct instance_globals {
     /* work buffer for You(), &c and verbalize() */
     char *you_buf;
     int you_buf_siz;
+    struct gamelog_line *gamelog;
 
     /* polyself.c */
     int sex_change_ok; /* controls whether taking on new form or becoming new

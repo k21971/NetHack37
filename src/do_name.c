@@ -1,4 +1,4 @@
-/* NetHack 3.7	do_name.c	$NHDT-Date: 1625885761 2021/07/10 02:56:01 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.213 $ */
+/* NetHack 3.7	do_name.c	$NHDT-Date: 1644347168 2022/02/08 19:06:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.231 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Pasi Kallinen, 2018. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1344,9 +1344,13 @@ oname(struct obj *obj, const char *name)
         if (g.via_naming) {
             /* violate illiteracy conduct since successfully wrote arti-name */
             if (!u.uconduct.literate++)
-                livelog_printf(LL_CONDUCT | LL_ARTIFACT, "became literate by naming %s", bare_artifactname(obj));
+                livelog_printf(LL_CONDUCT | LL_ARTIFACT,
+                               "became literate by naming %s",
+                               bare_artifactname(obj));
             else
-                livelog_printf(LL_ARTIFACT, "chose %s to be named \"%s\"", ansimpleoname(obj), bare_artifactname(obj));
+                livelog_printf(LL_ARTIFACT,
+                               "chose %s to be named \"%s\"",
+                               ansimpleoname(obj), bare_artifactname(obj));
         }
     }
     if (carried(obj))
@@ -1730,6 +1734,9 @@ x_monnam(
     boolean name_at_start, has_adjectives,
             falseCap = (*pm_name != lowc(*pm_name));
     char *bp;
+
+    if (mtmp == &g.youmonst)
+        return strcpy(buf, "you"); /* ignore article, "invisible", &c */
 
     if (g.program_state.gameover)
         suppress |= SUPPRESS_HALLUCINATION;
@@ -2346,7 +2353,9 @@ const char *
 hliquid(
     const char *liquidpref) /* use as-is when not hallucintg (unless empty) */
 {
-    if (Hallucination || !liquidpref || !*liquidpref) {
+    boolean hallucinate = Hallucination && !g.program_state.gameover;
+
+    if (hallucinate || !liquidpref || !*liquidpref) {
         int indx, count = SIZE(hliquids);
 
         /* if we have a non-hallucinatory default value, include it

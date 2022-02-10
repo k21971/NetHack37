@@ -56,6 +56,7 @@ CFLAGS+=-Wall -Wextra -Wno-missing-field-initializers \
 CFLAGS+=-pedantic
 CFLAGS+=-Wmissing-declarations
 CFLAGS+=-Wunreachable-code
+CFLAGS+=-Wformat-nonliteral
 #
 # the following are not allowed in C++
 CFLAGS+=-Wimplicit
@@ -113,6 +114,25 @@ endif  # clang-specific ends here
 # enable some optional code in various NetHack source files
 CFLAGS+=-DGCC_WARN
 CCXXFLAGS+=-DGCC_WARN
+
+ifdef MAKEFILE_SRC
+ifdef WANT_WIN_QT
+# when switching from Qt5 to Qt6 or vice versa, any old .moc files will be
+# incompatible; get rid of them in case user hasn't run 'make spotless';
+# object files are incompatable with Qt library, so get rid of them too;
+# Qt*.h-t are empty timestamp files and at most one should exist
+QTany_H = Qt*.h-t
+ifdef WANT_WIN_QT6
+# Qt 6 builds and runs (with a couple of warnings) but needs more testing
+QTn_H = Qt6.h-t
+else
+# Qt 5 is currently the default version for nethack 3.7.x's Qt interface
+QTn_H = Qt5.h-t
+endif
+$(QTn_H) ::
+	@if test ! -f $@; then ( rm -f $(QTany_H) *.moc qt_*.o; touch $@ ); fi;
+endif #WANT_WIN_QT
+endif #MAKFILE_SRC
 
 #end of compiler.370
 #------------------------------------------------------------------------------

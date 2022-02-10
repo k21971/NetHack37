@@ -133,6 +133,14 @@ moverock(void)
 
     sx = u.ux + u.dx, sy = u.uy + u.dy; /* boulder starting position */
     while ((otmp = sobj_at(BOULDER, sx, sy)) != 0) {
+
+        if (Blind && glyph_to_obj(glyph_at(sx, sy)) != BOULDER) {
+            pline("That feels like a boulder.");
+            map_object(otmp, TRUE);
+            nomul(0);
+            return -1;
+        }
+
         /* when otmp->next_boulder is 1, xname() will format it as
            "next boulder" instead of just "boulder"; affects
            boulder_hits_pool()'s messages as well as messages below */
@@ -566,13 +574,12 @@ still_chewing(xchar x, xchar y)
                        boulder
                        ? "a boulder"
                        : IS_TREE(lev->typ)
-                          ? "a tree"
-                          : IS_ROCK(lev->typ)
-                             ? "rock"
-                             : (lev->typ == IRONBARS)
-                                ? "iron bars"
-                                : "a door");
-
+                       ? "a tree"
+                       : IS_ROCK(lev->typ)
+                       ? "rock"
+                       : (lev->typ == IRONBARS)
+                       ? "iron bars"
+                       : "a door");
     u.uhunger += rnd(20);
 
     if (boulder) {
@@ -887,11 +894,20 @@ test_move(int ux, int uy, int dx, int dy, int mode)
                 else if (Passes_walls && !may_passwall(x, y)
                          && In_sokoban(&u.uz))
                     pline_The("Sokoban walls resist your ability.");
-                else if (flags.mention_walls)
-                    pline("It's %s.",
-                          (IS_WALL(tmpr->typ) || tmpr->typ == SDOOR) ? "a wall"
-                          : IS_TREE(tmpr->typ) ? "a tree"
-                          : "solid stone");
+                else if (flags.mention_walls) {
+                    char buf[BUFSZ];
+                    coord cc;
+                    int sym = 0;
+                    const char *firstmatch = 0;
+
+                    cc.x = x, cc.y = y;
+                    do_screen_description(cc, TRUE, sym, buf, &firstmatch, NULL);
+                    if (!strcmp(firstmatch, "stone"))
+                        Sprintf(buf, "solid stone");
+                    else
+                        Sprintf(buf, "%s", an(firstmatch));
+                    pline("It's %s.", buf);
+                }
             }
             return FALSE;
         }
@@ -2066,7 +2082,7 @@ domove_core(void)
                     int tmp, mndx;
 
                     if (!u.uconduct.killer++)
-                        livelog_write_string (LL_CONDUCT, "killed for the first time");
+                        livelog_printf(LL_CONDUCT, "killed for the first time");
                     mndx = monsndx(mtmp->data);
                     tmp = experience(mtmp, (int) g.mvitals[mndx].died);
                     more_experienced(tmp, 0);
@@ -2258,7 +2274,7 @@ switch_terrain(void)
 {
     struct rm *lev = &levl[u.ux][u.uy];
     boolean blocklev = (IS_ROCK(lev->typ) || closed_door(u.ux, u.uy)
-                        || (Is_waterlevel(&u.uz) && lev->typ == WATER)),
+                        || lev->typ == WATER),
             was_levitating = !!Levitation, was_flying = !!Flying;
 
     if (blocklev) {
@@ -2880,7 +2896,7 @@ pickup_checks(void)
     }
     traphere = t_at(u.ux, u.uy);
     if (!can_reach_floor(traphere && is_pit(traphere->ttyp))) {
-        /* it here's a hole here, any objects here clearly aren't at
+        /* if there's a hole here, any objects here clearly aren't at
            the bottom so only check for pits */
         if (traphere && uteetering_at_seen_pit(traphere)) {
             You("cannot reach the bottom of the pit.");

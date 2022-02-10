@@ -200,6 +200,7 @@ extern boolean status_hilite_menu(void);
 
 /* ### cmd.c ### */
 
+extern void set_move_cmd(int, int);
 extern int do_move_west(void);
 extern int do_move_northwest(void);
 extern int do_move_north(void);
@@ -260,6 +261,7 @@ extern void rhack(char *);
 extern int doextlist(void);
 extern int extcmd_via_menu(void);
 extern int enter_explore_mode(void);
+extern int do_gamelog(void);
 extern boolean bind_key(uchar, const char *);
 extern void dokeylist(void);
 extern int xytod(schar, schar);
@@ -887,8 +889,7 @@ extern boolean Death_quote(char *, int);
 #ifdef EXTRAINFO_FN
 extern void mk_dgl_extrainfo(void);
 #endif
-extern void livelog_write_string(unsigned int, const char *);
-extern void livelog_printf(unsigned int, const char *, ...);
+extern void livelog_add(unsigned int ll_type, const char *);
 
 /* ### fountain.c ### */
 
@@ -1361,7 +1362,6 @@ extern void movebubbles(void);
 extern void water_friction(void);
 extern void save_waterlevel(NHFILE *);
 extern void restore_waterlevel(NHFILE *);
-extern const char *waterbody_name(xchar, xchar);
 
 /* ### mkobj.c ### */
 
@@ -1945,6 +1945,7 @@ extern char *self_lookat(char *);
 extern char *monhealthdescr(struct monst *mon, boolean, char *);
 extern void mhidden_description(struct monst *, boolean, char *);
 extern boolean object_from_map(int,int,int,struct obj **);
+extern const char *waterbody_name(xchar, xchar);
 extern int do_screen_description(coord, boolean, int, char *, const char **,
                                  struct permonst **);
 extern int do_look(int, coord *);
@@ -2056,6 +2057,8 @@ extern void You_see(const char *, ...) PRINTF_F(1, 2);
 extern void pline_The(const char *, ...) PRINTF_F(1, 2);
 extern void There(const char *, ...) PRINTF_F(1, 2);
 extern void verbalize(const char *, ...) PRINTF_F(1, 2);
+extern void gamelog_add(unsigned int, long, const char *);
+extern void livelog_printf(unsigned int, const char *, ...) PRINTF_F(2, 3);
 extern void raw_printf(const char *, ...) PRINTF_F(1, 2);
 extern void impossible(const char *, ...) PRINTF_F(1, 2);
 extern void config_error_add(const char *, ...) PRINTF_F(1, 2);
@@ -2108,6 +2111,7 @@ extern int dopotion(struct obj *);
 extern int peffects(struct obj *);
 extern void healup(int, int, boolean, boolean);
 extern void strange_feeling(struct obj *, const char *);
+extern void impact_arti_light(struct obj *, boolean, boolean);
 extern void potionhit(struct monst *, struct obj *, int);
 extern void potionbreathe(struct obj *);
 extern int dodip(void);

@@ -2582,31 +2582,10 @@ mondead(register struct monst* mtmp)
      */
     if (mtmp->data == &mons[PM_MEDUSA])
         record_achievement(ACH_MEDU);
-    else if (mtmp->data == &mons[PM_DEATH]) {
+    else if (unique_corpstat(mtmp->data)) {
         switch (g.mvitals[tmp].died) {
             case 1:
-                livelog_printf(LL_UMONST, "put %s down for a little nap",
-                               livelog_mon_nam(mtmp));
-                break;
-            case 5:
-            case 10:
-            case 50:
-            case 100:
-            case 150:
-            case 200:
-            case 250:
-                livelog_printf(LL_UMONST, "put %s down for a little nap (%d times)",
-                               livelog_mon_nam(mtmp), g.mvitals[tmp].died);
-                break;
-            default:
-                /* don't spam the log every time */
-                break;
-        }
-    } else if (unique_corpstat(mtmp->data)) {
-        switch (g.mvitals[tmp].died) {
-            case 1:
-                if (mtmp->data != &mons[PM_MEDUSA])
-                    livelog_printf(LL_UMONST, "%s %s",
+                livelog_printf(LL_UMONST, "%s %s",
                                nonliving(mtmp->data) ? "destroyed" : "killed",
                                livelog_mon_nam(mtmp));
                 break;
@@ -2942,7 +2921,7 @@ xkilled(
     mtmp->mhp = 0; /* caller will usually have already done this */
     if (!noconduct) /* KMH, conduct */
         if (!u.uconduct.killer++)
-            livelog_write_string (LL_CONDUCT, "killed for the first time");
+            livelog_printf(LL_CONDUCT, "killed for the first time");
 
     if (!nomsg) {
         boolean namedpet = has_mgivenname(mtmp) && !Hallucination;

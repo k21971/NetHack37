@@ -984,6 +984,8 @@ dodown(void)
     boolean stairs_down = (stway && !stway->up && !stway->isladder),
             ladder_down = (stway && !stway->up &&  stway->isladder);
 
+    set_move_cmd(DIR_DOWN, 0);
+
     if (u_rooted())
         return ECMD_TIME;
 
@@ -1054,7 +1056,7 @@ dodown(void)
                     dotrap(trap, TOOKPLUNGE);
             }
         }
-        return ECMD_TIME; /* came out of hiding; might need '>' again to go down */
+        return ECMD_TIME; /* came out of hiding; need '>' again to go down */
     }
 
     if (u.ustuck) {
@@ -1073,7 +1075,6 @@ dodown(void)
         } else if (!trap || !is_hole(trap->ttyp)
                    || !Can_fall_thru(&u.uz) || !trap->tseen) {
             if (flags.autodig && !g.context.nopick && uwep && is_pick(uwep)) {
-                u.dz = 1; /* the #down command doesn't call set_move_cmd() */
                 return use_pick_axe2(uwep);
             } else {
                 You_cant("go down here.");
@@ -1124,8 +1125,6 @@ dodown(void)
     if (trap && Is_stronghold(&u.uz)) {
         goto_hell(FALSE, TRUE);
     } else {
-        if (!trap)
-            u.dz = 1;
         g.at_ladder = (boolean) (levl[u.ux][u.uy].typ == LADDER);
         next_level(!trap);
         g.at_ladder = FALSE;
@@ -1138,6 +1137,8 @@ int
 doup(void)
 {
     stairway *stway = stairway_at(u.ux,u.uy);
+
+    set_move_cmd(DIR_UP, 0);
 
     if (u_rooted())
         return ECMD_TIME;
@@ -1179,7 +1180,6 @@ doup(void)
         return ECMD_OK;
     }
     g.at_ladder = (boolean) (levl[u.ux][u.uy].typ == LADDER);
-    u.dz = -1;
     prev_level(TRUE);
     g.at_ladder = FALSE;
     return ECMD_TIME;
@@ -1509,7 +1509,8 @@ goto_level(
         }
         mklev();
         new = TRUE; /* made the level */
-        livelog_printf (LL_DEBUG, "entered new level %d, %s.", dunlev(&u.uz), g.dungeons[u.uz.dnum].dname );
+        livelog_printf(LL_DEBUG, "entered new level %d, %s",
+                       dunlev(&u.uz), g.dungeons[u.uz.dnum].dname);
 
         familiar = bones_include_name(g.plname);
     } else {
@@ -1930,10 +1931,20 @@ revive_corpse(struct obj *corpse)
             break;
 
         case OBJ_FLOOR:
-            if (cansee(mtmp->mx, mtmp->my))
-                pline("%s rises from the dead!",
+            if (cansee(mtmp->mx, mtmp->my)) {
+                const char *effect = "";
+
+                if (mtmp->data == &mons[PM_DEATH])
+                    effect = " in a whirl of spectral skulls";
+                else if (mtmp->data == &mons[PM_PESTILENCE])
+                    effect = " in a churning pillar of flies";
+                else if (mtmp->data == &mons[PM_FAMINE])
+                    effect = " in a ring of withered crops";
+
+                pline("%s rises from the dead%s!",
                       chewed ? Adjmonnam(mtmp, "bite-covered")
-                             : Monnam(mtmp));
+                             : Monnam(mtmp), effect);
+            }
             break;
 
         case OBJ_MINVENT: /* probably a nymph's */

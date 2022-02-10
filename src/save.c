@@ -25,6 +25,7 @@ static void saveobjchn(NHFILE *,struct obj **);
 static void savemon(NHFILE *,struct monst *);
 static void savemonchn(NHFILE *,struct monst *);
 static void savetrapchn(NHFILE *,struct trap *);
+static void save_gamelog(NHFILE *);
 static void savegamestate(NHFILE *);
 static void save_msghistory(NHFILE *);
 
@@ -232,6 +233,38 @@ dosave0(void)
 }
 
 static void
+save_gamelog(NHFILE* nhfp)
+{
+    struct gamelog_line *tmp = g.gamelog, *tmp2;
+    int slen;
+
+    while (tmp) {
+        tmp2 = tmp->next;
+        if (perform_bwrite(nhfp)) {
+            if (nhfp->structlevel) {
+                slen = strlen(tmp->text);
+                bwrite(nhfp->fd, (genericptr_t) &slen, sizeof(slen));
+                bwrite(nhfp->fd, (genericptr_t) tmp->text, slen);
+                bwrite(nhfp->fd, (genericptr_t) tmp, sizeof(struct gamelog_line));
+            }
+        }
+        if (release_data(nhfp)) {
+            free((genericptr_t) tmp->text);
+            free((genericptr_t) tmp);
+        }
+        tmp = tmp2;
+    }
+    if (perform_bwrite(nhfp)) {
+        if (nhfp->structlevel) {
+            slen = -1;
+            bwrite(nhfp->fd, (genericptr_t) &slen, sizeof(slen));
+        }
+    }
+    if (release_data(nhfp))
+        g.gamelog = NULL;
+}
+
+static void
 savegamestate(NHFILE* nhfp)
 {
     unsigned long uid;
@@ -316,6 +349,7 @@ savegamestate(NHFILE* nhfp)
     savenames(nhfp);
     save_waterlevel(nhfp);
     save_msghistory(nhfp);
+    save_gamelog(nhfp);
     if (nhfp->structlevel)
         bflush(nhfp->fd);
     g.program_state.saving--;
@@ -427,6 +461,9 @@ savelev(NHFILE* nhfp, xchar lev)
 #endif
 
     g.program_state.saving++; /* even if current mode is FREEING */
+
+    if (!nhfp)
+        panic("Save on bad file!"); /* impossible */
     /*
      *  Level file contents:
      *    version info (handled by caller);
@@ -453,8 +490,6 @@ savelev(NHFILE* nhfp, xchar lev)
         if (iflags.purge_monsters)
             dmonsfree();
 
-        if (!nhfp)
-            panic("Save on bad file!"); /* impossible */
         if (lev >= 0 && lev <= maxledgerno())
             g.level_info[lev].flags |= VISITED;
         if (nhfp->structlevel)

@@ -2682,7 +2682,7 @@ u_handsy(void)
 }
 
 /* getobj callback for object to be stashed into a container */
-int
+static int
 stash_ok(struct obj *obj)
 {
     if (!obj)
