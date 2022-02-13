@@ -1,4 +1,4 @@
-/* NetHack 3.7	save.c	$NHDT-Date: 1606949327 2020/12/02 22:48:47 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.164 $ */
+/* NetHack 3.7	save.c	$NHDT-Date: 1644524061 2022/02/10 20:14:21 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.181 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Michael Allison, 2009. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -233,7 +233,7 @@ dosave0(void)
 }
 
 static void
-save_gamelog(NHFILE* nhfp)
+save_gamelog(NHFILE *nhfp)
 {
     struct gamelog_line *tmp = g.gamelog, *tmp2;
     int slen;
@@ -243,9 +243,10 @@ save_gamelog(NHFILE* nhfp)
         if (perform_bwrite(nhfp)) {
             if (nhfp->structlevel) {
                 slen = strlen(tmp->text);
-                bwrite(nhfp->fd, (genericptr_t) &slen, sizeof(slen));
+                bwrite(nhfp->fd, (genericptr_t) &slen, sizeof slen);
                 bwrite(nhfp->fd, (genericptr_t) tmp->text, slen);
-                bwrite(nhfp->fd, (genericptr_t) tmp, sizeof(struct gamelog_line));
+                bwrite(nhfp->fd, (genericptr_t) tmp,
+                       sizeof (struct gamelog_line));
             }
         }
         if (release_data(nhfp)) {
@@ -257,7 +258,7 @@ save_gamelog(NHFILE* nhfp)
     if (perform_bwrite(nhfp)) {
         if (nhfp->structlevel) {
             slen = -1;
-            bwrite(nhfp->fd, (genericptr_t) &slen, sizeof(slen));
+            bwrite(nhfp->fd, (genericptr_t) &slen, sizeof slen);
         }
     }
     if (release_data(nhfp))
@@ -1094,6 +1095,7 @@ freedynamicdata(void)
 #define free_timers(R) save_timers(&tnhfp, R)
 #define free_light_sources(R) save_light_sources(&tnhfp, R)
 #define free_animals() mon_animal_list(FALSE)
+#define discard_gamelog() save_gamelog(&tnhfp);
 
     /* move-specific data */
     dmonsfree(); /* release dead monsters */
@@ -1141,6 +1143,11 @@ freedynamicdata(void)
 #ifdef USER_SOUNDS
     release_sound_mappings();
 #endif
+#ifdef DUMPLOG
+    dumplogfreemessages();
+#endif
+    discard_gamelog();
+    release_runtime_info(); /* build-time options and version stuff */
 #endif /* FREE_ALL_MEMORY */
 
     if (VIA_WINDOWPORT())

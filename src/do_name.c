@@ -2051,7 +2051,7 @@ distant_monnam(struct monst *mon,
        unless you're adjacent (overridden for hallucination which does
        its own obfuscation) */
     if (mon->data == &mons[PM_HIGH_CLERIC] && !Hallucination
-        && Is_astralevel(&u.uz) && distu(mon->mx, mon->my) > 2) {
+        && Is_astralevel(&u.uz) && !next2u(mon->mx, mon->my)) {
         Strcpy(outbuf, article == ARTICLE_THE ? "the " : "");
         Strcat(outbuf, mon->female ? "high priestess" : "high priest");
     } else {
@@ -2420,6 +2420,7 @@ christen_orc(struct monst *mtmp, const char *gang, const char *other)
     char buf[BUFSZ], buf2[BUFSZ], *orcname;
 
     orcname = rndorcname(buf2);
+    /* rndorcname() won't return NULL */
     sz = (int) strlen(orcname);
     if (gang)
         sz += (int) (strlen(gang) + sizeof " of " - sizeof "");
@@ -2430,11 +2431,11 @@ christen_orc(struct monst *mtmp, const char *gang, const char *other)
         char gbuf[BUFSZ];
         boolean nameit = FALSE;
 
-        if (gang && orcname) {
+        if (gang) {
             Sprintf(buf, "%s of %s", upstart(orcname),
                     upstart(strcpy(gbuf, gang)));
             nameit = TRUE;
-        } else if (other && orcname) {
+        } else if (other) {
             Sprintf(buf, "%s%s", upstart(orcname), other);
             nameit = TRUE;
         }

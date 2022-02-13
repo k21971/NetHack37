@@ -2412,7 +2412,7 @@ parse_status_hl2(char (*s)[QBUFSZ], boolean from_configfile)
         return parse_condition(s, sidx);
 
     ++sidx;
-    while (s[sidx]) {
+    while (s[sidx][0]) {
         char buf[BUFSZ], **subfields;
         int sf = 0;     /* subfield count */
         int kidx;
@@ -2421,11 +2421,11 @@ parse_status_hl2(char (*s)[QBUFSZ], boolean from_configfile)
         percent = numeric = always = FALSE;
         down = up = changed = FALSE;
         gt = ge = eq = le = lt = txtval = FALSE;
-
-        /* threshold value */
+#if 0
+        /* threshold value - return on empty string */
         if (!s[sidx][0])
             return TRUE;
-
+#endif
         memset((genericptr_t) &hilite, 0, sizeof (struct hilite_s));
         hilite.set = FALSE; /* mark it "unset" */
         hilite.fld = fld;
@@ -2602,8 +2602,10 @@ parse_status_hl2(char (*s)[QBUFSZ], boolean from_configfile)
             else {
                 int c = match_str2clr(subfields[i]);
 
-                if (c >= CLR_MAX || coloridx != -1)
+                if (c >= CLR_MAX || coloridx != -1) {
+                    config_error_add("bad color '%d %d'", c, coloridx);
                     return FALSE;
+                }
                 coloridx = c;
             }
         }
@@ -2642,7 +2644,7 @@ parse_status_hl2(char (*s)[QBUFSZ], boolean from_configfile)
         sidx++;
     }
 
-    return TRUE;
+    return (successes > 0);
 }
 #endif /* STATUS_HILITES */
 
@@ -2778,7 +2780,7 @@ parse_condition(char (*s)[QBUFSZ], int sidx)
     int coloridx = NO_COLOR;
     char *tmp, *how;
     unsigned long conditions_bitmask = 0UL;
-    boolean success = FALSE;
+    boolean result = FALSE;
 
     if (!s)
         return FALSE;
@@ -2796,17 +2798,15 @@ parse_condition(char (*s)[QBUFSZ], int sidx)
      */
 
     sidx++;
-    while(s[sidx]) {
+    if (!s[sidx][0]) {
+        config_error_add("Missing condition(s)");
+        return FALSE;
+    }
+    while (s[sidx][0]) {
         int sf = 0;     /* subfield count */
         char buf[BUFSZ], **subfields;
 
         tmp = s[sidx];
-        if (!*tmp) {
-            if (!success)
-                config_error_add("Missing condition(s)");
-            return success;
-        }
-
         Strcpy(buf, tmp);
         conditions_bitmask = str2conditionbitmask(buf);
 
@@ -2877,8 +2877,10 @@ parse_condition(char (*s)[QBUFSZ], int sidx)
             } else {
                 int k = match_str2clr(subfields[i]);
 
-                if (k >= CLR_MAX)
+                if (k >= CLR_MAX) {
+                    config_error_add("bad color %d", k);
                     return FALSE;
+                }
                 coloridx = k;
             }
         }
@@ -2886,10 +2888,10 @@ parse_condition(char (*s)[QBUFSZ], int sidx)
            condition array according to color chosen as index */
 
         g.cond_hilites[coloridx] |= conditions_bitmask;
-        success = TRUE;
+        result = TRUE;
         sidx++;
     }
-    return TRUE;
+    return result;
 }
 
 void

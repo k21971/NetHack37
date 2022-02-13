@@ -182,7 +182,9 @@ erode_obj(
     uvictim = (victim == &g.youmonst);
     vismon = victim && (victim != &g.youmonst) && canseemon(victim);
     /* Is g.bhitpos correct here? Ugh. */
-    visobj = !victim && cansee(g.bhitpos.x, g.bhitpos.y);
+    visobj = !victim && cansee(g.bhitpos.x, g.bhitpos.y)
+        && (!is_pool(g.bhitpos.x, g.bhitpos.y)
+            || (next2u(g.bhitpos.x,g.bhitpos.y) && Underwater));
 
     switch (type) {
     case ERODE_BURN:
@@ -2127,7 +2129,12 @@ trapeffect_poly_trap(
         if (resists_magm(mtmp)) {
             shieldeff(mtmp->mx, mtmp->my);
         } else if (!resist(mtmp, WAND_CLASS, 0, NOTELL)) {
-            (void) newcham(mtmp, (struct permonst *) 0, FALSE, FALSE);
+            (void) newcham(mtmp, (struct permonst *) 0, FALSE,
+                           /* if hero is moving, he probably just swapped
+                              places with a pet or perhaps used a joust
+                              attack to push mtmp into the trap; describe
+                              mtmp's transformation into another shape */
+                           (!g.context.mon_moving && in_sight));
             if (in_sight)
                 seetrap(trap);
         }
@@ -5171,7 +5178,7 @@ openholdingtrap(
                 pline("%s%s opens.", upstart(strcpy(buf, which)), trapdescr);
         }
         /* might pacify monster if adjacent */
-        if (rn2(2) && distu(mon->mx, mon->my) <= 2)
+        if (rn2(2) && next2u(mon->mx, mon->my))
             reward_untrap(t, mon);
     }
     return TRUE;

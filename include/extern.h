@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1637992233 2021/11/27 05:50:33 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1018 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1644524039 2022/02/10 20:13:59 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1046 $ */
 /* Copyright (c) Steve Creps, 1988.				  */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -28,6 +28,9 @@ extern void welcome(boolean);
 extern int argcheck(int, char **, enum earlyarg);
 extern long timet_to_seconds(time_t);
 extern long timet_delta(time_t, time_t);
+#ifndef NODUMPENUMS
+extern void dump_enums(void);
+#endif
 
 /* ### apply.c ### */
 
@@ -921,6 +924,7 @@ extern boolean test_move(int, int, int, int, int);
 extern int wiz_debug_cmd_traveldisplay(void);
 #endif
 extern boolean u_rooted(void);
+extern const char *u_locomotion(const char *);
 extern void domove(void);
 extern void runmode_delay_output(void);
 extern void overexert_hp(void);
@@ -1255,9 +1259,7 @@ extern int buzzmu(struct monst *, struct attack *);
 
 extern void runtime_info_init(void);
 extern const char *do_runtime_info(int *);
-#ifndef NODUMPENUMS
-extern void dump_enums(void);
-#endif
+extern void release_runtime_info(void);
 
 /* ### mhitm.c ### */
 
