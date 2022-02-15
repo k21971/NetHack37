@@ -4823,7 +4823,7 @@ livelog_add(unsigned int ll_type, const char *str)
             return;
         }
         fprintf(livelogfile,
-                 "lltype=%d%cname=%s%crole=%s%crace=%s%cgender=%s%c"
+                 "lltype=%d%cplayer=%s%crole=%s%crace=%s%cgender=%s%c"
                  "align=%s%cturns=%ld%cstarttime=%ld%ccurtime=%ld%c"
                  "message=%s\n",
                  (ll_type & sysopt.livelog), LLOG_SEP,
