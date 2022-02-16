@@ -1669,7 +1669,6 @@ extern int dosuspend(void);
 #endif
 #endif /* TOS */
 #ifdef WIN32
-extern char *get_username(int *);
 extern void nt_regularize(char *);
 extern int(*nt_kbhit)(void);
 extern void Delay(int);
@@ -1721,13 +1720,6 @@ extern boolean munslime(struct monst *, boolean);
 
 extern void awaken_soldiers(struct monst *);
 extern int do_play_instrument(struct obj *);
-
-/* ### nhlan.c ### */
-
-#ifdef LAN_FEATURES
-extern void init_lan_features(void);
-extern char *lan_username(void);
-#endif
 
 /* ### nhlsel.c ### */
 
