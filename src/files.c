@@ -2711,13 +2711,6 @@ parse_config_line(char *origbuf)
             return 0;
         }
         sysopt.livelog = n;
-    } else if (src == set_in_sysconf && match_varname(buf, "LLC_TURNS", 9)) {
-        n = atoi(bufp);
-        if (n < 0) {
-            raw_printf("Illegal value in LLC_TURNS (must be a positive integer).");
-            return 0;
-        }
-        sysopt.ll_conduct_turns = n;
 
     /* SYSCF PANICTRACE options */
     } else if (in_sysconf && match_varname(buf, "PANICTRACE_LIBC", 15)) {
@@ -4814,8 +4807,6 @@ livelog_add(unsigned int ll_type, const char *str)
 
     if (!(ll_type & sysopt.livelog))
         return;
-    if ((ll_type == LL_CONDUCT) && (g.moves < sysopt.ll_conduct_turns))
-        return;
     if (lock_file(LIVELOGFILE, SCOREPREFIX, 10)) {
         if (!(livelogfile = fopen_datafile(LIVELOGFILE, "a", SCOREPREFIX))) {
             pline("Cannot open live log file!");
@@ -4823,7 +4814,7 @@ livelog_add(unsigned int ll_type, const char *str)
             return;
         }
         fprintf(livelogfile,
-                 "lltype=%d%cplayer=%s%crole=%s%crace=%s%cgender=%s%c"
+                 "lltype=%d%cname=%s%crole=%s%crace=%s%cgender=%s%c"
                  "align=%s%cturns=%ld%cstarttime=%ld%ccurtime=%ld%c"
                  "message=%s\n",
                  (ll_type & sysopt.livelog), LLOG_SEP,

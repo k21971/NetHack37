@@ -47,7 +47,6 @@ sys_early_init(void)
     sysopt.maxplayers = 0; /* XXX eventually replace MAX_NR_OF_PLAYERS */
     sysopt.bones_pools = 0;
     sysopt.livelog = LL_NONE;
-    sysopt.ll_conduct_turns = 0;
 
     /* record file */
     sysopt.persmax = max(PERSMAX, 1);

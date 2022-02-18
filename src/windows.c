@@ -2222,7 +2222,7 @@ unsigned int llflags;
 #else
     dumpurl = dump_fmtstr(DUMPLOG_URL, buf, TRUE);
 #endif
-    livelog_printf(llflags, dumpurl);
+    livelog_printf(llflags, "%s", dumpurl);
 #else
     nhUse(llflags);
 #endif /*?DUMPLOG*/
