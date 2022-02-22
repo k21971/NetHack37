@@ -21,6 +21,8 @@ INSTDIR=$(PREFIX)$(HACKDIR)
 SHELLDIR=/tmp
 VARDIR=$(INSTDIR)/var
 
+GIT_HASH := $(shell echo `git rev-parse --verify HEAD` 2>&1)
+GIT_BRANCH := $(shell echo `git rev-parse --abbrev-ref HEAD` 2>&1)
 
 POSTINSTALL=cp -n sys/unix/sysconf $(INSTDIR)/sysconf; $(CHOWN) $(GAMEUID) $(INSTDIR)/sysconf; $(CHGRP) $(GAMEGRP) $(INSTDIR)/sysconf; chmod $(VARFILEPERM) $(INSTDIR)/sysconf;
 
@@ -41,6 +43,8 @@ CFLAGS+=-DDUMPLOG
 CFLAGS+=-DDUMPHTML
 CFLAGS+=-DSCORE_ON_BOTL
 CFLAGS+=-DUSE_GENERAL_ALTAR_COLORS
+CFLAGS+=-DNETHACK_GIT_SHA=\"$(GIT_HASH)\"
+CFLAGS+=-DNETHACK_GIT_BRANCH=\"$(GIT_BRANCH)\"
 
 # when building liblua.a, avoid warning that use of tmpnam() should be
 # replaced by mkstemp(); the lua code doesn't use nethack's config.h so
