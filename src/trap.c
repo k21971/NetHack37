@@ -2126,12 +2126,7 @@ trapeffect_poly_trap(
         if (resists_magm(mtmp)) {
             shieldeff(mtmp->mx, mtmp->my);
         } else if (!resist(mtmp, WAND_CLASS, 0, NOTELL)) {
-            (void) newcham(mtmp, (struct permonst *) 0, FALSE,
-                           /* if hero is moving, he probably just swapped
-                              places with a pet or perhaps used a joust
-                              attack to push mtmp into the trap; describe
-                              mtmp's transformation into another shape */
-                           (!g.context.mon_moving && in_sight));
+            (void) newcham(mtmp, (struct permonst *) 0, FALSE, in_sight);
             if (in_sight)
                 seetrap(trap);
         }
@@ -3085,7 +3080,7 @@ mintrap(register struct monst *mtmp)
             seetrap(trap);
         }
 
-        if (!rn2(40)) {
+        if (!rn2(40) || (is_pit(trap->ttyp) && mtmp->data->msize >= MZ_HUGE)) {
             if (sobj_at(BOULDER, mtmp->mx, mtmp->my)
                 && is_pit(trap->ttyp)) {
                 if (!rn2(2)) {
@@ -3095,6 +3090,14 @@ mintrap(register struct monst *mtmp)
                     fill_pit(mtmp->mx, mtmp->my);
                 }
             } else {
+                if (canseemon(mtmp)) {
+                    if (is_pit(trap->ttyp))
+                        pline("%s climbs %sout of the pit.", Monnam(mtmp),
+                              mtmp->data->msize >= MZ_HUGE ? "easily " : "");
+                    else if (trap->ttyp == BEAR_TRAP || trap->ttyp == WEB)
+                        pline("%s pulls free of the %s.", Monnam(mtmp),
+                              trapname(trap->ttyp, FALSE));
+                }
                 mtmp->mtrapped = 0;
             }
         } else if (metallivorous(mptr)) {
@@ -3136,7 +3139,8 @@ mintrap(register struct monst *mtmp)
 
         trap_result = trapeffect_selector(mtmp, trap, 0);
     }
-    return (trap_result == Trap_Killed_Mon) ? trap_result : mtmp->mtrapped;
+    return (trap_result == Trap_Killed_Mon) ? trap_result
+        : mtmp->mtrapped ? Trap_Caught_Mon : Trap_Effect_Finished;
 }
 
 /* Combine cockatrice checks into single functions to avoid repeating code. */
@@ -3502,7 +3506,7 @@ climb_pit(void)
         reset_utrap(FALSE);
         fill_pit(u.ux, u.uy);
         g.vision_full_recalc = 1; /* vision limits change */
-    } else if (!(--u.utrap)) {
+    } else if (!(--u.utrap) || g.youmonst.data->msize >= MZ_HUGE) {
         reset_utrap(FALSE);
         You("%s to the edge of the %s.",
             (Sokoban && Levitation)

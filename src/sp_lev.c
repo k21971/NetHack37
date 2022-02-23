@@ -1743,6 +1743,8 @@ create_trap(spltrap* t, struct mkroom* croom)
 
     if (!t->spider_on_web)
         mktrap_flags |= MKTRAP_NOSPIDERONWEB;
+    if (t->seen)
+        mktrap_flags |= MKTRAP_SEEN;
 
     tm.x = x;
     tm.y = y;
@@ -2198,7 +2200,10 @@ create_object(object* o, struct mkroom* croom)
                 ; /* ['otmp' remains on floor] */
             } else {
                 remove_object(otmp);
-                (void) mpickobj(invent_carrying_monster, otmp);
+                if (otmp->otyp == SADDLE)
+                    put_saddle_on_mon(otmp, invent_carrying_monster);
+                else
+                    (void) mpickobj(invent_carrying_monster, otmp);
             }
         } else {
             struct obj *cobj = container_obj[container_idx - 1];
@@ -4114,6 +4119,7 @@ lspo_trap(lua_State *L)
         get_table_xy_or_coord(L, &x, &y);
         tmptrap.type = get_table_traptype_opt(L, "type", -1);
         tmptrap.spider_on_web = get_table_boolean_opt(L, "spider_on_web", 1);
+        tmptrap.seen = get_table_boolean_opt(L, "seen", FALSE);
     }
 
     if (tmptrap.type == NO_TRAP)

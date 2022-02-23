@@ -3404,6 +3404,7 @@ bhit(int ddx, int ddy, int range,  /* direction and range */
 {
     struct monst *mtmp, *result = (struct monst *) 0;
     struct obj *obj = *pobj;
+    struct trap *ttmp;
     uchar typ;
     boolean shopdoor = FALSE, point_blank = TRUE;
     boolean in_skip = FALSE, allow_skip = FALSE;
@@ -3516,6 +3517,18 @@ bhit(int ddx, int ddy, int range,  /* direction and range */
             maybe_explode_trap(t_at(g.bhitpos.x, g.bhitpos.y), obj);
 
         mtmp = m_at(g.bhitpos.x, g.bhitpos.y);
+        ttmp = t_at(g.bhitpos.x, g.bhitpos.y);
+
+        if (!mtmp && ttmp && (ttmp->ttyp == WEB)
+            && (weapon == THROWN_WEAPON || weapon == KICKED_WEAPON)
+            && !rn2(3)) {
+            if (cansee(g.bhitpos.x, g.bhitpos.y)) {
+                pline("%s gets stuck in a web!", Yname2(obj));
+                ttmp->tseen = TRUE;
+                newsym(g.bhitpos.x, g.bhitpos.y);
+            }
+            break;
+        }
 
         /*
          * skipping rocks
@@ -5056,6 +5069,7 @@ destroy_one_item(struct obj *obj, int osym, int dmgtyp)
     int dmg, xresist, skip, dindx;
     const char *mult;
     boolean physical_damage;
+    boolean chargeit = FALSE;
 
     physical_damage = FALSE;
     xresist = skip = 0;
@@ -5123,6 +5137,9 @@ destroy_one_item(struct obj *obj, int osym, int dmgtyp)
                 || obj->otyp == RIN_SHOCK_RESISTANCE) {
                 skip++;
                 break;
+            } else if (objects[obj->otyp].oc_charged && rn2(3)) {
+                chargeit = TRUE;
+                break;
             }
             dindx = 5;
             dmg = 0;
@@ -5148,7 +5165,9 @@ destroy_one_item(struct obj *obj, int osym, int dmgtyp)
         break;
     }
 
-    if (!skip) {
+    if (chargeit)
+        recharge(obj, 0);
+    else if (!skip) {
         if (obj->in_use)
             --quan; /* one will be used up elsewhere */
         for (i = cnt = 0L; i < quan; i++)

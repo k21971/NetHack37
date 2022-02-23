@@ -1,4 +1,4 @@
-NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.788 $ $NHDT-Date: 1644610217 2022/02/11 20:10:17 $
+NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.806 $ $NHDT-Date: 1645298657 2022/02/19 19:24:17 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -782,6 +782,38 @@ looting will do #force if you could do it and the container is locked
 	and you didn't have a tool to unlock it
 use silly names for rays (such as breath weapons) when hallucinating
 zombies groan instead of being silent
+martial arts users, sasquatches, and heroes wearing kicking boots can
+	no longer miss a monster completely with a clumsy kick
+knights get no caitiff penalty against undead
+candy bars are bright blue in text mode
+towels weigh more than blindfolds
+knight quest home level contains some saddled warhorses
+allow creating unhidden traps in special levels
+reading magic marker shows the specific red ink color
+imps and other creatures cussing hero wake up nearby monsters
+make ravens oviparous
+thrown items can get stuck in webs
+engraving with Fire Brand burns the text on the floor and does not
+	dull the artifact
+make looting less tedious by getting rid of a y/n prompt making the command
+	go directly into the loot-in-out -menu
+always give a message when monster changes form via polytrap if seen
+illiterate hero receiving a spellbook from their deity gets the spell shoved
+	directly into their mind instead
+adjust levels of sleep, confuse monster, and charm monster spells
+replace monk starting sleep spell with confuse monster
+chargeable rings have a chance of getting charged when hit with electricity
+flint and hard gems break less often when thrown
+hobbits getting a sling also get some ammo for it
+elves and rangers get alignment penalty for cutting down trees
+casting a forgotten spell uses some random amount of power
+heroes starting with a spell have at least one level one spell, and
+	have just enough power to cast it
+huge monsters get easily out of pits
+give a message when a trapped monster frees itself from some trap
+change kitchen sink glyph to a white {
+killed wood golem has a chance to also drop small shields, clubs,
+	elven spears, and boomerangs
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1019,6 +1051,12 @@ when trapeffect_selector() returns 2 to caller mintrap(), meant to signify
 	returns that value too
 have com_pager() check for failed nhl_init(); probably can't actually happen
 	because the program would never get that far if lua init was failing
+rearranging first-kill and first-hit gamelog messages to get hit before kill
+	ordering resulted in "hit with a wielded weapon for first time" being
+	given twice if that hit was delivered via applied polearm
+counting "just picked up" items when deciding what pseudo-classes should be
+	included for the 'I' command's object class prompt was operating on
+	an uninitialized varaible
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1229,6 +1267,7 @@ Unix: add "ec2-user" to the list of user names 'sysconf' classifies as generic
 Unix: work-around a build issue in ubuntu 21.10 by using ifdef to skip the
 	define of warn_unused_result to empty string in tradstdc.h whenever
 	__linux__ is defined during build unless GCC_URWARN is also defined
+Unix: re-do command line parsing
 user_sounds: move the message hook from inside individual window display ports
 	to the core where it allows MSGTYP_NOSHOW msgtyp's to still trigger
 	sounds to correct a reported github issue; also fixes a past reported
@@ -1417,6 +1456,11 @@ reading a blessed scroll of light has a chance to improve bless/curse state
 	those into holy water; cursed scroll has chance to worsen the state
 added a chronicle of major events, and optional live logging of those
 paranoid:swim to prevent accidental dunking into dangerous liquids
+looking at a monster will indicate whether it is asleep, and waking up a
+	monster yields a message
+extend farlook's "<mon>, asleep" to "<mon>, can't move (paralyzed or sleeping
+	or busy)" for timed sleep and also "<mon>, meditating" for monster
+	that is waiting for hero to approach
 
 
 Platform- and/or Interface-Specific New Features
@@ -1467,6 +1511,9 @@ tty: if a message is marked urgent, override message suppression initiated
 	by user having typed ESC at previous --More-- prompt
 Unix: can define NOSUSPEND in config.h or src/Makefile's CFLAGS to prevent
 	unixconf.h from enabling SUSPEND without need to modify unixconf.h
+Unix: support --nethackrc=filename on the command line; same effect as
+	NETHACKOPTIONS='@filename' but leaves NETHACKOPTIONS available for
+	specifying options; --no-nethackrc is same as --nethackrc=/dev/null
 X11: implement 'selectsaved', restore via menu of saved games
 X11: echo getline prompt and response (wishes, applying names) to message
 	window and dumplog message history

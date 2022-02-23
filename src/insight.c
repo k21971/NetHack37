@@ -1,4 +1,4 @@
-/* NetHack 3.7	insight.c	$NHDT-Date: 1619640466 2021/04/28 20:07:46 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.35 $ */
+/* NetHack 3.7	insight.c	$NHDT-Date: 1645298661 2022/02/19 19:24:21 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.49 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -1990,8 +1990,8 @@ show_conduct(int final)
     if (!u.uconduct.weaphit) {
         you_have_never("hit with a wielded weapon");
     } else if (wizard) {
-        Sprintf(buf, "used a wielded weapon %ld time%s", u.uconduct.weaphit,
-                plur(u.uconduct.weaphit));
+        Sprintf(buf, "hit with a wielded weapon %ld time%s",
+                u.uconduct.weaphit, plur(u.uconduct.weaphit));
         you_have_X(buf);
     }
     if (!u.uconduct.killer)
@@ -2895,8 +2895,8 @@ mstatusline(struct monst *mtmp)
         Strcat(info, ", stunned");
     if (mtmp->msleeping)
         Strcat(info, ", asleep");
-#if 0 /* unfortunately mfrozen covers temporary sleep and being busy \
-         (donning armor, for instance) as well as paralysis */
+#if 0 /* unfortunately mfrozen covers temporary sleep and being busy
+       * (donning armor, for instance) as well as paralysis */
     else if (mtmp->mfrozen)
         Strcat(info, ", paralyzed");
 #else
@@ -2937,6 +2937,8 @@ mstatusline(struct monst *mtmp)
             Sprintf(eos(info), ", injured %s", what);
         }
     }
+    if (mtmp->mleashed)
+        Strcat(info, ", leashed");
 
     /* avoid "Status of the invisible newt ..., invisible" */
     /* and unlike a normal mon_nam, use "saddled" even if it has a name */

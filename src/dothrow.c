@@ -1,4 +1,4 @@
-/* NetHack 3.7	dothrow.c	$NHDT-Date: 1621037618 2021/05/15 00:13:38 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.199 $ */
+/* NetHack 3.7	dothrow.c	$NHDT-Date: 1645298658 2022/02/19 19:24:18 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.217 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -637,6 +637,8 @@ walk_path(coord *src_cc, coord *dest_cc,
             /* check for early exit condition */
             if (!(keep_going = (*check_proc)(arg, x, y)))
                 break;
+            flush_screen(1);
+            delay_output();
         }
     } else {
         while (i++ < dx) {
@@ -651,6 +653,8 @@ walk_path(coord *src_cc, coord *dest_cc,
             /* check for early exit condition */
             if (!(keep_going = (*check_proc)(arg, x, y)))
                 break;
+            flush_screen(1);
+            delay_output();
         }
     }
 
@@ -901,19 +905,41 @@ static boolean
 mhurtle_step(genericptr_t arg, int x, int y)
 {
     struct monst *mon = (struct monst *) arg;
+    struct monst *mtmp;
 
-    /* TODO: Treat walls, doors, iron bars, pools, lava, etc. specially
-     * rather than just stopping before.
-     */
-    if (goodpos(x, y, mon, 0) && m_in_out_region(mon, x, y)) {
+    if (is_pool(x, y) || is_lava(x, y)) {
         remove_monster(mon->mx, mon->my);
         newsym(mon->mx, mon->my);
         place_monster(mon, x, y);
         newsym(mon->mx, mon->my);
         set_apparxy(mon);
-        (void) mintrap(mon);
+        if (minliquid(mon))
+            return FALSE;
         return TRUE;
     }
+
+    /* TODO: Treat walls, doors, iron bars, pools, lava, etc. specially
+     * rather than just stopping before.
+     */
+    if (goodpos(x, y, mon, 0) && m_in_out_region(mon, x, y)) {
+        int res;
+
+        remove_monster(mon->mx, mon->my);
+        newsym(mon->mx, mon->my);
+        place_monster(mon, x, y);
+        newsym(mon->mx, mon->my);
+        set_apparxy(mon);
+        res = mintrap(mon);
+        if (res == Trap_Killed_Mon || res == Trap_Caught_Mon)
+            return FALSE;
+        return TRUE;
+    }
+    if ((mtmp = m_at(x, y)) != 0 && (canseemon(mon) || canseemon(mtmp))) {
+        pline("%s bumps into %s.", Monnam(mon), a_monnam(mtmp));
+        wakeup(mon, !g.context.mon_moving);
+        wakeup(mtmp, !g.context.mon_moving);
+    }
+
     return FALSE;
 }
 
@@ -1885,9 +1911,12 @@ thitmonst(
                     chopper = is_axe(obj);
 
             /* attack hits mon */
-            if (hmode == HMON_APPLIED)
-                if (!u.uconduct.weaphit++)
-                    livelog_printf(LL_CONDUCT, "hit with a wielded weapon for the first time");
+            if (hmode == HMON_APPLIED) { /* ranged hit with wielded polearm */
+                /* hmon()'s caller is expected to do this; however, hmon()
+                   delivers the "hit with wielded weapon for first time"
+                   gamelog message when applicable */
+                u.uconduct.weaphit++;
+            }
             if (hmon(mon, obj, hmode, dieroll)) { /* mon still alive */
                 if (mon->wormno)
                     cutworm(mon, g.bhitpos.x, g.bhitpos.y, chopper);
@@ -1918,6 +1947,11 @@ thitmonst(
                 else
                     broken = !rn2(4);
                 if (obj->blessed && !rnl(4))
+                    broken = 0;
+
+                /* Flint and hard gems don't break easily */
+                if (((obj->oclass == GEM_CLASS && objects[otyp].oc_tough)
+                     || obj->otyp == FLINT) && !rn2(2))
                     broken = 0;
 
                 if (broken) {

@@ -964,6 +964,7 @@ extern char lowc(char);
 extern char *lcase(char *);
 extern char *ucase(char *);
 extern char *upstart(char *);
+extern char *upwords(char *);
 extern char *mungspaces(char *);
 extern char *trimspaces(char *);
 extern char *strip_newline(char *);
@@ -1511,6 +1512,7 @@ extern void maybe_mnexto(struct monst *);
 extern int mnearto(struct monst *, xchar, xchar, boolean, unsigned);
 extern void m_respond(struct monst *);
 extern void setmangry(struct monst *, boolean);
+extern void wake_msg(struct monst *, boolean);
 extern void wakeup(struct monst *, boolean);
 extern void wake_nearby(void);
 extern void wake_nearto(int, int, int);
@@ -2544,6 +2546,10 @@ extern int tport_spell(int);
 extern void losespells(void);
 extern int dovspell(void);
 extern void initialspell(struct obj *);
+extern boolean known_spell(short);
+extern int spell_idx(short);
+extern boolean force_learn_spell(short);
+extern int num_spells(void);
 
 /* ### steal.c ### */
 
