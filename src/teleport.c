@@ -43,6 +43,7 @@ goodpos(int x, int y, struct monst* mtmp, long gpflags)
 {
     struct permonst *mdat = (struct permonst *) 0;
     boolean ignorewater = ((gpflags & MM_IGNOREWATER) != 0),
+            ignorelava = ((gpflags & MM_IGNORELAVA) != 0),
             allow_u = ((gpflags & GP_ALLOW_U) != 0);
 
     if (!isok(x, y))
@@ -55,7 +56,7 @@ goodpos(int x, int y, struct monst* mtmp, long gpflags)
      * oh well.
      */
     if (!allow_u) {
-        if (x == u.ux && y == u.uy && mtmp != &g.youmonst
+        if (u_at(x, y) && mtmp != &g.youmonst
             && (mtmp != u.ustuck || !u.uswallow)
             && (!u.usteed || mtmp != u.usteed))
             return FALSE;
@@ -83,18 +84,18 @@ goodpos(int x, int y, struct monst* mtmp, long gpflags)
             if (mtmp == &g.youmonst)
                 return (Swimming || Amphibious
                         || (!Is_waterlevel(&u.uz)
-                            && !(levl[x][y].typ == WATER)
+                            && !is_waterwall(x, y)
                             /* water on the Plane of Water has no surface
                                so there's no way to be on or above that */
                             && (Levitation || Flying || Wwalking)));
             else
                 return (is_swimmer(mdat)
                         || (!Is_waterlevel(&u.uz)
-                            && !(levl[x][y].typ == WATER)
+                            && !is_waterwall(x, y)
                             && !grounded(mdat)));
         } else if (mdat->mlet == S_EEL && rn2(13) && !ignorewater) {
             return FALSE;
-        } else if (is_lava(x, y)) {
+        } else if (is_lava(x, y) && !ignorelava) {
             /* 3.6.3: floating eye can levitate over lava but it avoids
                that due the effect of the heat causing it to dry out */
             if (mdat == &mons[PM_FLOATING_EYE])
@@ -114,7 +115,8 @@ goodpos(int x, int y, struct monst* mtmp, long gpflags)
             return TRUE;
     }
     if (!accessible(x, y)) {
-        if (!(is_pool(x, y) && ignorewater))
+        if (!(is_pool(x, y) && ignorewater)
+            && !(is_lava(x, y) && ignorelava))
             return FALSE;
     }
 
@@ -532,7 +534,7 @@ scrolltele(struct obj* scroll)
             if (teleok(cc.x, cc.y, FALSE)) {
                 /* for scroll, discover it regardless of destination */
                 teleds(cc.x, cc.y, TELEDS_TELEPORT);
-                if (iflags.travelcc.x == u.ux && iflags.travelcc.y == u.uy)
+                if (u_at(iflags.travelcc.x, iflags.travelcc.y))
                     iflags.travelcc.x = iflags.travelcc.y = 0;
                 return;
             }
@@ -763,7 +765,7 @@ dotele(
         if (castit) {
             /* energy cost is deducted in spelleffects() */
             exercise(A_WIS, TRUE);
-            if ((spelleffects(spell_idx(SPE_TELEPORT_AWAY), TRUE) & ECMD_TIME))
+            if ((spelleffects(SPE_TELEPORT_AWAY, TRUE) & ECMD_TIME))
                 return 1;
             else if (!break_the_rules)
                 return 0;
@@ -1286,7 +1288,7 @@ rloc_to_core(struct monst* mtmp,
 
     /* trapped monster teleported away */
     if (mtmp->mtrapped && !mtmp->wormno)
-        (void) mintrap(mtmp);
+        (void) mintrap(mtmp, NO_TRAP_FLAGS);
 }
 
 void
@@ -1428,7 +1430,7 @@ mtele_trap(struct monst* mtmp, struct trap* trap, int in_sight)
     }
 }
 
-/* return 0 if still on level, 3 if not */
+/* return Trap_Effect_Finished if still on level, Trap_Moved_Mon if not */
 int
 mlevel_tele_trap(
     struct monst *mtmp,
@@ -1439,7 +1441,7 @@ mlevel_tele_trap(
     int tt = (trap ? trap->ttyp : NO_TRAP);
 
     if (mtmp == u.ustuck) /* probably a vortex */
-        return 0;         /* temporary? kludge */
+        return Trap_Effect_Finished; /* temporary? kludge */
     if (teleport_pet(mtmp, force_it)) {
         d_level tolevel;
         int migrate_typ = MIGR_RANDOM;
@@ -1451,7 +1453,7 @@ mlevel_tele_trap(
                 if (in_sight && trap->tseen)
                     pline("%s avoids the %s.", Monnam(mtmp),
                           (tt == HOLE) ? "hole" : "trap");
-                return 0;
+                return Trap_Effect_Finished;
             } else {
                 get_level(&tolevel, depth(&u.uz) + 1);
             }
@@ -1463,7 +1465,7 @@ mlevel_tele_trap(
                     pline("%s seems to shimmer for a moment.", Monnam(mtmp));
                     seetrap(trap);
                 }
-                return 0;
+                return Trap_Effect_Finished;
             } else {
                 assign_level(&tolevel, &trap->dst);
                 migrate_typ = MIGR_PORTAL;
@@ -1480,7 +1482,7 @@ mlevel_tele_trap(
                 if (in_sight)
                     pline("%s seems very disoriented for a moment.",
                           Monnam(mtmp));
-                return 0;
+                return Trap_Effect_Finished;
             }
             if (tt == NO_TRAP) {
                 /* creature is being forced off the level to make room;
@@ -1493,13 +1495,13 @@ mlevel_tele_trap(
                 if (nlev == depth(&u.uz)) {
                     if (in_sight)
                         pline("%s shudders for a moment.", Monnam(mtmp));
-                    return 0;
+                    return Trap_Effect_Finished;
                 }
                 get_level(&tolevel, nlev);
             }
         } else {
             impossible("mlevel_tele_trap: unexpected trap type (%d)", tt);
-            return 0;
+            return Trap_Effect_Finished;
         }
 
         if (in_sight) {
@@ -1508,9 +1510,9 @@ mlevel_tele_trap(
                 seetrap(trap);
         }
         migrate_to_level(mtmp, ledger_no(&tolevel), migrate_typ, (coord *) 0);
-        return 3; /* no longer on this level */
+        return Trap_Moved_Mon; /* no longer on this level */
     }
-    return 0;
+    return Trap_Effect_Finished;
 }
 
 /* place object randomly, returns False if it's gone (eg broken) */

@@ -637,8 +637,6 @@ walk_path(coord *src_cc, coord *dest_cc,
             /* check for early exit condition */
             if (!(keep_going = (*check_proc)(arg, x, y)))
                 break;
-            flush_screen(1);
-            delay_output();
         }
     } else {
         while (i++ < dx) {
@@ -653,8 +651,6 @@ walk_path(coord *src_cc, coord *dest_cc,
             /* check for early exit condition */
             if (!(keep_going = (*check_proc)(arg, x, y)))
                 break;
-            flush_screen(1);
-            delay_output();
         }
     }
 
@@ -770,7 +766,8 @@ hurtle_step(genericptr_t arg, int x, int y)
         }
         if ((u.ux - x) && (u.uy - y) && bad_rock(g.youmonst.data, u.ux, y)
             && bad_rock(g.youmonst.data, x, u.uy)) {
-            boolean too_much = (g.invent && (inv_weight() + weight_cap() > 600));
+            boolean too_much = (g.invent
+                                && (inv_weight() + weight_cap() > 600));
 
             /* Move at a diagonal. */
             if (bigmonst(g.youmonst.data) || too_much) {
@@ -795,17 +792,18 @@ hurtle_step(genericptr_t arg, int x, int y)
              && (Flying || Levitation || Wwalking))
 #endif
         ) {
-        const char *mnam, *pronoun;
+        const char *mnam;
         int glyph = glyph_at(x, y);
 
         mon->mundetected = 0; /* wakeup() will handle mimic */
-        mnam = a_monnam(mon); /* after unhiding */
-        pronoun = noit_mhim(mon);
-        if (!strcmp(mnam, "it")) {
-            mnam = !strcmp(pronoun, "it") ? "something" : "someone";
-        }
+        /* after unhiding; combination of a_monnam() and some_mon_nam();
+           yields "someone" or "something" instead of "it" for unseen mon */
+        mnam = x_monnam(mon, ARTICLE_A, (char *) 0,
+                        ((has_mgivenname(mon) ? SUPPRESS_SADDLE : 0)
+                         | AUGMENT_IT),
+                        FALSE);
         if (!glyph_is_monster(glyph) && !glyph_is_invisible(glyph))
-            You("find %s by bumping into %s.", mnam, pronoun);
+            You("find %s by bumping into %s.", mnam, noit_mhim(mon));
         else
             You("bump into %s.", mnam);
         wakeup(mon, FALSE);
@@ -851,14 +849,16 @@ hurtle_step(genericptr_t arg, int x, int y)
         switch_terrain();
 
     if (is_pool(x, y) && !u.uinwater) {
-        if ((Is_waterlevel(&u.uz) && levl[x][y].typ == WATER)
+        if ((Is_waterlevel(&u.uz) && is_waterwall(x,y))
             || !(Levitation || Flying || Wwalking)) {
-            g.multi = 0; /* can move, so drown() allows crawling out of water */
+            /* couldn't move while hurtling; allow movement now so that
+               drown() will give a chance to crawl out of pool and survive */
+            g.multi = 0;
             (void) drown();
             return FALSE;
         } else if (!Is_waterlevel(&u.uz) && !stopping_short) {
             Norep("You move over %s.", an(is_moat(x, y) ? "moat" : "pool"));
-       }
+        }
     } else if (is_lava(x, y) && !stopping_short) {
         Norep("You move over some lava.");
     }
@@ -874,19 +874,19 @@ hurtle_step(genericptr_t arg, int x, int y)
         if (stopping_short) {
             ; /* see the comment above hurtle_jump() */
         } else if (ttmp->ttyp == MAGIC_PORTAL) {
-            dotrap(ttmp, 0);
+            dotrap(ttmp, NO_TRAP_FLAGS);
             return FALSE;
         } else if (ttmp->ttyp == VIBRATING_SQUARE) {
             pline("The ground vibrates as you pass it.");
-            dotrap(ttmp, 0); /* doesn't print messages */
+            dotrap(ttmp, NO_TRAP_FLAGS); /* doesn't print messages */
         } else if (ttmp->ttyp == FIRE_TRAP) {
-            dotrap(ttmp, 0);
+            dotrap(ttmp, NO_TRAP_FLAGS);
         } else if ((is_pit(ttmp->ttyp) || is_hole(ttmp->ttyp))
                    && Sokoban) {
             /* air currents overcome the recoil in Sokoban;
                when jumping, caller performs last step and enters trap */
             if (!via_jumping)
-                dotrap(ttmp, 0);
+                dotrap(ttmp, NO_TRAP_FLAGS);
             *range = 0;
             return TRUE;
         } else {
@@ -907,21 +907,11 @@ mhurtle_step(genericptr_t arg, int x, int y)
     struct monst *mon = (struct monst *) arg;
     struct monst *mtmp;
 
-    if (is_pool(x, y) || is_lava(x, y)) {
-        remove_monster(mon->mx, mon->my);
-        newsym(mon->mx, mon->my);
-        place_monster(mon, x, y);
-        newsym(mon->mx, mon->my);
-        set_apparxy(mon);
-        if (minliquid(mon))
-            return FALSE;
-        return TRUE;
-    }
-
-    /* TODO: Treat walls, doors, iron bars, pools, lava, etc. specially
+    /* TODO: Treat walls, doors, iron bars, etc. specially
      * rather than just stopping before.
      */
-    if (goodpos(x, y, mon, 0) && m_in_out_region(mon, x, y)) {
+    if (goodpos(x, y, mon, MM_IGNOREWATER | MM_IGNORELAVA)
+        && m_in_out_region(mon, x, y)) {
         int res;
 
         remove_monster(mon->mx, mon->my);
@@ -929,9 +919,16 @@ mhurtle_step(genericptr_t arg, int x, int y)
         place_monster(mon, x, y);
         newsym(mon->mx, mon->my);
         set_apparxy(mon);
-        res = mintrap(mon);
-        if (res == Trap_Killed_Mon || res == Trap_Caught_Mon)
+        if (is_waterwall(x, y))
             return FALSE;
+        res = mintrap(mon, HURTLING);
+        if (res == Trap_Killed_Mon
+            || res == Trap_Caught_Mon
+            || res == Trap_Moved_Mon)
+            return FALSE;
+
+        flush_screen(1);
+        delay_output();
         return TRUE;
     }
     if ((mtmp = m_at(x, y)) != 0 && (canseemon(mon) || canseemon(mtmp))) {
@@ -1016,8 +1013,11 @@ mhurtle(struct monst *mon, int dx, int dy, int range)
     /* Is the monster stuck or too heavy to push?
      * (very large monsters have too much inertia, even floaters and flyers)
      */
-    if (mon->data->msize >= MZ_HUGE || mon == u.ustuck || mon->mtrapped)
+    if (mon->data->msize >= MZ_HUGE || mon == u.ustuck || mon->mtrapped) {
+        if (canseemon(mon))
+            pline("%s doesn't budge!", Monnam(mon));
         return;
+    }
 
     /* Make sure dx and dy are [-1,0,1] */
     dx = sgn(dx);
@@ -1042,6 +1042,10 @@ mhurtle(struct monst *mon, int dx, int dy, int range)
     cc.x = mon->mx + (dx * range);
     cc.y = mon->my + (dy * range);
     (void) walk_path(&mc, &cc, mhurtle_step, (genericptr_t) mon);
+    if (!DEADMONSTER(mon) && t_at(mon->mx, mon->my))
+        mintrap(mon, FORCEBUNGLE);
+    else
+        (void) minliquid(mon);
     return;
 }
 

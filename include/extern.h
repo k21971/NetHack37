@@ -297,6 +297,7 @@ extern void free_nomakedefs(void);
 
 /* ### dbridge.c ### */
 
+extern boolean is_waterwall(xchar, xchar);
 extern boolean is_pool(int, int);
 extern boolean is_lava(int, int);
 extern boolean is_pool_or_lava(int, int);
@@ -2703,7 +2704,7 @@ extern void reset_utrap(boolean);
 extern void dotrap(struct trap *, unsigned);
 extern void seetrap(struct trap *);
 extern void feeltrap(struct trap *);
-extern int mintrap(struct monst *);
+extern int mintrap(struct monst *, unsigned);
 extern void instapetrify(const char *);
 extern void minstapetrify(struct monst *, boolean);
 extern void selftouch(const char *);

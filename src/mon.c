@@ -707,6 +707,7 @@ static int
 minliquid_core(struct monst* mtmp)
 {
     boolean inpool, inlava, infountain;
+    boolean waterwall = is_waterwall(mtmp->mx,mtmp->my);
 
     /* [ceiling clingers are handled below] */
     inpool = (is_pool(mtmp->mx, mtmp->my)
@@ -722,7 +723,7 @@ minliquid_core(struct monst* mtmp)
        water location on the Plane of Water, flight and levitating
        are blocked so this (Flying || Levitation) test fails there
        and steed will be subject to water effects, as intended) */
-    if (mtmp == u.usteed && (Flying || Levitation))
+    if (mtmp == u.usteed && (Flying || Levitation) && !waterwall)
         return 0;
 
     /* Gremlin multiplying won't go on forever since the hit points
@@ -800,13 +801,13 @@ minliquid_core(struct monst* mtmp)
             }
             return 1;
         }
-    } else if (inpool) {
+    } else if (inpool || waterwall) {
         /* Most monsters drown in pools.  flooreffects() will take care of
          * water damage to dead monsters' inventory, but survivors need to
          * be handled here.  Swimmers are able to protect their stuff...
          */
-        if (!is_clinger(mtmp->data) && !is_swimmer(mtmp->data)
-            && !amphibious(mtmp->data)) {
+        if ((waterwall || !is_clinger(mtmp->data))
+            && !is_swimmer(mtmp->data) && !amphibious(mtmp->data)) {
             /* like hero with teleport intrinsic or spell, teleport away
                if possible */
             if (can_teleport(mtmp->data) && !tele_restrict(mtmp)) {
@@ -1783,7 +1784,7 @@ mfndpos(
 
     nodiag = NODIAG(mdat - mons);
     wantpool = (mdat->mlet == S_EEL);
-    poolok = ((!Is_waterlevel(&u.uz) && !(nowtyp != WATER)
+    poolok = ((!Is_waterlevel(&u.uz) && IS_WATERWALL(nowtyp)
                && !grounded(mdat))
               || (is_swimmer(mdat) && !wantpool));
     /* note: floating eye is the only is_floater() so this could be
@@ -1889,9 +1890,9 @@ mfndpos(
                         continue;
                     info[cnt] |= ALLOW_SSM;
                 }
-                if ((nx == u.ux && ny == u.uy)
+                if (u_at(nx, ny)
                     || (nx == mon->mux && ny == mon->muy)) {
-                    if (nx == u.ux && ny == u.uy) {
+                    if (u_at(nx, ny)) {
                         /* If it's right next to you, it found you,
                          * displaced or no.  We must set mux and muy
                          * right now, so when we return we can tell

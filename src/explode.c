@@ -182,7 +182,7 @@ explode(
             } else
                 explmask[i][j] = 0;
 
-            if (i + x - 1 == u.ux && j + y - 1 == u.uy) {
+            if (u_at(i + x - 1, j + y - 1)) {
                 switch (adtyp) {
                 case AD_PHYS:
                     explmask[i][j] = 0;
@@ -219,7 +219,7 @@ explode(
             }
             /* can be both you and mtmp if you're swallowed or riding */
             mtmp = m_at(i + x - 1, j + y - 1);
-            if (!mtmp && i + x - 1 == u.ux && j + y - 1 == u.uy)
+            if (!mtmp && u_at(i + x - 1, j + y - 1))
                 mtmp = u.usteed;
             if (mtmp) {
                 if (DEADMONSTER(mtmp))
@@ -327,7 +327,7 @@ explode(
             for (j = 0; j < 3; j++) {
                 if (explmask[i][j] == 2)
                     continue;
-                if (i + x - 1 == u.ux && j + y - 1 == u.uy) {
+                if (u_at(i + x - 1, j + y - 1)) {
                     uhurt = (explmask[i][j] == 1) ? 1 : 2;
                     /* If the player is attacking via polyself into something
                      * with an explosion attack, leave them (and their gear)
@@ -348,7 +348,7 @@ explode(
                                           &shopdamage, exploding_wand_typ);
 
                 mtmp = m_at(i + x - 1, j + y - 1);
-                if (!mtmp && i + x - 1 == u.ux && j + y - 1 == u.uy)
+                if (!mtmp && u_at(i + x - 1, j + y - 1))
                     mtmp = u.usteed;
                 if (!mtmp)
                     continue;
@@ -746,6 +746,7 @@ scatter(int sx, int sy,  /* location of objects to scatter */
     while (farthest-- > 0) {
         for (stmp = schain; stmp; stmp = stmp->next) {
             if ((stmp->range-- > 0) && (!stmp->stopped)) {
+                g.thrownobj = stmp->obj; /* mainly in case it kills hero */
                 g.bhitpos.x = stmp->ox + stmp->dx;
                 g.bhitpos.y = stmp->oy + stmp->dy;
                 typ = levl[g.bhitpos.x][g.bhitpos.y].typ;
@@ -766,7 +767,7 @@ scatter(int sx, int sy,  /* location of objects to scatter */
                             stmp->stopped = TRUE;
                         }
                     }
-                } else if (g.bhitpos.x == u.ux && g.bhitpos.y == u.uy) {
+                } else if (u_at(g.bhitpos.x, g.bhitpos.y)) {
                     if (scflags & MAY_HITYOU) {
                         int hitvalu, hitu;
 
@@ -794,6 +795,7 @@ scatter(int sx, int sy,  /* location of objects to scatter */
                 stmp->oy = g.bhitpos.y;
                 if (IS_SINK(levl[stmp->ox][stmp->oy].typ))
                     stmp->stopped = TRUE;
+                g.thrownobj = (struct obj *) 0;
             }
         }
     }
@@ -836,8 +838,7 @@ scatter(int sx, int sy,  /* location of objects to scatter */
         newsym(x, y);
     }
     newsym(sx, sy);
-    if (sx == u.ux && sy == u.uy && u.uundetected
-        && hides_under(g.youmonst.data))
+    if (u_at(sx, sy) && u.uundetected && hides_under(g.youmonst.data))
         (void) hideunder(&g.youmonst);
     if (lostgoods) /* implies shop_origin and therefore shkp valid */
         credit_report(shkp, 1, FALSE);

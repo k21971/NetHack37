@@ -633,7 +633,7 @@ still_chewing(xchar x, xchar y)
                updates hunger state and requests status update if changed */
             morehungry(-nut);
         }
-        digtxt = (x == u.ux && y == u.uy)
+        digtxt = u_at(x, y)
                  ? "devour the iron bars."
                  : "eat through the bars.";
         dissolve_bars(x, y);
@@ -1282,7 +1282,7 @@ findtravelpath(int mode)
                         }
                     }
 
-            if (px == u.ux && py == u.uy) {
+            if (u_at(px, py)) {
                 /* no guesses, just go in the general direction */
                 u.dx = sgn(u.tx - u.ux);
                 u.dy = sgn(u.ty - u.uy);
@@ -1332,7 +1332,7 @@ is_valid_travelpt(int x, int y)
     boolean ret;
     int glyph = glyph_at(x,y);
 
-    if (x == u.ux && y == u.uy)
+    if (u_at(x, y))
         return TRUE;
     if (isok(x,y) && glyph_is_cmap(glyph) && S_stone == glyph_to_cmap(glyph)
         && !levl[x][y].seenv)
@@ -1535,7 +1535,7 @@ u_simple_floortyp(xchar x, xchar y)
 {
     boolean u_in_air = (Levitation || Flying || !grounded(g.youmonst.data));
 
-    if (levl[x][y].typ == WATER)
+    if (is_waterwall(x,y))
         return WATER; /* wall of water, fly/lev does not matter */
     if (!u_in_air) {
         if (is_pool(x,y))
@@ -1551,7 +1551,7 @@ static boolean
 swim_move_danger(xchar x, xchar y)
 {
     schar newtyp = u_simple_floortyp(x, y);
-    boolean liquid_wall = (newtyp == WATER);
+    boolean liquid_wall = IS_WATERWALL(newtyp);
 
     if ((newtyp != u_simple_floortyp(u.ux, u.uy))
         && !Stunned && !Confusion && levl[x][y].seenv
@@ -2058,7 +2058,7 @@ domove_core(void)
            or blame if something bad happens to it */
         g.context.mon_moving = 1;
         if (!minliquid(mtmp))
-            (void) mintrap(mtmp);
+            (void) mintrap(mtmp, NO_TRAP_FLAGS);
         g.context.mon_moving = 0;
 
     /*
@@ -2138,16 +2138,17 @@ domove_core(void)
                          has_mgivenname(mtmp) ? SUPPRESS_SADDLE : 0, FALSE));
 
             /* check for displacing it into pools and traps */
-            switch (minliquid(mtmp) ? 2 : mintrap(mtmp)) {
-            case 0:
+            switch (minliquid(mtmp) ? Trap_Killed_Mon
+                    : mintrap(mtmp, NO_TRAP_FLAGS)) {
+            case Trap_Effect_Finished:
                 break;
-            case 1: /* trapped */
-            case 3: /* changed levels */
+            case Trap_Caught_Mon: /* trapped */
+            case Trap_Moved_Mon: /* changed levels */
                 /* there's already been a trap message, reinforce it */
                 abuse_dog(mtmp);
                 adjalign(-3);
                 break;
-            case 2:
+            case Trap_Killed_Mon:
                 /* drowned or died...
                  * you killed your pet by direct action, so get experience
                  * and possibly penalties;
@@ -2352,7 +2353,7 @@ switch_terrain(void)
 {
     struct rm *lev = &levl[u.ux][u.uy];
     boolean blocklev = (IS_ROCK(lev->typ) || closed_door(u.ux, u.uy)
-                        || lev->typ == WATER),
+                        || IS_WATERWALL(lev->typ)),
             was_levitating = !!Levitation, was_flying = !!Flying;
 
     if (blocklev) {
@@ -2464,7 +2465,7 @@ pooleffects(boolean newspot)             /* true if called by spoteffects */
         if (is_lava(u.ux, u.uy)) {
             if (lava_effects())
                 return TRUE;
-        } else if ((!Wwalking || levl[u.ux][u.uy].typ == WATER)
+        } else if ((!Wwalking || is_waterwall(u.ux,u.uy))
                    && (newspot || !u.uinwater || !(Swimming || Amphibious))) {
             if (drown())
                 return TRUE;
@@ -2489,7 +2490,7 @@ spoteffects(boolean pick)
     /* prevent recursion from affecting the hero all over again
        [hero poly'd to iron golem enters water here, drown() inflicts
        damage that triggers rehumanize() which calls spoteffects()...] */
-    if (inspoteffects && u.ux == spotloc.x && u.uy == spotloc.y
+    if (inspoteffects && u_at(spotloc.x, spotloc.y)
         /* except when reason is transformed terrain (ice -> water) */
         && spotterrain == levl[u.ux][u.uy].typ
         /* or transformed trap (land mine -> pit) */
@@ -3042,7 +3043,7 @@ lookaround(void)
     for (x = u.ux - 1; x <= u.ux + 1; x++)
         for (y = u.uy - 1; y <= u.uy + 1; y++) {
             /* ignore out of bounds, and our own location */
-            if (!isok(x, y) || (x == u.ux && y == u.uy))
+            if (!isok(x, y) || u_at(x, y))
                 continue;
             /* (grid bugs) ignore diagonals */
             if (NODIAG(u.umonnum) && x != u.ux && y != u.uy)
@@ -3246,7 +3247,7 @@ monster_nearby(void)
     /* Also see the similar check in dochugw() in monmove.c */
     for (x = u.ux - 1; x <= u.ux + 1; x++)
         for (y = u.uy - 1; y <= u.uy + 1; y++) {
-            if (!isok(x, y) || (x == u.ux && y == u.uy))
+            if (!isok(x, y) || u_at(x, y))
                 continue;
             if ((mtmp = m_at(x, y)) != 0
                 && M_AP_TYPE(mtmp) != M_AP_FURNITURE

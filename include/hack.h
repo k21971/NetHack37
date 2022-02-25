@@ -297,6 +297,7 @@ typedef struct sortloot_item Loot;
                                * to make an extra call to goodpos()]        */
 #define GP_ALLOW_U  0x100000L /* don't reject hero's location */
 #define MM_NOEXCLAM 0x200000L /* more sedate "<mon> appears." mesg for ^G */
+#define MM_IGNORELAVA   0x400000L /* ignore lava when positioning */
 
 /* flags for make_corpse() and mkcorpstat(); 0..7 are recorded in obj->spe */
 #define CORPSTAT_NONE     0x00
@@ -380,14 +381,16 @@ typedef struct sortloot_item Loot;
 #define PICK_RANDOM 0
 #define PICK_RIGID 1
 
-/* Flags to control dotrap() in trap.c */
-#define FORCETRAP 0x01     /* triggering not left to chance */
-#define NOWEBMSG 0x02      /* suppress stumble into web message */
-#define FORCEBUNGLE 0x04   /* adjustments appropriate for bungling */
-#define RECURSIVETRAP 0x08 /* trap changed into another type this same turn */
-#define TOOKPLUNGE 0x10    /* used '>' to enter pit below you */
-#define VIASITTING 0x20    /* #sit while at trap location (affects message) */
-#define FAILEDUNTRAP 0x40  /* trap activated by failed untrap attempt */
+/* Flags to control dotrap() and mintrap() in trap.c */
+#define NO_TRAP_FLAGS 0x00U
+#define FORCETRAP     0x01U /* triggering not left to chance */
+#define NOWEBMSG      0x02U /* suppress stumble into web message */
+#define FORCEBUNGLE   0x04U /* adjustments appropriate for bungling */
+#define RECURSIVETRAP 0x08U /* trap changed into another type this same turn */
+#define TOOKPLUNGE    0x10U /* used '>' to enter pit below you */
+#define VIASITTING    0x20U /* #sit while at trap location (affects message) */
+#define FAILEDUNTRAP  0x40U /* trap activated by failed untrap attempt */
+#define HURTLING      0x80U /* monster is hurtling through air */
 
 /* Flags to control test_move in hack.c */
 #define DO_MOVE 0   /* really doing the move */

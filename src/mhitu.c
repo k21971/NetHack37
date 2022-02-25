@@ -195,7 +195,7 @@ wildmiss(struct monst *mtmp, struct attack *mattk)
                 break;
             case 2:
                 pline("%s strikes at %s!", Monst_name,
-                      (levl[mtmp->mux][mtmp->muy].typ == WATER)
+                      is_waterwall(mtmp->mux,mtmp->muy)
                         ? "empty water"
                         : "thin air");
                 break;
@@ -403,7 +403,7 @@ mattacku(register struct monst *mtmp)
      */
     boolean ranged = (distu(mtmp->mx, mtmp->my) > 3),
             range2 = !monnear(mtmp, mtmp->mux, mtmp->muy),
-            foundyou = (mtmp->mux == u.ux && mtmp->muy == u.uy),
+            foundyou = u_at(mtmp->mux, mtmp->muy),
             youseeit = canseemon(mtmp),
             skipnonmagc = FALSE;
 
@@ -1402,8 +1402,8 @@ explmu(struct monst *mtmp, struct attack *mattk, boolean ufound)
     if (!ufound) {
         pline("%s explodes at a spot in %s!",
               canseemon(mtmp) ? Monnam(mtmp) : "It",
-              levl[mtmp->mux][mtmp->muy].typ == WATER ? "empty water"
-                                                      : "thin air");
+              is_waterwall(mtmp->mux,mtmp->muy) ? "empty water"
+                                                : "thin air");
     } else {
         hitmsg(mtmp, mattk);
     }

@@ -49,7 +49,7 @@ dowatersnakes(void)
             if ((mtmp = makemon(&mons[PM_WATER_MOCCASIN], u.ux, u.uy,
                                 MM_NOMSG)) != 0
                 && t_at(mtmp->mx, mtmp->my))
-                (void) mintrap(mtmp);
+                (void) mintrap(mtmp, NO_TRAP_FLAGS);
     } else
         pline_The("fountain bubbles furiously for a moment, then calms.");
 }
@@ -76,7 +76,7 @@ dowaterdemon(void)
                 /* give a wish and discard the monster (mtmp set to null) */
                 mongrantswish(&mtmp);
             } else if (t_at(mtmp->mx, mtmp->my))
-                (void) mintrap(mtmp);
+                (void) mintrap(mtmp, NO_TRAP_FLAGS);
         }
     } else
         pline_The("fountain bubbles furiously for a moment, then calms.");
@@ -97,7 +97,7 @@ dowaternymph(void)
             You_hear("a seductive voice.");
         mtmp->msleeping = 0;
         if (t_at(mtmp->mx, mtmp->my))
-            (void) mintrap(mtmp);
+            (void) mintrap(mtmp, NO_TRAP_FLAGS);
     } else if (!Blind)
         pline("A large bubble rises to the surface and pops.");
     else
@@ -125,7 +125,7 @@ gush(int x, int y, genericptr_t poolcnt)
     register struct monst *mtmp;
     register struct trap *ttmp;
 
-    if (((x + y) % 2) || (x == u.ux && y == u.uy)
+    if (((x + y) % 2) || u_at(x, y)
         || (rn2(1 + distmin(u.ux, u.uy, x, y))) || (levl[x][y].typ != ROOM)
         || (sobj_at(BOULDER, x, y)) || nexttodoor(x, y))
         return;
@@ -528,7 +528,7 @@ dipfountain(register struct obj *obj)
 void
 breaksink(int x, int y)
 {
-    if (cansee(x, y) || (x == u.ux && y == u.uy))
+    if (cansee(x, y) || u_at(x, y))
         pline_The("pipes break!  Water spurts out!");
     g.level.flags.nsinks--;
     levl[x][y].typ = FOUNTAIN, levl[x][y].looted = 0;
