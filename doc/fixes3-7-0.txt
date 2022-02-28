@@ -823,6 +823,9 @@ if a lit potion of oil on the floor was launched by an explosion and it hit
 	and killed the hero via missile damage rather than its own explosion,
 	it could trigger an "obj_is_local" panic when end of game cleanup
 	tried to extinguish it as a light source
+place_object() validated coordinates after using them to index level.objects
+killed rope golem may drop leashes and bullwhips
+using magic portals and level teleporters stuns hero for a few turns
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1066,6 +1069,8 @@ rearranging first-kill and first-hit gamelog messages to get hit before kill
 counting "just picked up" items when deciding what pseudo-classes should be
 	included for the 'I' command's object class prompt was operating on
 	an uninitialized varaible
+changes to stair internals resulted in summoned Kops blockcading the stairs up
+	rather than intended stairs down
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1327,7 +1332,8 @@ when hallucinating, see hallucinated liquids when looking at water or lava
 applying a spellbook hints about read charges left
 wizard mode wishing for level topology can now create hidden doors (ask for
 	"secret door" when at a door or wall location), hidden corridor
-	spots ("secret corridor" at a corridor location), clouds and walls
+	spots ("secret corridor" at a corridor location), clouds, walls,
+	and (melting) ice
 tiny chance for randomly created spellbooks to be Discworld novels instead
 	of having only one in the first book or scroll shop created (won't
 	occur in hero's initial inventory or NPC priest inventory or be

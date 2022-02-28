@@ -606,6 +606,13 @@ make_corpse(struct monst *mtmp, unsigned int corpseflags)
         }
         free_mgivenname(mtmp);
         break;
+    case PM_ROPE_GOLEM:
+        num = rn2(3);
+        while (num-- > 0) {
+            obj = mksobj_at(rn2(2) ? LEASH : BULLWHIP, x, y, TRUE, FALSE);
+        }
+        free_mgivenname(mtmp);
+        break;
     case PM_LEATHER_GOLEM:
         num = d(2, 4);
         while (num--)
@@ -2803,7 +2810,7 @@ monstone(struct monst* mdef)
     if (wasinside) {
         if (is_animal(mdef->data))
             You("%s through an opening in the new %s.",
-                locomotion(g.youmonst.data, "jump"), xname(otmp));
+                u_locomotion("jump"), xname(otmp));
     }
 }
 

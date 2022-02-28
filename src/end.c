@@ -28,7 +28,6 @@ static void done_hangup(int);
 static void disclose(int, boolean);
 static void get_valuables(struct obj *);
 static void sort_valuables(struct valuable_data *, int);
-static void done_object_cleanup(void);
 static void artifact_score(struct obj *, boolean, winid);
 static void really_done(int) NORETURN;
 static void savelife(int);
@@ -1047,7 +1046,7 @@ odds_and_ends(struct obj *list, int what)
 #endif
 
 /* deal with some objects which may be in an abnormal state at end of game */
-static void
+void
 done_object_cleanup(void)
 {
     int ox, oy;
@@ -1104,10 +1103,10 @@ done_object_cleanup(void)
 
 /* called twice; first to calculate total, then to list relevant items */
 static void
-artifact_score(struct obj *list,
-               boolean counting, /* true => add up points;
-                                    false => display them */
-               winid endwin)
+artifact_score(
+    struct obj *list,
+    boolean counting, /* true => add up points; false => display them */
+    winid endwin)
 {
     char pbuf[BUFSZ];
     struct obj *otmp;
@@ -1703,9 +1702,13 @@ really_done(int how)
     nh_terminate(EXIT_SUCCESS);
 }
 
+/* used for disclosure and for the ':' choice when looting a container */
 void
-container_contents(struct obj *list, boolean identified,
-                   boolean all_containers, boolean reportempty)
+container_contents(
+    struct obj *list,
+    boolean identified,
+    boolean all_containers,
+    boolean reportempty)
 {
     register struct obj *box, *obj;
     char buf[BUFSZ];
