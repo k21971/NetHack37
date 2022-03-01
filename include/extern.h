@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1644524039 2022/02/10 20:13:59 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1046 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1646136928 2022/03/01 12:15:28 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1062 $ */
 /* Copyright (c) Steve Creps, 1988.				  */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -264,7 +264,6 @@ extern void rhack(char *);
 extern int doextlist(void);
 extern int extcmd_via_menu(void);
 extern int enter_explore_mode(void);
-extern int do_gamelog(void);
 extern boolean bind_key(uchar, const char *);
 extern void dokeylist(void);
 extern int xytod(schar, schar);
@@ -277,7 +276,7 @@ extern const char *directionname(int);
 extern int isok(int, int);
 extern int get_adjacent_loc(const char *, const char *, xchar, xchar, coord *);
 extern const char *click_to_cmd(int, int, int);
-extern char get_count(char *, char, long, long *, boolean);
+extern char get_count(char *, char, long, cmdcount_t *, boolean);
 #ifdef HANGUPHANDLING
 extern void hangup(int);
 extern void end_of_input(void);
@@ -1048,6 +1047,8 @@ extern boolean remove_achievement(schar);
 extern int count_achievements(void);
 extern schar achieve_rank(int);
 extern boolean sokoban_in_play(void);
+extern int do_gamelog(void);
+extern void show_gamelog(int);
 extern int dovanquished(void);
 extern int doborn(void);
 extern void list_vanquished(char, boolean);
