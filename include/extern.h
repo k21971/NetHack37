@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1646136928 2022/03/01 12:15:28 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1062 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1646255373 2022/03/02 21:09:33 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1064 $ */
 /* Copyright (c) Steve Creps, 1988.				  */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -181,7 +181,7 @@ extern void max_rank_sz(void);
 #ifdef SCORE_ON_BOTL
 extern long botl_score(void);
 #endif
-extern int describe_level(char *);
+extern int describe_level(char *, int);
 extern void status_initialize(boolean);
 extern void status_finish(void);
 extern boolean exp_percent_changing(void);
@@ -893,7 +893,7 @@ extern boolean Death_quote(char *, int);
 #ifdef EXTRAINFO_FN
 extern void mk_dgl_extrainfo(void);
 #endif
-extern void livelog_add(unsigned int ll_type, const char *);
+extern void livelog_add(long, const char *);
 
 /* ### fountain.c ### */
 
@@ -2058,8 +2058,8 @@ extern void You_see(const char *, ...) PRINTF_F(1, 2);
 extern void pline_The(const char *, ...) PRINTF_F(1, 2);
 extern void There(const char *, ...) PRINTF_F(1, 2);
 extern void verbalize(const char *, ...) PRINTF_F(1, 2);
-extern void gamelog_add(unsigned int, long, const char *);
-extern void livelog_printf(unsigned int, const char *, ...) PRINTF_F(2, 3);
+extern void gamelog_add(long, long, const char *);
+extern void livelog_printf(long, const char *, ...) PRINTF_F(2, 3);
 extern void raw_printf(const char *, ...) PRINTF_F(1, 2);
 extern void impossible(const char *, ...) PRINTF_F(1, 2);
 extern void config_error_add(const char *, ...) PRINTF_F(1, 2);

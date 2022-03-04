@@ -1,4 +1,4 @@
-/* NetHack 3.7	mon.c	$NHDT-Date: 1629817677 2021/08/24 15:07:57 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.384 $ */
+/* NetHack 3.7	mon.c	$NHDT-Date: 1646184187 2022/03/02 01:23:07 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.412 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -477,7 +477,7 @@ pm_to_cham(int mndx)
      || is_reviver((mon)->data)                                         \
         /* normally quest leader will be unique, */                     \
         /* but he or she might have been polymorphed  */                \
-     || (mon)->m_id == g.quest_status.leader_m_id                         \
+     || (mon)->m_id == g.quest_status.leader_m_id                       \
         /* special cancellation handling for these */                   \
      || (dmgtype((mon)->data, AD_SEDU) || dmgtype((mon)->data, AD_SSEX)))
 
@@ -2077,7 +2077,7 @@ mm_displacement(
 
 /* Is the square close enough for the monster to move or attack into? */
 boolean
-monnear(struct monst* mon, int x, int y)
+monnear(struct monst *mon, int x, int y)
 {
     int distance = dist2(mon->mx, mon->my, x, y);
 
@@ -2107,7 +2107,7 @@ dmonsfree(void)
     }
 
     if (count != iflags.purge_monsters) {
-        describe_level(buf);
+        describe_level(buf, 2);
         impossible("dmonsfree: %d removed doesn't match %d pending on %s",
                    count, iflags.purge_monsters, buf);
     }
@@ -2116,7 +2116,7 @@ dmonsfree(void)
 
 /* called when monster is moved to larger structure */
 void
-replmon(struct monst* mtmp, struct monst* mtmp2)
+replmon(struct monst *mtmp, struct monst *mtmp2)
 {
     struct obj *otmp;
 
@@ -2286,13 +2286,13 @@ dealloc_mextra(struct monst* m)
 }
 
 void
-dealloc_monst(struct monst* mon)
+dealloc_monst(struct monst *mon)
 {
     char buf[QBUFSZ];
 
     buf[0] = '\0';
     if (mon->nmon) {
-        describe_level(buf);
+        describe_level(buf, 2);
         panic("dealloc_monst with nmon on %s", buf);
     }
     if (mon->mextra)
@@ -2440,7 +2440,7 @@ mondead(register struct monst* mtmp)
 {
     struct permonst *mptr;
     boolean be_sad;
-    int tmp;
+    int mndx;
 
     /* potential pet message; always clear global flag */
     be_sad = iflags.sad_feeling;
@@ -2452,12 +2452,11 @@ mondead(register struct monst* mtmp)
         return;
 
     if (is_vampshifter(mtmp)) {
-        int mndx = mtmp->cham;
-        int x = mtmp->mx, y = mtmp->my;
-
         /* this only happens if shapeshifted */
+        mndx = mtmp->cham;
         if (mndx >= LOW_PM && mndx != monsndx(mtmp->data)
             && !(g.mvitals[mndx].mvflags & G_GENOD)) {
+            coord new_xy;
             char buf[BUFSZ];
             boolean in_door = (amorphous(mtmp->data)
                                && closed_door(mtmp->mx, mtmp->my)),
@@ -2468,6 +2467,7 @@ mondead(register struct monst* mtmp)
                 spec_death = (g.disintegested /* disintegrated or digested */
                               || noncorporeal(mtmp->data)
                               || amorphous(mtmp->data));
+            int x = mtmp->mx, y = mtmp->my;
 
             /* construct a format string before transformation;
                will be capitalized when used, expects one %s arg */
@@ -2489,11 +2489,8 @@ mondead(register struct monst* mtmp)
                     uunstick();
             }
             if (in_door) {
-                coord new_xy;
-
-                if (enexto(&new_xy, mtmp->mx, mtmp->my, &mons[mndx])) {
+                if (enexto(&new_xy, mtmp->mx, mtmp->my, &mons[mndx]))
                     rloc_to(mtmp, new_xy.x, new_xy.y);
-                }
             }
             newcham(mtmp, &mons[mndx], FALSE, FALSE);
             if (mtmp->data == &mons[mndx])
@@ -2550,17 +2547,17 @@ mondead(register struct monst* mtmp)
      * based on only player kills probably opens more avenues of abuse
      * for rings of conflict and such.
      */
-    tmp = monsndx(mtmp->data);
-    if (g.mvitals[tmp].died < 255)
-        g.mvitals[tmp].died++;
+    mndx = monsndx(mtmp->data);
+    if (g.mvitals[mndx].died < 255)
+        g.mvitals[mndx].died++;
 
     /* if it's a (possibly polymorphed) quest leader, mark him as dead */
     if (mtmp->m_id == g.quest_status.leader_m_id)
         g.quest_status.leader_is_dead = TRUE;
 #ifdef MAIL_STRUCTURES
     /* if the mail daemon dies, no more mail delivery.  -3. */
-    if (tmp == PM_MAIL_DAEMON)
-        g.mvitals[tmp].mvflags |= G_GENOD;
+    if (mndx == PM_MAIL_DAEMON)
+        g.mvitals[mndx].mvflags |= G_GENOD;
 #endif
 
     if (mtmp->data->mlet == S_KOP) {
@@ -2587,40 +2584,49 @@ mondead(register struct monst* mtmp)
     if (mtmp->data->msound == MS_NEMESIS)
         nemdead();
 #endif
-    /* Medusa falls into two livelog categories,
-     * we log one message flagged for both categories,
-     * but only for the first kill. Subsequent kills are not an achievement.
-     * record_achievement() now handles this.
-     */
-    if (mtmp->data == &mons[PM_MEDUSA])
-        record_achievement(ACH_MEDU);
-    else if (unique_corpstat(mtmp->data)) {
-        switch (g.mvitals[tmp].died) {
-            case 1:
-                livelog_printf(LL_UMONST, "%s %s",
-                               nonliving(mtmp->data) ? "destroyed" : "killed",
-                               livelog_mon_nam(mtmp));
-                break;
-            case 5:
-            case 10:
-            case 50:
-            case 100:
-            case 150:
-            case 200:
-            case 250:
-                livelog_printf(LL_UMONST, "%s %s (%d times)",
-                               nonliving(mtmp->data) ? "destroyed" : "killed",
-                               livelog_mon_nam(mtmp), g.mvitals[tmp].died);
-                break;
-            default:
-                /* don't spam the log every time */
-                break;
+
+    if (mndx == PM_MEDUSA && g.mvitals[mndx].died == 1) {
+        record_achievement(ACH_MEDU); /* also generates a livelog event */
+    } else if (unique_corpstat(mtmp->data)) {
+        /*
+         * livelog event; unique_corpstat() includes the Wizard and
+         * any High Priest even though they aren't actually unique.
+         *
+         * It would be nice to include shopkeepers.  Their names are
+         * unique within each game but unfortunately for this potential
+         * usage their kill count is lumped together in a group total.
+         */
+        int howmany = g.mvitals[mndx].died;
+
+        /* killing a unique more than once doesn't get logged every time;
+           the Wizard and the Riders can be killed more than once
+           "naturally", others require deliberate player action such as
+           use of undead turning to revive a corpse or petrification plus
+           stone-to-flesh to create and revive a statue */
+        if (howmany <= 3 || howmany == 5 || howmany == 10 || howmany == 25
+            || (howmany % 50) == 0) { /* 50, 100, 150, 200, 250 */
+            char xtra[40];
+            long llevent_type = LL_UMONST;
+
+            /* first kill of any unique is a major event; all kills of the
+               Wizard and the Riders are major if they're logged but they
+               still don't get logged every time */
+            if (howmany == 1 || mtmp->iswiz || is_rider(mtmp->data))
+                llevent_type |= LL_ACHIEVE;
+            xtra[0] = '\0';
+            if (howmany > 1) /* "(2nd time)" or "(50th time)" */
+                Sprintf(xtra, " (%d%s time)", howmany, ordin(howmany));
+
+            livelog_printf(llevent_type, "%s %s%s",
+                           nonliving(mtmp->data) ? "destroyed" : "killed",
+                           livelog_mon_nam(mtmp), xtra);
         }
     }
 
     if (glyph_is_invisible(levl[mtmp->mx][mtmp->my].glyph))
         unmap_object(mtmp->mx, mtmp->my);
     m_detach(mtmp, mptr);
+    return;
 }
 
 RESTORE_WARNING_FORMAT_NONLITERAL

@@ -1,4 +1,4 @@
-/* NetHack 3.7	insight.c	$NHDT-Date: 1646136941 2022/03/01 12:15:41 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.53 $ */
+/* NetHack 3.7	insight.c	$NHDT-Date: 1646322468 2022/03/03 15:47:48 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.55 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -59,7 +59,7 @@ static struct ll_achieve_msg achieve_msg [] = {
     { LL_ACHIEVE, "acquired the Book of the Dead" },
     { LL_ACHIEVE, "performed the invocation" },
     { LL_ACHIEVE, "acquired The Amulet of Yendor" },
-    { LL_ACHIEVE, "entered the Planes" },
+    { LL_ACHIEVE, "entered the Elemental Planes" },
     { LL_ACHIEVE, "entered the Astral Plane" },
     { LL_ACHIEVE, "ascended" },
     { LL_ACHIEVE | LL_SPOILER, "acquired the Mines' End luckstone" },
@@ -1963,7 +1963,7 @@ youhiding(boolean via_enlghtmt, /* englightment line vs topl message */
 int
 doconduct(void)
 {
-    show_conduct(0);
+    show_conduct(ENL_GAMEINPROGRESS);
     return ECMD_OK;
 }
 
@@ -2377,16 +2377,13 @@ sokoban_in_play(void)
     return FALSE;
 }
 
-#define majorevent(llmsg) (((llmsg)->flags & LL_ACHIEVE) != 0)
-#define spoilerevent(llmsg) (((llmsg)->flags & LL_SPOILER) != 0)
-
 /* #chronicle command */
 int
 do_gamelog(void)
 {
 #ifdef CHRONICLE
     if (g.gamelog) {
-        show_gamelog(0);
+        show_gamelog(ENL_GAMEINPROGRESS);
     } else {
         pline("No chronicled events.");
     }
@@ -2395,6 +2392,19 @@ do_gamelog(void)
 #endif /* !CHRONICLE */
     return ECMD_OK;
 }
+
+/* 'major' events for dumplog; inclusion or exclusion here may need tuning */
+#define LL_majors (0L \
+                   | LL_WISH            \
+                   | LL_ACHIEVE         \
+                   | LL_UMONST          \
+                   | LL_DIVINEGIFT      \
+                   | LL_LIFESAVE        \
+                   | LL_ARTIFACT        \
+                   | LL_GENOCIDE        \
+                   | LL_DUMP) /* explicitly for dumplog */
+#define majorevent(llmsg) (((llmsg)->flags & LL_majors) != 0)
+#define spoilerevent(llmsg) (((llmsg)->flags & LL_SPOILER) != 0)
 
 /* #chronicle details */
 void
