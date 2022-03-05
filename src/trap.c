@@ -1,4 +1,4 @@
-/* NetHack 3.7	trap.c	$NHDT-Date: 1646175653 2022/03/01 23:00:53 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.455 $ */
+/* NetHack 3.7	trap.c	$NHDT-Date: 1646428017 2022/03/04 21:06:57 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.459 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -2751,6 +2751,7 @@ launch_obj(
 
     if (otmp->quan == 1L) {
         obj_extract_self(otmp);
+        maybe_unhide_at(otmp->ox, otmp->oy);
         singleobj = otmp;
         otmp = (struct obj *) 0;
     } else {
@@ -6028,7 +6029,8 @@ maybe_finish_sokoban(void)
 
             /* log the completion event regardless of whether or not
                any normal in-game feedback has just been given */
-            livelog_printf(LL_ACHIEVE, "completed sokoban %d", sokonum);
+            livelog_printf(LL_MINORAC | LL_DUMP, "completed sokoban %d",
+                           sokonum);
         }
     }
 }
@@ -6124,4 +6126,20 @@ trap_ice_effects(xchar x, xchar y, boolean ice_is_melting)
         }
     }
 }
+
+/* sanity check traps */
+void
+trap_sanity_check(void)
+{
+    struct trap *ttmp = g.ftrap;
+
+    while (ttmp) {
+        if (!isok(ttmp->tx, ttmp->ty))
+            impossible("trap sanity: location (%i,%i)", ttmp->tx, ttmp->ty);
+        if (ttmp->ttyp <= NO_TRAP || ttmp->ttyp >= TRAPNUM)
+            impossible("trap sanity: type (%i)", ttmp->ttyp);
+        ttmp = ttmp->ntrap;
+    }
+}
+
 /*trap.c*/
