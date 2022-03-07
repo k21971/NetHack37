@@ -154,7 +154,8 @@ moverock(void)
             pline("That feels like a boulder.");
             map_object(otmp, TRUE);
             nomul(0);
-            return -1;
+            res = -1;
+            goto moverock_done;
         }
 
         /* when otmp->next_boulder is 1, xname() will format it as
@@ -423,6 +424,7 @@ moverock(void)
             /* Move the boulder *after* the message. */
             if (glyph_is_invisible(levl[rx][ry].glyph))
                 unmap_object(rx, ry);
+            otmp->next_boulder = 0;
             movobj(otmp, rx, ry); /* does newsym(rx,ry) */
             if (Blind) {
                 feel_location(rx, ry);
