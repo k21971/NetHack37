@@ -1,4 +1,4 @@
-NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.836 $ $NHDT-Date: 1646260985 2022/03/02 22:43:05 $
+NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.838 $ $NHDT-Date: 1646694720 2022/03/07 23:12:00 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -134,6 +134,7 @@ tribute (Discworld snippets) typos, in book order rather than fix order:
 	The Truth #1, italicize several words
 	Thief of Time #2, "gold starts" -> "gold stars"
 	A Hat Full of Sky passage #9 "though" -> "thought"
+	Death quotes #29, "metaphore" -> "metaphor"
 	various, including Death quotes:  use two spaces to separate sentences
 unicorn corpses and wraith corpses could be sacrificed even if "too old"
 hero polymorphed into a hider and hiding was not unhidden when teleporting
@@ -832,6 +833,7 @@ clear obj->bypass for buried objects [a giant on ice triggers a fire trap,
 	other inventory, ice is melted, boulder plugs resulting pool burying
 	rest of giant's dropped inventory, subsequent sanity checks report
 	that there are buried objects which are 'flagged bypass']
+only give Sunsword or Demonbane as starting gear to lawful Angels
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository

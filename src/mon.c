@@ -1,4 +1,4 @@
-/* NetHack 3.7	mon.c	$NHDT-Date: 1646184187 2022/03/02 01:23:07 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.412 $ */
+/* NetHack 3.7	mon.c	$NHDT-Date: 1646688064 2022/03/07 21:21:04 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.415 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -677,7 +677,7 @@ make_corpse(struct monst *mtmp, unsigned int corpseflags)
         bypass_obj(obj);
 
     if (has_mgivenname(mtmp))
-        obj = oname(obj, MGIVENNAME(mtmp));
+        obj = oname(obj, MGIVENNAME(mtmp), ONAME_NO_FLAGS);
 
     /*  Avoid "It was hidden under a green mold corpse!"
      *  during Blind combat. An unseen monster referred to as "it"
@@ -1096,10 +1096,11 @@ movemon(void)
  * has young and old forms).
  */
 int
-meatmetal(register struct monst* mtmp)
+meatmetal(struct monst *mtmp)
 {
-    register struct obj *otmp;
+    struct obj *otmp;
     struct permonst *ptr;
+    char *otmpname;
     int poly, grow, heal, mstone, vis = canseemon(mtmp);
 
     /* If a pet, eating is handled separately, in dog.c */
@@ -1117,24 +1118,33 @@ meatmetal(register struct monst* mtmp)
         if (is_metallic(otmp) && !obj_resists(otmp, 5, 95)
             && touch_artifact(otmp, mtmp)) {
             if (mtmp->data == &mons[PM_RUST_MONSTER] && otmp->oerodeproof) {
-                if (vis && flags.verbose) {
-                    pline("%s eats %s!", Monnam(mtmp),
-                          distant_name(otmp, doname));
+                if (vis) {
+                    /* call distant_name() for its side-effects even when
+                       !verbose so won't be printed */
+                    otmpname = distant_name(otmp, doname);
+                    if (flags.verbose)
+                        pline("%s eats %s!", Monnam(mtmp), otmpname);
                 }
                 /* The object's rustproofing is gone now */
                 otmp->oerodeproof = 0;
                 mtmp->mstun = 1;
-                if (vis && flags.verbose) {
-                    pline("%s spits %s out in disgust!", Monnam(mtmp),
-                          distant_name(otmp, doname));
+                if (vis) {
+                    /* (see above; format even if it won't be printed) */
+                    otmpname = distant_name(otmp, doname);
+                    if (flags.verbose)
+                        pline("%s spits %s out in disgust!",
+                              Monnam(mtmp), otmpname);
                 }
             } else {
-                /* [should this be canseemon()?] */
-                if (cansee(mtmp->mx, mtmp->my) && flags.verbose)
-                    pline("%s eats %s!", Monnam(mtmp),
-                          distant_name(otmp, doname));
-                else if (flags.verbose)
-                    You_hear("a crunching sound.");
+                if (cansee(mtmp->mx, mtmp->my)) {
+                    /* (see above; format even if it won't be printed) */
+                    otmpname = distant_name(otmp, doname);
+                    if (flags.verbose)
+                        pline("%s eats %s!", Monnam(mtmp), otmpname);
+                } else {
+                    if (flags.verbose)
+                        You_hear("a crunching sound.");
+                }
                 mtmp->meating = otmp->owt / 2 + 1;
                 /* Heal up to the object's weight in hp */
                 if (mtmp->mhp < mtmp->mhpmax) {
@@ -1199,7 +1209,7 @@ meatobj(struct monst* mtmp) /* for gelatinous cubes */
     struct obj *otmp, *otmp2;
     struct permonst *ptr, *original_ptr = mtmp->data;
     int poly, grow, heal, eyes, count = 0, ecount = 0, vis = canseemon(mtmp);
-    char buf[BUFSZ];
+    char buf[BUFSZ], *otmpname;
 
     buf[0] = '\0';
     /* If a pet, eating is handled separately, in dog.c */
@@ -1260,9 +1270,11 @@ meatobj(struct monst* mtmp) /* for gelatinous cubes */
                        && !slimeproof(mtmp->data))) {
             /* engulf */
             ++ecount;
+            /* call distant_name() for its possible side-effects even if
+               the result won't be printed */
+            otmpname = distant_name(otmp, doname);
             if (ecount == 1)
-                Sprintf(buf, "%s engulfs %s.", Monnam(mtmp),
-                        distant_name(otmp, doname));
+                Sprintf(buf, "%s engulfs %s.", Monnam(mtmp), otmpname);
             else if (ecount == 2)
                 Sprintf(buf, "%s engulfs several objects.", Monnam(mtmp));
             obj_extract_self(otmp);
@@ -1273,9 +1285,10 @@ meatobj(struct monst* mtmp) /* for gelatinous cubes */
             /* devour */
             ++count;
             if (cansee(mtmp->mx, mtmp->my)) {
+                /* (see above; distant_name() sometimes has side-effects */
+                otmpname = distant_name(otmp, doname);
                 if (flags.verbose)
-                    pline("%s eats %s!", Monnam(mtmp),
-                          distant_name(otmp, doname));
+                    pline("%s eats %s!", Monnam(mtmp), otmpname);
                 /* give this one even if !verbose */
                 if (otmp->oclass == SCROLL_CLASS
                     && objdescr_is(otmp, "YUM YUM"))
@@ -1388,8 +1401,12 @@ meatcorpse(struct monst* mtmp) /* for purple worms and other voracious monsters 
             otmp = splitobj(otmp, 1L);
 
         if (cansee(x, y) && canseemon(mtmp)) {
+            /* call distant_name() for its possible side-effects even if
+               the result won't be printed */
+            char *otmpname = distant_name(otmp, doname);
+
             if (flags.verbose)
-                pline("%s eats %s!", Monnam(mtmp), distant_name(otmp, doname));
+                pline("%s eats %s!", Monnam(mtmp), otmpname);
         } else {
             if (flags.verbose)
                 You_hear("a masticating sound.");
@@ -1513,7 +1530,7 @@ mpickgold(register struct monst* mtmp)
 }
 
 boolean
-mpickstuff(register struct monst* mtmp, register const char* str)
+mpickstuff(struct monst *mtmp, const char *str)
 {
     register struct obj *otmp, *otmp2, *otmp3;
     int carryamt = 0;
@@ -1551,11 +1568,15 @@ mpickstuff(register struct monst* mtmp, register const char* str)
             if (carryamt != otmp->quan) {
                 otmp3 = splitobj(otmp, carryamt);
             }
-            if (cansee(mtmp->mx, mtmp->my) && flags.verbose)
-                pline("%s picks up %s.", Monnam(mtmp),
-                      (distu(mtmp->mx, mtmp->my) <= 5)
-                          ? doname(otmp3)
-                          : distant_name(otmp3, doname));
+            if (cansee(mtmp->mx, mtmp->my)) {
+                /* call distant_name() for its possible side-effects even
+                   if the result won't be printed; do it before the extract
+                   from floor and subsequent pickup by mtmp */
+                char *otmpname = distant_name(otmp, doname);
+
+                if (flags.verbose)
+                    pline("%s picks up %s.", Monnam(mtmp), otmpname);
+            }
             obj_extract_self(otmp3);      /* remove from floor */
             (void) mpickobj(mtmp, otmp3); /* may merge and free otmp3 */
             m_dowear(mtmp, FALSE);
@@ -2792,7 +2813,7 @@ monstone(struct monst* mdef)
             corpstatflags |= CORPSTAT_HISTORIC;
         otmp = mkcorpstat(STATUE, mdef, mdef->data, x, y, corpstatflags);
         if (has_mgivenname(mdef))
-            otmp = oname(otmp, MGIVENNAME(mdef));
+            otmp = oname(otmp, MGIVENNAME(mdef), ONAME_NO_FLAGS);
         while ((obj = oldminvent) != 0) {
             oldminvent = obj->nobj;
             obj->nobj = 0; /* avoid merged-> obfree-> dealloc_obj-> panic */
@@ -3037,7 +3058,7 @@ xkilled(
                 /* oc_big is also oc_bimanual and oc_bulky */
                 && (otmp->owt > 30 || objects[otyp].oc_big)) {
                 if (otmp->oartifact)
-                    artifact_exists(otmp, safe_oname(otmp), FALSE);
+                    artifact_exists(otmp, safe_oname(otmp), FALSE, FALSE);
                 delobj(otmp);
             } else if (!flooreffects(otmp, x, y, nomsg ? "" : "fall")) {
                 place_object(otmp, x, y);

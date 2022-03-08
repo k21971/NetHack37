@@ -1,4 +1,4 @@
-/* NetHack 3.7	objnam.c	$NHDT-Date: 1644347179 2022/02/08 19:06:19 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.343 $ */
+/* NetHack 3.7	objnam.c	$NHDT-Date: 1646688068 2022/03/07 21:21:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.348 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2011. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -294,24 +294,52 @@ obj_is_pname(struct obj* obj)
 }
 
 /* Give the name of an object seen at a distance.  Unlike xname/doname,
- * we don't want to set dknown if it's not set already.
- */
+   we usually don't want to set dknown if it's not set already. */
 char *
-distant_name(struct obj* obj, char* (*func)(OBJ_P))
+distant_name(
+    struct obj *obj, /* object to be formatted */
+    char *(*func)(OBJ_P)) /* formatting routine (usually xname or doname) */
 {
     char *str;
+    xchar ox = 0, oy = 0;
+        /*
+         * (r * r): square of the x or y distance;
+         * (r * r) * 2: sum of squares of both x and y distances
+         * (r * r) * 2 - r: instead of a square extending from the hero,
+         * round the corners (so shorter distance imposed for diagonal).
+         *
+         * distu() matrix convering a range of 3+ for one quadrant:
+         *  16 17  -  -  -
+         *   9 10 13 18  -
+         *   4  5  8 13  -
+         *   1  2  5 10 17
+         *   @  1  4  9 16
+         * Theoretical r==1 would yield 1.
+         * r==2 yields 6, functionally equivalent to 5, a knight's jump,
+         * r==3, the xray range of the Eyes of the Overworld, yields 15.
+         */
+    int r = (u.xray_range > 2) ? u.xray_range : 2,
+        neardist = (r * r) * 2 - r; /* same as r*r + r*(r-1) */
 
-    /* 3.6.1: this used to save Blind, set it, make the call, then restore
-     * the saved value; but the Eyes of the Overworld override blindness
-     * and let characters wearing them get dknown set for distant items.
-     *
-     * TODO? if the hero is wearing those Eyes, figure out whether the
-     * object is within X-ray radius and only treat it as distant when
-     * beyond that radius.  Logic is iffy but result might be interesting.
-     */
-    ++g.distantname;
-    str = (*func)(obj);
-    --g.distantname;
+    /* this maybe-nearby part used to be replicated in multiple callers */
+    if (get_obj_location(obj, &ox, &oy, 0) && cansee(ox, oy)
+        && (obj->oartifact || distu(ox, oy) <= neardist)) {
+        /* side-effects:  treat as having been seen up close;
+           cansee() is True hence hero isn't Blind so if 'func' is
+           the usual doname or xname, obj->dknown will become set
+           and then for an artifact, find_artifact() will be called */
+        str = (*func)(obj);
+    } else {
+        /* prior to 3.6.1, this used to save current blindness state,
+           explicitly set state to hero-is-blind, make the call (which
+           won't set obj->dknown when blind), then restore the saved
+           value; but the Eyes of the Overworld override blindness and
+           would let characters wearing them get obj->dknown set for
+           distant items, so the external flag was added */
+        ++g.distantname;
+        str = (*func)(obj);
+        --g.distantname;
+    }
     return str;
 }
 
@@ -512,6 +540,28 @@ xname_flags(
         dknown = obj->dknown;
         bknown = obj->bknown;
     }
+
+    /*
+     * Maybe find a previously unseen artifact.
+     *
+     * Assumption 1: if an artifact object is being formatted, it is
+     *  being shown to the hero (on floor, or looking into container,
+     *  or probing a monster, or seeing a monster wield it).
+     * Assumption 2: if in a pile that has been stepped on, the
+     *  artifact won't be noticed for cases where the pile to too deep
+     *  to be auto-shown, unless the player explicitly looks at that
+     *  spot (via ':').  Might need to make an exception somehow (at
+     *  the point where the decision whether to auto-show gets made?)
+     *  when an artifact is on the top of the pile.
+     * Assumption 3: since this is used for livelog events, not being
+     *  100% correct won't negatively affect the player's current game.
+     *
+     * We use the real obj->dknown rather than the override_ID variant
+     * so that wizard-mode ^I doesn't cause a not-yet-seen artifact in
+     * inventory (picked up while blind, still blind) to become found.
+     */
+    if (obj->oartifact && obj->dknown)
+        find_artifact(obj);
 
     if (obj_is_pname(obj))
         goto nameit;
@@ -880,9 +930,10 @@ minimal_xname(struct obj *obj)
         bareobj.spe = obj->spe;
 
     /* bufp will be an obuf[] and a pointer into middle of that is viable */
-    bufp = distant_name(&bareobj, xname); /* xname(&bareobj) */
+    bufp = distant_name(&bareobj, xname);
+    /* undo forced setting of bareobj.blessed for cleric (preist[ess]) */
     if (!strncmp(bufp, "uncursed ", 9))
-        bufp += 9; /* Role_if(PM_CLERIC) */
+        bufp += 9;
 
     objects[otyp].oc_uname = saveobcls.oc_uname;
     objects[otyp].oc_name_known = saveobcls.oc_name_known;
@@ -4787,7 +4838,7 @@ readobjnam(char *bp, struct obj *no_wish)
                 d.name = novelname;
         }
 
-        d.otmp = oname(d.otmp, d.name);
+        d.otmp = oname(d.otmp, d.name, ONAME_NO_FLAGS);
         /* name==aname => wished for artifact (otmp->oartifact => got it) */
         if (d.otmp->oartifact || d.name == aname) {
             d.otmp->quan = 1L;
@@ -4799,7 +4850,7 @@ readobjnam(char *bp, struct obj *no_wish)
     /* and make them pay; charge them for the wish anyway! */
     if ((is_quest_artifact(d.otmp)
          || (d.otmp->oartifact && rn2(nartifact_exist()) > 1)) && !wizard) {
-        artifact_exists(d.otmp, safe_oname(d.otmp), FALSE);
+        artifact_exists(d.otmp, safe_oname(d.otmp), FALSE, FALSE);
         obfree(d.otmp, (struct obj *) 0);
         d.otmp = (struct obj *) &cg.zeroobj;
         pline("For a moment, you feel %s in your %s, but it disappears!",
