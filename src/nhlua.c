@@ -22,6 +22,10 @@ static int nhl_stairways(lua_State *);
 static int nhl_pushkey(lua_State *);
 static int nhl_doturn(lua_State *);
 static int nhl_debug_flags(lua_State *);
+static int nhl_timer_has_at(lua_State *);
+static int nhl_timer_peek_at(lua_State *);
+static int nhl_timer_stop_at(lua_State *);
+static int nhl_timer_start_at(lua_State *);
 static int nhl_test(lua_State *);
 static int nhl_getmap(lua_State *);
 static char splev_typ2chr(schar);
@@ -30,6 +34,7 @@ static int nhl_deltrap(lua_State *);
 #if 0
 static int nhl_setmap(lua_State *);
 #endif
+static int nhl_impossible(lua_State *);
 static int nhl_pline(lua_State *);
 static int nhl_verbalize(lua_State *);
 static int nhl_parse_config(lua_State *);
@@ -189,6 +194,21 @@ get_table_mapchr_opt(lua_State *L, const char *name, schar defval)
     if (ter)
         free(ter);
     return typ;
+}
+
+short
+nhl_get_timertype(lua_State *L, int idx)
+{
+    static const char *const timerstr[NUM_TIME_FUNCS+1] = {
+        "rot-organic", "rot-corpse", "revive-mon", "zombify-mon",
+        "burn-obj", "hatch-egg", "fig-transform", "melt-ice", "shrink-glob",
+        NULL
+    };
+    short ret = luaL_checkoption(L, idx, NULL, timerstr);
+
+    if (ret < 0 || ret >= NUM_TIME_FUNCS)
+        nhl_error(L, "Unknown timer type");
+    return ret;
 }
 
 void
@@ -471,6 +491,19 @@ nhl_getmap(lua_State *L)
 }
 
 RESTORE_WARNING_CONDEXPR_IS_CONSTANT
+
+/* impossible("Error!") */
+static int
+nhl_impossible(lua_State *L)
+{
+    int argc = lua_gettop(L);
+
+    if (argc == 1)
+        impossible("%s", luaL_checkstring(L, 1));
+    else
+        nhl_error(L, "Wrong args");
+    return 0;
+}
 
 /* pline("It hits!") */
 static int
@@ -1032,6 +1065,91 @@ nhl_debug_flags(lua_State *L)
     return 0;
 }
 
+/* does location at x,y have timer? */
+/* local has_melttimer = nh.has_timer_at(x,y, "melt-ice"); */
+static int
+nhl_timer_has_at(lua_State *L)
+{
+    int argc = lua_gettop(L);
+    boolean ret = FALSE;
+
+    if (argc == 3) {
+        xchar x = (xchar) lua_tointeger(L, 1);
+        xchar y = (xchar) lua_tointeger(L, 2);
+        short timertype = nhl_get_timertype(L, 3);
+        long when = spot_time_expires(x, y, timertype);
+
+        ret = (when > 0L);
+    } else
+        nhl_error(L, "nhl_timer_has_at: Wrong args");
+    lua_pushboolean(L, ret);
+    return 1;
+}
+
+/* when does location at x,y timer trigger? */
+/* local melttime = nh.peek_timer_at(x,y, "melt-ice"); */
+static int
+nhl_timer_peek_at(lua_State *L)
+{
+    int argc = lua_gettop(L);
+    long when = 0L;
+
+    if (argc == 3) {
+        xchar x = (xchar) lua_tointeger(L, 1);
+        xchar y = (xchar) lua_tointeger(L, 2);
+        short timertype = nhl_get_timertype(L, 3);
+
+        if (timer_is_pos(timertype))
+            when = spot_time_expires(x, y, timertype);
+    } else
+        nhl_error(L, "nhl_timer_peek_at: Wrong args");
+    lua_pushinteger(L, when);
+    return 1;
+}
+
+/* stop timer at location x,y */
+/* nh.stop_timer_at(x,y, "melt-ice"); */
+static int
+nhl_timer_stop_at(lua_State *L)
+{
+    int argc = lua_gettop(L);
+
+    if (argc == 3) {
+        xchar x = (xchar) lua_tointeger(L, 1);
+        xchar y = (xchar) lua_tointeger(L, 2);
+        short timertype = nhl_get_timertype(L, 3);
+
+        if (timer_is_pos(timertype))
+            spot_stop_timers(x, y, timertype);
+    } else
+        nhl_error(L, "nhl_timer_stop_at: Wrong args");
+    return 0;
+}
+
+/* start timer at location x,y */
+/* nh.start_timer_at(x,y, "melt-ice", 10); */
+static int
+nhl_timer_start_at(lua_State *L)
+{
+    int argc = lua_gettop(L);
+
+    if (argc == 4) {
+        xchar x = (xchar) lua_tointeger(L, 1);
+        xchar y = (xchar) lua_tointeger(L, 2);
+        short timertype = nhl_get_timertype(L, 3);
+        long when = lua_tointeger(L, 4);
+
+        if (timer_is_pos(timertype)) {
+            long where = ((long) x << 16) | (long) y;
+
+            spot_stop_timers(x, y, timertype);
+            (void) start_timer((long) when, TIMER_LEVEL, MELT_ICE_AWAY,
+                               long_to_any(where));
+        }
+    } else
+        nhl_error(L, "nhl_timer_stop_at: Wrong args");
+    return 0;
+}
 
 static const struct luaL_Reg nhl_functions[] = {
     {"test", nhl_test},
@@ -1043,6 +1161,14 @@ static const struct luaL_Reg nhl_functions[] = {
     {"gettrap", nhl_gettrap},
     {"deltrap", nhl_deltrap},
 
+    {"has_timer_at", nhl_timer_has_at},
+    {"peek_timer_at", nhl_timer_peek_at},
+    {"stop_timer_at", nhl_timer_stop_at},
+    {"start_timer_at", nhl_timer_start_at},
+
+    {"abscoord", nhl_abs_coord},
+
+    {"impossible", nhl_impossible},
     {"pline", nhl_pline},
     {"verbalize", nhl_verbalize},
     {"menu", nhl_menu},

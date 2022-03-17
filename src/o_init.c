@@ -1,4 +1,4 @@
-/* NetHack 3.7	o_init.c	$NHDT-Date: 1614812489 2021/03/03 23:01:29 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.50 $ */
+/* NetHack 3.7	o_init.c	$NHDT-Date: 1646950588 2022/03/10 22:16:28 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.56 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2011. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -833,11 +833,14 @@ doclassdisco(void)
     /* have player choose a class */
     c = '\0'; /* class not chosen yet */
     if (traditional) {
+        char allclasses_plustwo[sizeof allclasses + 2];
+
         /* we'll prompt even if there's only one viable class; we add all
            nonviable classes as unseen acceptable choices so player can ask
            for discoveries of any class whether it has discoveries or not */
-        for (s = allclasses, xtras = 0; *s; ++s) {
-            c = def_oc_syms[(int) *s].sym;
+        Sprintf(allclasses_plustwo, "%s%c%c", allclasses, 'u', 'a');
+        for (s = allclasses_plustwo, xtras = 0; *s; ++s) {
+            c = (*s == 'u' || *s == 'a') ? *s : def_oc_syms[(int) *s].sym;
             if (!index(discosyms, c)) {
                 if (!xtras++)
                     (void) strkitten(discosyms, '\033');
@@ -889,6 +892,15 @@ doclassdisco(void)
             You(havent_discovered_any, unique_items);
         break;
     case 'a':
+        /* note: this will work all the time for menustyle traditional
+           but requires at least one artifact discovery for other styles
+           [could fix that by forcing the 'a' choice into the pick-class
+           menu when running in wizard mode] */
+        if (wizard && yn("Dump information about all artifacts?") == 'y') {
+            dump_artifact_info(tmpwin);
+            ct = NROFARTIFACTS; /* non-zero vs zero is what matters below */
+            break;
+        }
         /* disp_artifact_discoveries() includes a header */
         ct = disp_artifact_discoveries(tmpwin);
         if (!ct)

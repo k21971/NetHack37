@@ -99,6 +99,7 @@ static void get_table_xy_or_coord(lua_State *, int *, int *);
 static int get_table_region(lua_State *, const char *, int *, int *, int *,
                             int *, boolean);
 static void set_wallprop_in_selection(lua_State *, int);
+static xchar random_wdir(void);
 static int floodfillchk_match_under(int, int);
 static int floodfillchk_match_accessible(int, int);
 static boolean sel_flood_havepoint(int, int, xchar *, xchar *, int);
@@ -328,7 +329,8 @@ lvlfill_solid(schar filling, schar lit)
 
     for (x = 2; x <= g.x_maze_max; x++)
         for (y = 0; y <= g.y_maze_max; y++) {
-            SET_TYPLIT(x, y, filling, lit);
+            if (!set_levltyp_lit(x, y, filling, lit))
+                continue;
             /* TODO: consolidate this w lspo_map ? */
             levl[x][y].flags = 0;
             levl[x][y].horizontal = 0;
@@ -349,7 +351,7 @@ lvlfill_swamp(schar fg, schar bg, schar lit)
         for (y = 0; y <= g.y_maze_max; y += 2) {
             int c = 0;
 
-            SET_TYPLIT(x, y, fg, lit);
+            (void) set_levltyp_lit(x, y, fg, lit);
             if (levl[x + 1][y].typ == bg)
                 ++c;
             if (levl[x][y + 1].typ == bg)
@@ -359,13 +361,13 @@ lvlfill_swamp(schar fg, schar bg, schar lit)
             if (c == 3) {
                 switch (rn2(3)) {
                 case 0:
-                    SET_TYPLIT(x + 1,y, fg, lit);
+                    (void) set_levltyp_lit(x + 1,y, fg, lit);
                     break;
                 case 1:
-                    SET_TYPLIT(x, y + 1, fg, lit);
+                    (void) set_levltyp_lit(x, y + 1, fg, lit);
                     break;
                 case 2:
-                    SET_TYPLIT(x + 1, y + 1, fg, lit);
+                    (void) set_levltyp_lit(x + 1, y + 1, fg, lit);
                     break;
                 default:
                     break;
@@ -1107,7 +1109,7 @@ get_location(xchar *x, xchar *y, int humidity, struct mkroom* croom)
         do {
             if (croom) { /* handle irregular areas */
                 coord tmpc;
-                somexy(croom, &tmpc);
+                (void) somexy(croom, &tmpc);
                 *x = tmpc.x;
                 *y = tmpc.y;
             } else {
@@ -1582,6 +1584,9 @@ create_door(room_door *dd, struct mkroom *broom)
     if (dd->secret == -1)
         dd->secret = rn2(2);
 
+    if (dd->wall == W_RANDOM)
+        dd->wall = W_ANY; /* speeds things up in the below loop */
+
     if (dd->mask == -1) {
         /* is it a locked door, closed, or a doorway? */
         if (!dd->secret) {
@@ -1608,13 +1613,7 @@ create_door(room_door *dd, struct mkroom *broom)
     }
 
     for (trycnt = 0; trycnt < 100; ++trycnt) {
-        int dwall, dpos;
-
-        dwall = dd->wall;
-        if (dwall == -1) /* The wall is RANDOM */
-            dwall = 1 << rn2(4);
-
-        dpos = dd->pos;
+        int dwall = dd->wall, dpos = dd->pos;
 
         /* Convert wall and pos into an absolute coordinate! */
         switch (rn2(4)) {
@@ -1666,56 +1665,9 @@ create_door(room_door *dd, struct mkroom *broom)
         impossible("create_door: Can't find a proper place!");
         return;
     }
-    levl[x][y].typ = (dd->secret ? SDOOR : DOOR);
+    if (!set_levltyp(x, y, (dd->secret ? SDOOR : DOOR)))
+        return;
     levl[x][y].doormask = dd->mask;
-}
-
-/*
- * Create a secret door in croom on any one of the specified walls.
- */
-void
-create_secret_door(
-    struct mkroom *croom,
-    xchar walls) /* any of W_NORTH | W_SOUTH | W_EAST | W_WEST (or W_ANY) */
-{
-    xchar sx, sy; /* location of the secret door */
-    int count;
-
-    for (count = 0; count < 100; count++) {
-        sx = rn1(croom->hx - croom->lx + 1, croom->lx);
-        sy = rn1(croom->hy - croom->ly + 1, croom->ly);
-
-        switch (rn2(4)) {
-        case 0: /* top */
-            if (!(walls & W_NORTH))
-                continue;
-            sy = croom->ly - 1;
-            break;
-        case 1: /* bottom */
-            if (!(walls & W_SOUTH))
-                continue;
-            sy = croom->hy + 1;
-            break;
-        case 2: /* left */
-            if (!(walls & W_EAST))
-                continue;
-            sx = croom->lx - 1;
-            break;
-        case 3: /* right */
-            if (!(walls & W_WEST))
-                continue;
-            sx = croom->hx + 1;
-            break;
-        }
-
-        if (okdoor(sx, sy)) {
-            levl[sx][sy].typ = SDOOR;
-            levl[sx][sy].doormask = D_CLOSED;
-            return;
-        }
-    }
-
-    impossible("couldn't create secret door on any walls 0x%x", walls);
 }
 
 /*
@@ -2152,13 +2104,12 @@ create_object(object* o, struct mkroom* croom)
     /* set_corpsenm() took care of egg hatch and corpse timers */
 
     if (named) {
-        otmp = oname(otmp, o->name.str, ONAME_NO_FLAGS);
+        otmp = oname(otmp, o->name.str, ONAME_LEVEL_DEF);
         if (otmp->otyp == SPE_NOVEL) {
             /* needs to be an existing title */
             (void) lookup_novel(o->name.str, &otmp->novelidx);
         }
     }
-
     if (o->eroded) {
         if (o->eroded < 0) {
             otmp->oerodeproof = 1;
@@ -2214,8 +2165,11 @@ create_object(object* o, struct mkroom* croom)
                 cobj->owt = weight(cobj);
             } else {
                 obj_extract_self(otmp);
+                /* uncreate a random artifact created in a container */
+                /* FIXME: it could be intentional rather than random */
                 if (otmp->oartifact)
-                    artifact_exists(otmp, safe_oname(otmp), FALSE, FALSE);
+                    artifact_exists(otmp, safe_oname(otmp), FALSE,
+                                    ONAME_NO_FLAGS); /* flags don't matter */
                 obfree(otmp, NULL);
                 return;
             }
@@ -2326,7 +2280,6 @@ create_altar(altar* a, struct mkroom* croom)
     xchar x = -1, y = -1;
     unsigned int amask;
     boolean croom_is_temple = TRUE;
-    int oldtyp;
 
     if (croom) {
         get_free_room_loc(&x, &y, croom, a->coord);
@@ -2341,13 +2294,11 @@ create_altar(altar* a, struct mkroom* croom)
     }
 
     /* check for existing features */
-    oldtyp = levl[x][y].typ;
-    if (!CAN_OVERWRITE_TERRAIN(oldtyp))
+    if (!set_levltyp(x, y, ALTAR))
         return;
 
     amask = sp_amask_to_amask(a->sp_amask);
 
-    levl[x][y].typ = ALTAR;
     levl[x][y].altarmask = amask;
 
     if (a->shrine < 0)
@@ -2548,6 +2499,14 @@ create_corridor(corridor *c)
         return;
     }
 
+    /* Safety railings - if there's ever a case where des.corridor() needs to be
+     * called with src/destwall="random", that logic first needs to be
+     * implemented in search_door. */
+    if (c->src.wall == W_ANY || c->src.wall == W_RANDOM
+        || c->dest.wall == W_ANY || c->dest.wall == W_RANDOM) {
+        impossible("create_corridor to/from a random wall");
+        return;
+    }
     if (!search_door(&g.rooms[c->src.room], &org.x, &org.y, c->src.wall,
                      c->src.door))
         return;
@@ -4123,6 +4082,16 @@ lspo_trap(lua_State *L)
         tmptrap.type = get_table_traptype_opt(L, "type", -1);
         tmptrap.spider_on_web = get_table_boolean_opt(L, "spider_on_web", 1);
         tmptrap.seen = get_table_boolean_opt(L, "seen", FALSE);
+
+        lua_getfield(L, -1, "launchfrom");
+        if (lua_type(L, -1) == LUA_TTABLE) {
+            int lx = -1, ly = -1;
+
+            get_coord(L, -1, &lx, &ly);
+            lua_pop(L, 1);
+            g.launchplace.x = lx;
+            g.launchplace.y = ly;
+        }
     }
 
     if (tmptrap.type == NO_TRAP)
@@ -4134,6 +4103,7 @@ lspo_trap(lua_State *L)
         tmptrap.coord = SP_COORD_PACK(x, y);
 
     create_trap(&tmptrap, g.coder->croom);
+    g.launchplace.x = g.launchplace.y = 0;
 
     return 0;
 }
@@ -4195,7 +4165,7 @@ lspo_corridor(lua_State *L)
         "all", "random", "north", "west", "east", "south", NULL
     };
     static const int walldirs2i[] = {
-        W_ANY, -1, W_NORTH, W_WEST, W_EAST, W_SOUTH, 0
+        W_ANY, W_RANDOM, W_NORTH, W_WEST, W_EAST, W_SOUTH, 0
     };
     corridor tc;
 
@@ -4385,6 +4355,14 @@ selection_rndcoord(struct selectionvar* ov, xchar *x, xchar *y, boolean removeit
     return 0;
 }
 
+/* Choose a single random W_* direction. */
+static xchar
+random_wdir(void)
+{
+    static const xchar wdirs[4] = { W_NORTH, W_SOUTH, W_EAST, W_WEST };
+    return wdirs[rn2(4)];
+}
+
 void
 selection_do_grow(struct selectionvar* ov, int dir)
 {
@@ -4393,6 +4371,9 @@ selection_do_grow(struct selectionvar* ov, int dir)
 
     if (!ov || !tmp)
         return;
+
+    if (dir == W_RANDOM)
+        dir = random_wdir();
 
     for (x = 1; x < ov->wid; x++)
         for (y = 0; y < ov->hei; y++) {
@@ -4819,7 +4800,9 @@ sel_set_ter(int x, int y, genericptr_t arg)
     terrain terr;
 
     terr = *(terrain *) arg;
-    SET_TYPLIT(x, y, terr.ter, terr.tlit);
+    if (!set_levltyp_lit(x, y, terr.ter, terr.tlit))
+        return;
+    /* TODO: move this below into set_levltyp? */
     /* handle doors and secret doors */
     if (levl[x][y].typ == SDOOR || IS_DOOR(levl[x][y].typ)) {
         if (levl[x][y].typ == SDOOR)
@@ -4896,6 +4879,8 @@ lspo_door(lua_State *L)
         static const char *const walldirs[] = {
             "all", "random", "north", "west", "east", "south", NULL
         };
+        /* Note that "random" is also W_ANY, because create_door just wants a
+         * mask of acceptable walls */
         static const int walldirs2i[] = {
             W_ANY, W_ANY, W_NORTH, W_WEST, W_EAST, W_SOUTH, 0
         };
@@ -4936,6 +4921,25 @@ l_table_getset_feature_flag(
         else
             levl[x][y].flags &= ~flag;
     }
+}
+
+/* convert relative coordinate to absolute */
+int
+nhl_abs_coord(lua_State *L)
+{
+    int argc = lua_gettop(L);
+    xchar x = -1, y = -1;
+
+    if (argc == 2) {
+        x = (xchar) lua_tointeger(L, 1);
+        y = (xchar) lua_tointeger(L, 2);
+        x += g.xstart;
+        y += g.ystart;
+    } else
+        nhl_error(L, "nhl_abs_coord: Wrong args");
+    lua_pushinteger(L, x);
+    lua_pushinteger(L, y);
+    return 2;
 }
 
 /* feature("fountain", x, y); */
@@ -5164,10 +5168,10 @@ lspo_replace_terrain(lua_State *L)
             if (selection_getpoint(x, y,sel)) {
                 if (mf) {
                     if (mapfrag_match(mf, x, y) && (rn2(100)) < chance)
-                        SET_TYPLIT(x, y, totyp, tolit);
+                        (void) set_levltyp_lit(x, y, totyp, tolit);
                 } else {
                     if (levl[x][y].typ == fromtyp && rn2(100) < chance)
-                        SET_TYPLIT(x, y, totyp, tolit);
+                        (void) set_levltyp_lit(x, y, totyp, tolit);
                 }
             }
 
@@ -5710,7 +5714,7 @@ lspo_mazewalk(lua_State *L)
     static const char *const mwdirs[] = {
         "north", "south", "east", "west", "random", NULL
     };
-    static const int mwdirs2i[] = { W_NORTH, W_SOUTH, W_EAST, W_WEST, -1, -2 };
+    static const int mwdirs2i[] = { W_NORTH, W_SOUTH, W_EAST, W_WEST, W_RANDOM, -2 };
     xchar x, y;
     int mx, my;
     xchar ftyp = ROOM;
@@ -5746,8 +5750,8 @@ lspo_mazewalk(lua_State *L)
         ftyp = g.level.flags.corrmaze ? CORR : ROOM;
     }
 
-    if (dir == -1)
-        dir = mwdirs2i[rn2(4)];
+    if (dir == W_RANDOM)
+        dir = random_wdir();
 
     /* don't use move() - it doesn't use W_NORTH, etc. */
     switch (dir) {

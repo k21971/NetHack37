@@ -888,10 +888,8 @@ Amulet_on(void)
         }
         livelog_newform(FALSE, orig_sex, new_sex);
         pline_The("amulet disintegrates!");
-        if (orig_sex == poly_gender() && uamul->dknown
-            && !objects[AMULET_OF_CHANGE].oc_name_known
-            && !objects[AMULET_OF_CHANGE].oc_uname)
-            docall(uamul);
+        if (orig_sex == poly_gender() && uamul->dknown)
+            trycall(uamul);
         useup(uamul);
         break;
     }
@@ -1535,7 +1533,7 @@ stop_donning(struct obj *stolenobj) /* no message if stolenobj is already
                 thesimpleoname(otmp));
     } else {
         buf[0] = '\0';   /* silently stop doffing stolenobj */
-        result = -g.multi; /* remember this before calling unmul() */
+        result = (int) -g.multi; /* remember this before calling unmul() */
     }
     unmul(buf);
     /* while putting on, item becomes worn immediately but side-effects are

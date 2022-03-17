@@ -6,6 +6,17 @@
 
 Functions exposed from the NetHack core. They are all in the `nh` table.
 
+=== abscoord
+
+Convert a relative coordinate to absolute.
+des-routines tend to use relative coordinates, nh and obj use absolute.
+(This mess is still very much in need of improvement.)
+
+Example:
+
+ local ax, ay = nh.abscoord(x, y);
+
+
 === an
 
 Returns a string with "a " or "an " prepended to it.
@@ -158,6 +169,15 @@ Example:
  local t = nh.gettrap(x, y);
 
 
+=== has_timer_at
+
+Does location at x,y have a timer?
+
+Example:
+
+ local has_melttimer = nh.has_timer_at(x,y, "melt-ice");
+
+
 === deltrap
 
 Delete a trap at x,y
@@ -165,6 +185,15 @@ Delete a trap at x,y
 Example:
 
  nh.deltrap(x, y);
+
+
+=== impossible
+
+Issue an impossible, signaling a possible error in the code.
+
+Example:
+
+ nh.impossible("Something errory happened!");
 
 
 === ing_suffix
@@ -245,6 +274,15 @@ Example:
  nh.pline("Line: " .. errors[1].line .. ", " .. errors[1].error);
 
 
+=== peek_timer_at
+
+When does timer at location at x,y trigger?
+
+Example:
+
+ local melttime = nh.peek_timer_at(x,y, "melt-ice");
+
+
 === pline
 
 Show the text in the message area.
@@ -306,6 +344,24 @@ Example:
  for k, v in pairs(stairs) do
    nh.pline("stair[" .. k .. "]:(" .. v.x .. "," .. v.y .. ")," .. tostring(v.up));
  end
+
+
+=== start_timer_at
+
+Start a timer at location x,y, with trigger time of `when` - relative to current turn.
+
+Example:
+
+ nh.start_timer_at(x,y, "melt-ice", when);
+
+
+=== stop_timer_at
+
+Stop a timer at location x,y.
+
+Example:
+
+ nh.stop_timer_at(x,y, "melt-ice");
 
 
 === verbalize
@@ -741,13 +797,14 @@ Example:
 
 === trap
 
-Create a trap.
+Create a trap. The `launchfrom` is relative to the rolling boulder trap coord.
 
 Example:
 
  des.trap({ type = "hole", x = 1, y = 1 });
  des.trap({ type = "hole", coord = {2, 2} });
  des.trap({ type = "web", coord = {2, 2}, spider_on_web = false, seen = true });
+ des.trap({ type = "rolling boulder", coord = {7, 5}, launchfrom = {-2, -2} });
  des.trap("hole", 3, 4);
  des.trap("level teleport", {5, 8});
  des.trap("rust")
@@ -792,11 +849,13 @@ Example:
 
 === Logical or
 
-Choose locations that are selected in either or both selections.
+Choose locations that are selected in either or both selections. The
+addition operator also does this.
 
 Example:
 
  local sel = selection.area(4,5, 40,10) | selection.rect(7,8, 60,14);
+ local sel = selection.area(4,5, 40,10) + selection.rect(7,8, 60,14);
 
 
 === Logical xor
@@ -806,6 +865,15 @@ Choose locations in either selection, but not both.
 Example:
 
  local sel = selection.area(4,5, 40,10) ~ selection.rect(7,8, 60,14);
+
+
+=== Logical difference
+
+Choose locations in the first selection but not in the second selection.
+
+Example:
+
+ local sel = selection.area(10,10, 20,20) - selection.area(14,14, 17,17);
 
 
 === area
@@ -984,6 +1052,164 @@ Example:
  local sel = selection.set();
  local sel = sel:set();
  local sel = selection.set(sel);
+
+== Obj
+
+Handling objects via obj-class.
+
+=== new
+
+Create a new object via wishing routine.
+
+Example:
+
+ local o = obj.new("rock");
+
+
+=== isnull
+
+Is the object a "null" object?  Meaning, the object variable exists in lua, but NetHack
+core has freed it.
+
+Example:
+
+ local badobj = o:isnull();
+
+
+=== at
+
+Get the topmost object on the map at x,y.
+
+Example:
+
+ local o = obj.at(x, y);
+
+
+=== next
+
+Get the next object in the object chain.
+When called without an object, returns the first object in the object chain.
+When called with an object, an optional boolean parameter can be given. When
+it is true, and the object is on the map, the next object at the same location
+is returned. Otherwise the normal object chain is followed.
+
+Example:
+
+ local first = obj.next();
+ local second = first:next();
+ local o_at_xy = obj.at(x, y);
+ local next_at_xy = o_at_xy:next(true);
+
+
+=== totable
+
+Create a lua table representation of the object, unpacking all the object fields.
+
+Example:
+
+ local o = obj.new("rock");
+ local otbl = o:totable();
+
+
+=== class
+
+Get a lua table of object class data.
+
+Example:
+
+ local odata1 = obj.class(obj.new("rock"));
+
+
+=== placeobj
+
+Place object on the map at x,y.
+
+Example:
+
+ local o = obj.new("rock");
+ o:placeobj(u.ux, u.uy);
+
+
+=== container
+
+Get the container object is in.
+
+Example:
+
+ local box = o:container();
+
+
+=== contents
+
+Get the contents of an object.
+
+Example:
+
+ local o = obj.new("large chest");
+ local cobj = o:contents();
+
+
+=== addcontent
+
+Put object inside another object.
+
+Example:
+
+ local box = obj.new("large chest");
+ box.addcontent(obj.new("rock"));
+
+
+=== has_timer
+
+Does object have an attached timer of certain type?
+
+Example:
+
+ local hastimer = o:has_timer("rot-organic");
+
+
+=== peek_timer
+
+Peek at an object timer. Returns the turn when timer triggers.
+Returns 0 if no such timer attached to the object.
+
+Example:
+
+ local when = o:peek_timer("hatch-egg");
+
+
+=== stop_timer
+
+Stop object timer(s). Return the turn when timer would have triggered.
+Returns 0 if no such timer was attached to the object.
+Without a timer type parameters, stops all timers for the object,
+and returns nothing.
+
+Example:
+
+ o:stop_timer();
+ local when = o:stop_timer("rot-organic");
+
+
+=== start_timer
+
+Start an object timer.
+
+Example:
+
+ o:start_timer("hatch-egg", 10);
+
+
+=== bury
+
+Bury an object. Returns true if object is gone (merged with ground), false otherwise.
+Without parameters, buries the object at the location it is.
+
+Example:
+
+ local ogone = o:bury();
+ local ogone = o:bury(5, 5);
+
 
 == Map characters
 

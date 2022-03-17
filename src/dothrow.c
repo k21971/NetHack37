@@ -257,7 +257,7 @@ throw_obj(struct obj *obj, int shotlimit)
 static boolean
 ok_to_throw(int *shotlimit_p) /* (see dothrow()) */
 {
-    *shotlimit_p = g.command_count;
+    *shotlimit_p = LIMIT_TO_RANGE_INT(0, LARGEST_INT, g.command_count);
     g.multi = 0; /* reset; it's been used up */
 
     if (notake(g.youmonst.data)) {
@@ -461,7 +461,7 @@ dofire(void)
                        swap to it and retry */
                     cmdq_add_ec(doswapweapon);
                     cmdq_add_ec(dofire);
-                    return ECMD_OK;
+                    return ECMD_TIME;
                 } else
                     You("have no ammunition readied.");
             }
@@ -502,7 +502,7 @@ dofire(void)
             /* swap weapons and retry fire */
             cmdq_add_ec(doswapweapon);
             cmdq_add_ec(dofire);
-            return ECMD_OK;
+            return ECMD_TIME;
         } else if ((olauncher = find_launcher(obj)) != 0) {
             /* wield launcher, retry fire */
             if (uwep && !flags.pushweapon)
@@ -510,7 +510,7 @@ dofire(void)
             cmdq_add_ec(dowield);
             cmdq_add_key(olauncher->invlet);
             cmdq_add_ec(dofire);
-            return ECMD_OK;
+            return ECMD_TIME;
         }
     }
 

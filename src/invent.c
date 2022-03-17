@@ -1,4 +1,4 @@
-/* NetHack 3.7	invent.c	$NHDT-Date: 1629409876 2021/08/19 21:51:16 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.339 $ */
+/* NetHack 3.7	invent.c	$NHDT-Date: 1647472704 2022/03/16 23:18:24 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.355 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -2674,7 +2674,7 @@ display_pickinv(
                 Sprintf(eos(prompt), " (%s for all)",
                         visctrl(iflags.override_ID));
             add_menu(win, &nul_glyphinfo, &any, '_', iflags.override_ID,
-                     ATR_NONE, prompt, MENU_ITEMFLAGS_NONE);
+                     ATR_NONE, prompt, MENU_ITEMFLAGS_SKIPINVERT);
             gotsomething = TRUE;
         }
    } else if (xtra_choice) {
@@ -3622,7 +3622,7 @@ stackobj(struct obj *obj)
 boolean
 mergable(register struct obj *otmp, register struct obj *obj)
 {
-    int objnamelth = 0, otmpnamelth = 0;
+    size_t objnamelth = 0, otmpnamelth = 0;
 
     /* fail if already the same object, if different types, if either is
        explicitly marked to prevent merge, or if not mergable in general */

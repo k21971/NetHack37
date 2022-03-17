@@ -73,6 +73,13 @@ typedef xchar boolean; /* 0 or 1 */
 #endif
 #endif
 
+/* Type for third parameter of read(2) */
+#if defined(BSD) || defined(ULTRIX)
+typedef int readLenType;
+#else /* e.g. SYSV, __TURBOC__ */
+typedef unsigned readLenType;
+#endif
+
 #ifndef TRUE /* defined in some systems' native include files */
 #define TRUE ((boolean) 1)
 #define FALSE ((boolean) 0)
@@ -279,6 +286,8 @@ typedef uchar nhsym;
    declaration has been moved out of the '#else' below to avoid getting
    a complaint from -Wmissing-prototypes when building with MONITOR_HEAP */
 extern char *dupstr(const char *);
+/* same, but return strlen(string) */
+extern char *dupstr_n(const char *string, unsigned int *lenout);
 
 /*
  * MONITOR_HEAP is conditionally used for primitive memory leak debugging.

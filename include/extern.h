@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1646255373 2022/03/02 21:09:33 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1064 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1646870811 2022/03/10 00:06:51 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1069 $ */
 /* Copyright (c) Steve Creps, 1988.				  */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -69,10 +69,11 @@ extern const char *artiname(int);
 extern struct obj *mk_artifact(struct obj *, aligntyp);
 extern const char *artifact_name(const char *, short *);
 extern boolean exist_artifact(int, const char *);
-extern void artifact_exists(struct obj *, const char *, boolean, boolean);
+extern void artifact_exists(struct obj *, const char *, boolean, unsigned);
 extern void found_artifact(int);
 extern void find_artifact(struct obj *);
 extern int nartifact_exist(void);
+extern void artifact_origin(struct obj *, unsigned);
 extern boolean arti_immune(struct obj *, int);
 extern boolean spec_ability(struct obj *, unsigned long);
 extern boolean confers_luck(struct obj *);
@@ -89,6 +90,7 @@ extern int spec_dbon(struct obj *, struct monst *, int);
 extern void discover_artifact(xchar);
 extern boolean undiscovered_artifact(xchar);
 extern int disp_artifact_discoveries(winid);
+extern void dump_artifact_info(winid);
 extern boolean artifact_hit(struct monst *, struct monst *, struct obj *,
                             int *, int);
 extern int doinvoke(void);
@@ -246,7 +248,7 @@ extern const char *cmdname_from_func(int(*)(void), char *, boolean);
 extern boolean redraw_cmd(char);
 extern const char *levltyp_to_name(int);
 extern void reset_occupations(void);
-extern void set_occupation(int(*)(void), const char *, int);
+extern void set_occupation(int(*)(void), const char *, cmdcount_t);
 extern void cmdq_add_ec(int(*)(void));
 extern void cmdq_add_key(char);
 extern struct _cmd_queue *cmdq_pop(void);
@@ -434,6 +436,7 @@ extern int dodrop(void);
 extern boolean boulder_hits_pool(struct obj *, int, int, boolean);
 extern boolean flooreffects(struct obj *, int, int, const char *);
 extern void doaltarobj(struct obj *);
+extern void trycall(struct obj *);
 extern boolean canletgo(struct obj *, const char *);
 extern void dropx(struct obj *);
 extern void dropy(struct obj *);
@@ -1005,6 +1008,7 @@ extern int strncmpi(const char *, const char *, int);
 #ifndef STRSTRI
 extern char *strstri(const char *, const char *);
 #endif
+extern int streq(const char *, const char *, boolean);
 extern boolean fuzzymatch(const char *, const char *, const char *, boolean);
 extern void init_random(int(*fn)(int));
 extern void reseed_random(int(*fn)(int));
@@ -1353,6 +1357,8 @@ extern boolean litstate_rnd(int);
 
 /* ### mkmaze.c ### */
 
+extern boolean set_levltyp(xchar, xchar, schar);
+extern boolean set_levltyp_lit(xchar, xchar, schar, schar);
 extern void create_maze(int, int, boolean);
 extern void wallification(int, int, int, int);
 extern void fix_wall_spines(int, int, int, int);
@@ -1762,6 +1768,7 @@ extern void nhl_error(lua_State *, const char *) NORETURN;
 extern void lcheck_param_table(lua_State *);
 extern schar get_table_mapchr(lua_State *, const char *);
 extern schar get_table_mapchr_opt(lua_State *, const char *, schar);
+extern short nhl_get_timertype(lua_State *, int);
 extern void nhl_add_table_entry_int(lua_State *, const char *, int);
 extern void nhl_add_table_entry_char(lua_State *, const char *, char);
 extern void nhl_add_table_entry_str(lua_State *, const char *, const char *);
@@ -2501,7 +2508,6 @@ extern void flip_level_rnd(int, boolean);
 extern boolean check_room(xchar *, xchar *, xchar *, xchar *, boolean);
 extern boolean create_room(xchar, xchar, xchar, xchar, xchar, xchar, xchar,
                            xchar);
-extern void create_secret_door(struct mkroom *, xchar);
 extern boolean dig_corridor(coord *, coord *, boolean, schar, schar);
 extern void fill_special_room(struct mkroom *);
 extern void wallify_map(int, int, int, int);
@@ -2533,6 +2539,7 @@ extern void selection_do_gradient(struct selectionvar *, long, long, long,
                                   long, long, long, long, long);
 extern int lspo_reset_level(lua_State *);
 extern int lspo_finalize_level(lua_State *);
+extern int nhl_abs_coord(lua_State *);
 extern void update_croom(void);
 extern const char *get_trapname_bytype(int);
 extern void l_register_des(lua_State *);
@@ -2552,9 +2559,9 @@ extern int tport_spell(int);
 extern void losespells(void);
 extern int dovspell(void);
 extern void initialspell(struct obj *);
-extern boolean known_spell(short);
+extern int known_spell(short);
 extern int spell_idx(short);
-extern boolean force_learn_spell(short);
+extern char force_learn_spell(short);
 extern int num_spells(void);
 
 /* ### steal.c ### */

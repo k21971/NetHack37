@@ -70,7 +70,8 @@ resetobjs(struct obj *ochain, boolean restore)
                     if (has_oname(otmp))
                         free_oname(otmp);
                 } else {
-                    artifact_exists(otmp, safe_oname(otmp), TRUE, FALSE);
+                    artifact_exists(otmp, safe_oname(otmp), TRUE,
+                                    ONAME_BONES);
                 }
             } else if (has_oname(otmp)) {
                 sanitize_name(ONAME(otmp));
@@ -690,7 +691,7 @@ boolean
 bones_include_name(const char *name)
 {
     struct cemetery *bp;
-    int len;
+    size_t len;
     char buf[BUFSZ];
 
     /* prepare buffer by appending terminal hyphen to name, to avoid partial

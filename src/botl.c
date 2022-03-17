@@ -113,7 +113,7 @@ do_statusline2(void)
             time (in moves), varying number of status conditions */
          dloc[QBUFSZ], hlth[QBUFSZ], expr[QBUFSZ], tmmv[QBUFSZ], cond[QBUFSZ];
     register char *nb;
-    unsigned dln, dx, hln, xln, tln, cln;
+    size_t dln, dx, hln, xln, tln, cln;
     int hp, hpmax, cap;
     long money;
 
@@ -229,7 +229,7 @@ do_statusline2(void)
     } else {
         if (dln + 1 + hln + 1 + xln + 1 + tln + 1 + cln + 1 > MAXCO) {
             panic("bot2: second status line exceeds MAXCO (%u > %d)",
-                  (dln + 1 + hln + 1 + xln + 1 + tln + 1 + cln + 1), MAXCO);
+                  (unsigned)(dln + 1 + hln + 1 + xln + 1 + tln + 1 + cln + 1), MAXCO);
         } else if ((dln - dx) + 1 + hln + 1 + xln + 1 + cln <= COLNO) {
             Snprintf(newbot2, sizeof(newbot2), "%s %s %s %s %s", dloc, hlth,
                      expr, cond, tmmv);
@@ -366,8 +366,7 @@ title_to_mon(const char *str, int *rank_indx, int *title_length)
         /* loop through each of the rank titles for role #i */
         for (j = 0; j < 9; j++) {
             if (roles[i].rank[j].m
-                && !strncmpi(str, roles[i].rank[j].m,
-                             strlen(roles[i].rank[j].m))) {
+                && streq(str, roles[i].rank[j].m, TRUE)) {
                 if (rank_indx)
                     *rank_indx = j;
                 if (title_length)
@@ -375,8 +374,7 @@ title_to_mon(const char *str, int *rank_indx, int *title_length)
                 return roles[i].mnum;
             }
             if (roles[i].rank[j].f
-                && !strncmpi(str, roles[i].rank[j].f,
-                             strlen(roles[i].rank[j].f))) {
+                && streq(str, roles[i].rank[j].m, TRUE)) {
                 if (rank_indx)
                     *rank_indx = j;
                 if (title_length)
@@ -393,14 +391,15 @@ title_to_mon(const char *str, int *rank_indx, int *title_length)
 void
 max_rank_sz(void)
 {
-    register int i, r, maxr = 0;
+    register int i;
+    size_t r, maxr = 0;
     for (i = 0; i < 9; i++) {
         if (g.urole.rank[i].m && (r = strlen(g.urole.rank[i].m)) > maxr)
             maxr = r;
         if (g.urole.rank[i].f && (r = strlen(g.urole.rank[i].f)) > maxr)
             maxr = r;
     }
-    g.mrank_sz = maxr;
+    g.mrank_sz = (int) maxr;
     return;
 }
 
@@ -499,7 +498,7 @@ static char *conditionbitmask2str(unsigned long);
 static unsigned long match_str2conditionbitmask(const char *);
 static unsigned long str2conditionbitmask(char *);
 static boolean parse_condition(char (*)[QBUFSZ], int);
-static char *hlattr2attrname(int, char *, int);
+static char *hlattr2attrname(int, char *, size_t);
 static void status_hilite_linestr_add(int, struct hilite_s *, unsigned long,
                                       const char *);
 static void status_hilite_linestr_done(void);
@@ -2927,11 +2926,12 @@ clear_status_hilites(void)
 }
 
 static char *
-hlattr2attrname(int attrib, char *buf, int bufsz)
+hlattr2attrname(int attrib, char *buf, size_t bufsz)
 {
     if (attrib && buf) {
         char attbuf[BUFSZ];
-        int k, first = 0;
+        int first = 0;
+        size_t k;
 
         attbuf[0] = '\0';
         if (attrib == HL_NONE) {
@@ -2951,7 +2951,7 @@ hlattr2attrname(int attrib, char *buf, int bufsz)
             Strcat(attbuf, first++ ? "+dim" : "dim");
 
         k = strlen(attbuf);
-        if (k < (bufsz - 1))
+        if (k < (size_t)(bufsz - 1))
             Strcpy(buf, attbuf);
         return buf;
     }
@@ -3045,7 +3045,7 @@ status_hilite_linestr_gather_conditions(void)
     int i;
     struct _cond_map {
         unsigned long bm;
-        unsigned long clratr;
+        unsigned int clratr;
     } cond_maps[SIZE(conditions)];
 
     (void) memset(cond_maps, 0,
@@ -3075,7 +3075,7 @@ status_hilite_linestr_gather_conditions(void)
             atr &= ~HL_NONE;
 
         if (clr != NO_COLOR || atr != HL_NONE) {
-            unsigned long ca = clr | (atr << 8);
+            unsigned int ca = clr | (atr << 8);
             boolean added_condmap = FALSE;
 
             for (j = 0; j < SIZE(conditions); j++)

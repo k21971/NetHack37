@@ -1,4 +1,4 @@
-/* NetHack 3.7	pray.c	$NHDT-Date: 1621208529 2021/05/16 23:42:09 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.147 $ */
+/* NetHack 3.7	pray.c	$NHDT-Date: 1646870846 2022/03/10 00:07:26 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.164 $ */
 /* Copyright (c) Benson I. Margulies, Mike Stephenson, Steve Linhart, 1989. */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -11,6 +11,7 @@ static void fix_worst_trouble(int);
 static void angrygods(aligntyp);
 static void at_your_feet(const char *);
 static void gcrownu(void);
+static void give_spell(void);
 static void pleased(aligntyp);
 static void godvoice(aligntyp, const char *);
 static void god_zaps_you(aligntyp);
@@ -749,8 +750,9 @@ at_your_feet(const char *str)
               s_suffix(mon_nam(u.ustuck)), mbodypart(u.ustuck, STOMACH));
     } else {
         pline("%s %s %s your %s!", str,
-              Blind ? "lands" : vtense(str, "appear"),
-              Levitation ? "beneath" : "at", makeplural(body_part(FOOT)));
+              vtense(str, Blind ? "land" : "appear"),
+              Levitation ? "beneath" : "at",
+              makeplural(body_part(FOOT)));
     }
 }
 
@@ -828,7 +830,8 @@ gcrownu(void)
                                          * even if hero doesn't know book */
         bless(obj);
         obj->bknown = 1; /* ok to skip set_bknown() */
-        at_your_feet("A spellbook");
+        obj->dknown = 1;
+        at_your_feet(upstart(ansimpleoname(obj)));
         dropy(obj);
         u.ugifts++;
         /* not an artifact, but treat like one for this situation;
@@ -838,7 +841,7 @@ gcrownu(void)
 
         /* when getting a new book for known spell, enhance
            currently wielded weapon rather than the book */
-        if (known_spell(class_gift) && ok_wep(uwep))
+        if (known_spell(class_gift) != spe_Unknown && ok_wep(uwep))
             obj = uwep; /* to be blessed,&c */
     }
 
@@ -852,7 +855,8 @@ gcrownu(void)
             Strcpy(lbuf, simpleonames(obj)); /* before transformation */
             if (!Blind)
                 Your("sword shines brightly for a moment.");
-            obj = oname(obj, artiname(ART_EXCALIBUR), ONAME_FOUND_ARTI);
+            obj = oname(obj, artiname(ART_EXCALIBUR),
+                        ONAME_GIFT | ONAME_KNOW_ARTI);
             if (obj && obj->oartifact == ART_EXCALIBUR) {
                 u.ugifts++;
                 livelog_printf(LL_DIVINEGIFT | LL_ARTIFACT,
@@ -873,7 +877,8 @@ gcrownu(void)
             obj->dknown = 1;
         } else if (!already_exists) {
             obj = mksobj(LONG_SWORD, FALSE, FALSE);
-            obj = oname(obj, artiname(ART_VORPAL_BLADE), ONAME_FOUND_ARTI);
+            obj = oname(obj, artiname(ART_VORPAL_BLADE),
+                        ONAME_GIFT | ONAME_KNOW_ARTI);
             obj->spe = 1;
             at_your_feet("A sword");
             dropy(obj);
@@ -897,7 +902,8 @@ gcrownu(void)
             obj->dknown = 1;
         } else if (!already_exists) {
             obj = mksobj(RUNESWORD, FALSE, FALSE);
-            obj = oname(obj, artiname(ART_STORMBRINGER), ONAME_FOUND_ARTI);
+            obj = oname(obj, artiname(ART_STORMBRINGER),
+                        ONAME_GIFT | ONAME_KNOW_ARTI);
             obj->spe = 1;
             at_your_feet(An(swordbuf));
             dropy(obj);
@@ -935,6 +941,77 @@ gcrownu(void)
     /* lastly, confer an extra skill slot/credit beyond the
        up-to-29 you can get from gaining experience levels */
     add_weapon_skill(1);
+    return;
+}
+
+static void
+give_spell(void)
+{
+    struct obj *otmp;
+    char spe_let;
+    int spe_knowledge, trycnt = u.ulevel + 1;
+
+    /* not yet known spells and forgotten spells are given preference over
+       usable ones; also, try to grant spell that hero could gain skill in
+       (even though being restricted doesn't prevent learning and casting) */
+    otmp = mkobj(SPBOOK_no_NOVEL, TRUE);
+    while (--trycnt > 0) {
+        if (otmp->otyp != SPE_BLANK_PAPER) {
+            if (known_spell(otmp->otyp) <= spe_Unknown
+                && !P_RESTRICTED(spell_skilltype(otmp->otyp)))
+                break; /* forgotten or not yet known */
+        } else {
+            /* blank paper is acceptable if not discovered yet or
+               if hero has a magic marker to write something on it
+               (doesn't matter if marker is out of charges); it will
+               become discovered (below) without needing to be read */
+            if (!objects[SPE_BLANK_PAPER].oc_name_known
+                || carrying(MAGIC_MARKER))
+                break;
+        }
+        otmp->otyp = rnd_class(g.bases[SPBOOK_CLASS], SPE_BLANK_PAPER);
+    }
+    /*
+     * 25% chance of learning the spell directly instead of
+     * receiving the book for it, unless it's already well known.
+     * The chance is not influenced by whether hero is illiterate.
+     */
+    if (otmp->otyp != SPE_BLANK_PAPER && !rn2(4)
+        && (spe_knowledge = known_spell(otmp->otyp)) != spe_Fresh) {
+        /* force_learn_spell() should only return '\0' if the book
+           is blank paper or the spell is known and has retention
+           of spe_Fresh, so no 'else' case is needed here */
+        if ((spe_let = force_learn_spell(otmp->otyp)) != '\0') {
+            /* for spellbook class, OBJ_NAME() yields the name of
+               the spell rather than "spellbook of <spell-name>" */
+            const char *spe_name = OBJ_NAME(objects[otmp->otyp]);
+
+            if (spe_knowledge == spe_Unknown) /* prior to learning */
+                /* appending "spell 'a'" seems slightly silly but
+                   is similar to "added to your repertoire, as 'a'"
+                   and without any spellbook on hand a novice player
+                   might not recognize that 'spe_name' is a spell */
+                pline("Divine knowledge of %s fills your mind!  Spell '%c'.",
+                      spe_name, spe_let);
+            else
+                Your("knowledge of spell '%c' - %s is %s.",
+                     spe_let, spe_name,
+                     (spe_knowledge == spe_Forgotten) ? "restored"
+                                                      : "refreshed");
+        }
+        obfree(otmp, (struct obj *) 0); /* discard the book */
+    } else {
+        otmp->dknown = 1; /* not bknown */
+        /* discovering blank paper will make it less likely to
+           be given again; small chance to arbitrarily discover
+           some other book type without having to read it first */
+        if (otmp->otyp == SPE_BLANK_PAPER || !rn2(100))
+            makeknown(otmp->otyp);
+        bless(otmp);
+        at_your_feet(upstart(ansimpleoname(otmp)));
+        place_object(otmp, u.ux, u.uy);
+        newsym(u.ux, u.uy);
+    }
     return;
 }
 
@@ -1204,39 +1281,9 @@ pleased(aligntyp g_align)
                 break;
             }
             /*FALLTHRU*/
-        case 6: {
-            struct obj *otmp;
-            int trycnt = u.ulevel + 1;
-
-            /* not yet known spells given preference over already known ones;
-               also, try to grant a spell for which there is a skill slot */
-            otmp = mkobj(SPBOOK_no_NOVEL, TRUE);
-            while (--trycnt > 0) {
-                if (otmp->otyp != SPE_BLANK_PAPER) {
-                    if (!known_spell(otmp->otyp)
-                        && !P_RESTRICTED(spell_skilltype(otmp->otyp)))
-                        break; /* usable, but not yet known */
-                } else {
-                    if ((!objects[SPE_BLANK_PAPER].oc_name_known
-                         || carrying(MAGIC_MARKER)) && u.uconduct.literate)
-                        break;
-                }
-                otmp->otyp = rnd_class(g.bases[SPBOOK_CLASS], SPE_BLANK_PAPER);
-            }
-            if (!u.uconduct.literate && (otmp->otyp != SPE_BLANK_PAPER)
-                && !known_spell(otmp->otyp)) {
-                if (force_learn_spell(otmp->otyp))
-                    pline("Divine knowledge of %s fills your mind!",
-                          OBJ_NAME(objects[otmp->otyp]));
-                obfree(otmp, (struct obj *) 0);
-            } else {
-                bless(otmp);
-                at_your_feet("A spellbook");
-                place_object(otmp, u.ux, u.uy);
-                newsym(u.ux, u.uy);
-            }
+        case 6:
+            give_spell();
             break;
-        }
         default:
             impossible("Confused deity!");
             break;
@@ -1808,12 +1855,21 @@ dosacrifice(void)
                 && !rn2(10 + (2 * u.ugifts * nartifacts))) {
                 otmp = mk_artifact((struct obj *) 0, a_align(u.ux, u.uy));
                 if (otmp) {
+                    char buf[BUFSZ];
+
+                    artifact_origin(otmp, ONAME_GIFT | ONAME_KNOW_ARTI);
                     if (otmp->spe < 0)
                         otmp->spe = 0;
                     if (otmp->cursed)
                         uncurse(otmp);
                     otmp->oerodeproof = TRUE;
-                    at_your_feet("An object");
+                    Strcpy(buf, (Hallucination ? "a doodad"
+                                 : Blind ? "an object"
+                                   : ansimpleoname(otmp)));
+                    if (!Blind)
+                        Sprintf(eos(buf), " named %s",
+                                bare_artifactname(otmp));
+                    at_your_feet(upstart(buf));
                     dropy(otmp);
                     godvoice(u.ualign.type, "Use my gift wisely!");
                     u.ugifts++;

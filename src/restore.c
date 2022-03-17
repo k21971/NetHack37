@@ -1446,7 +1446,7 @@ restore_menu(
 int
 validate(NHFILE* nhfp, const char *name)
 {
-    int rlen = 0;
+    readLenType rlen = 0;
     struct savefile_info sfi;
     unsigned long utdflags = 0L;
     boolean verbose = name ? TRUE : FALSE, reslt = FALSE;
@@ -1457,10 +1457,10 @@ validate(NHFILE* nhfp, const char *name)
 
     if ((nhfp->mode & WRITING) == 0) {
 	if (nhfp->structlevel)
-            rlen = read(nhfp->fd, (genericptr_t) &sfi, sizeof sfi);
+            rlen = (readLenType) read(nhfp->fd, (genericptr_t) &sfi, sizeof sfi);
     } else {
         if (nhfp->structlevel)
-            rlen = read(nhfp->fd, (genericptr_t) &sfi, sizeof sfi);
+            rlen = (readLenType) read(nhfp->fd, (genericptr_t) &sfi, sizeof sfi);
         minit();		/* ZEROCOMP */
         if (rlen == 0) {
 	    if (verbose) {

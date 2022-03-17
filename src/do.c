@@ -7,12 +7,11 @@
 
 #include "hack.h"
 
-static void trycall(struct obj *);
 static void polymorph_sink(void);
 static boolean teleport_sink(void);
 static void dosinkring(struct obj *);
 static int drop(struct obj *);
-static int menudrop_split(struct obj *, int);
+static int menudrop_split(struct obj *, long);
 static boolean engulfer_digests_food(struct obj *);
 static int wipeoff(void);
 static int menu_drop(int);
@@ -315,7 +314,9 @@ doaltarobj(struct obj *obj)
     }
 }
 
-static void
+/* If obj is neither formally identified nor informally called something
+ * already, prompt the player to call its object type. */
+void
 trycall(struct obj *obj)
 {
     if (!objects[obj->otyp].oc_name_known && !objects[obj->otyp].oc_uname)
@@ -837,7 +838,7 @@ doddrop(void)
 }
 
 static int /* check callers */
-menudrop_split(struct obj *otmp, int cnt)
+menudrop_split(struct obj *otmp, long cnt)
 {
     if (cnt && cnt < otmp->quan) {
         if (welded(otmp)) {

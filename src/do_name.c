@@ -1,4 +1,4 @@
-/* NetHack 3.7	do_name.c	$NHDT-Date: 1644347168 2022/02/08 19:06:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.231 $ */
+/* NetHack 3.7	do_name.c	$NHDT-Date: 1646870842 2022/03/10 00:07:22 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.239 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Pasi Kallinen, 2018. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1300,16 +1300,18 @@ do_oname(register struct obj *obj)
            a valid artifact name */
         u.uconduct.literate++;
     }
-    obj = oname(obj, buf, ONAME_VIA_NAMING);
+    obj = oname(obj, buf, ONAME_VIA_NAMING | ONAME_KNOW_ARTI);
 }
 
 struct obj *
-oname(struct obj *obj, const char *name, unsigned oflgs)
+oname(
+    struct obj *obj,  /* item to assign name to */
+    const char *name, /* name to assign */
+    unsigned oflgs)   /* flags for artifact creation; otherwise ignored */
 {
     int lth;
     char buf[PL_PSIZ];
-    boolean via_naming = (oflgs & ONAME_VIA_NAMING) != 0,
-            found_arti = (oflgs & ONAME_FOUND_ARTI) != 0;
+    boolean via_naming = (oflgs & ONAME_VIA_NAMING) != 0;
 
     lth = *name ? (int) (strlen(name) + 1) : 0;
     if (lth > PL_PSIZ) {
@@ -1329,7 +1331,7 @@ oname(struct obj *obj, const char *name, unsigned oflgs)
         Strcpy(ONAME(obj), name);
 
     if (lth)
-        artifact_exists(obj, name, TRUE, via_naming || found_arti);
+        artifact_exists(obj, name, TRUE, oflgs);
     if (obj->oartifact) {
         /* can't dual-wield with artifact as secondary weapon */
         if (obj == uswapwep)

@@ -440,8 +440,7 @@ doread(void)
 
         /* yet another note: despite the fact that player will recognize
            the object type, don't make it become a discovery for hero */
-        if (!objects[otyp].oc_name_known && !objects[otyp].oc_uname)
-            docall(scroll);
+        trycall(scroll);
         return ECMD_TIME;
     } else if (otyp == CREDIT_CARD) {
         static const char *const card_msgs[] = {
@@ -631,8 +630,8 @@ doread(void)
         if (!objects[otyp].oc_name_known) {
             if (g.known)
                 learnscroll(scroll);
-            else if (!objects[otyp].oc_uname)
-                docall(scroll);
+            else
+                trycall(scroll);
         }
         scroll->in_use = FALSE;
         if (otyp != SCR_BLANK_PAPER)
@@ -2143,7 +2142,7 @@ drop_boulder_on_player(boolean confused, boolean helmet_protects, boolean byu, b
     if (!amorphous(g.youmonst.data) && !Passes_walls
         && !noncorporeal(g.youmonst.data) && !unsolid(g.youmonst.data)) {
         You("are hit by %s!", doname(otmp2));
-        dmg = dmgval(otmp2, &g.youmonst) * otmp2->quan;
+        dmg = (int) (dmgval(otmp2, &g.youmonst) * otmp2->quan);
         if (uarmh && helmet_protects) {
             if (is_metallic(uarmh)) {
                 pline("Fortunately, you are wearing a hard helmet.");
@@ -2184,7 +2183,7 @@ drop_boulder_on_monster(int x, int y, boolean confused, boolean byu)
     if (mtmp && !amorphous(mtmp->data) && !passes_walls(mtmp->data)
         && !noncorporeal(mtmp->data) && !unsolid(mtmp->data)) {
         struct obj *helmet = which_armor(mtmp, W_ARMH);
-        int mdmg;
+        long mdmg;
 
         if (cansee(mtmp->mx, mtmp->my)) {
             pline("%s is hit by %s!", Monnam(mtmp), doname(otmp2));
@@ -2894,7 +2893,7 @@ create_particular_parse(char* str, struct _create_particular_data* d)
     char *bufp = str;
     char *tmpp;
 
-    d->quan = 1 + ((g.multi > 0) ? g.multi : 0);
+    d->quan = 1 + ((g.multi > 0) ? (int) g.multi : 0);
     d->monclass = MAXMCLASSES;
     d->which = g.urole.mnum; /* an arbitrary index into mons[] */
     d->fem = -1;     /* gender not specified */

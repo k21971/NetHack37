@@ -1,4 +1,4 @@
-/* NetHack 3.7	artifact.c	$NHDT-Date: 1646688062 2022/03/07 21:21:02 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.181 $ */
+/* NetHack 3.7	artifact.c	$NHDT-Date: 1646870837 2022/03/10 00:07:17 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.182 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -39,13 +39,21 @@ static int count_surround_traps(int, int);
    of hit points that will fit in a 15 bit integer. */
 #define FATAL_DAMAGE_MODIFIER 200
 
-/* artifact tracking */
+/* artifact tracking; gift and wish imply found; it also gets set for items
+   seen on the floor, in containers, and wielded or dropped by monsters */
 struct arti_info {
-    Bitfield(exists, 1); /* True if corresponding artifact has been created */
-    Bitfield(found, 1);  /* True if artifact is known by hero to exist */
+    Bitfield(exists, 1); /* 1 if corresponding artifact has been created */
+    Bitfield(found, 1);  /* 1 if artifact is known by hero to exist */
+    Bitfield(gift, 1);   /* 1 iff artifact was created as a prayer reward */
+    Bitfield(wish, 1);   /* 1 iff artifact was created via wish */
+    Bitfield(named, 1);  /* 1 iff artifact was made by naming an item */
+    Bitfield(viadip, 1); /* 1 iff dipped long sword became Excalibur */
+    Bitfield(lvldef, 1); /* 1 iff created by special level definition */
+    Bitfield(bones, 1);  /* 1 iff came from bones file */
+    Bitfield(rndm, 1);   /* 1 iff randomly generated */
 };
 /* array of flags tracking which artifacts exist, indexed by ART_xx;
-   ART_xx values are 1..N, element [0] isn't used */
+   ART_xx values are 1..N, element [0] isn't used; no terminator needed */
 static struct arti_info artiexist[1 + NROFARTIFACTS];
 /* discovery list; for N discovered artifacts, the first N entries are ART_xx
    values in discovery order, the remaining (NROFARTIFACTS-N) slots are 0 */
@@ -55,6 +63,7 @@ static xchar artidisco[NROFARTIFACTS];
  * bulk re-init if game restart ever gets implemented.  They are saved
  * and restored but that is done through this file so they can be local.
  */
+static const struct arti_info zero_artiexist = {0}; /* all bits zero */
 
 static void hack_artifacts(void);
 static boolean attacks(int, struct obj *);
@@ -206,8 +215,8 @@ mk_artifact(
         if (otmp) {
             otmp = oname(otmp, a->name, ONAME_NO_FLAGS);
             otmp->oartifact = m;
-            artiexist[m].exists = 1;
-            artiexist[m].found = 0;
+            /* set existence and reason for creation bits */
+            artifact_origin(otmp, ONAME_RANDOM); /* 'random' is default */
         }
     } else {
         /* nothing appropriate could be found; return original object */
@@ -260,12 +269,14 @@ exist_artifact(int otyp, const char *name)
     return FALSE;
 }
 
+/* an artifact has just been created or is being "un-created" for a chance
+   to be created again later */
 void
 artifact_exists(
     struct obj *otmp,
     const char *name,
-    boolean mod,      /* True: exists, False: being uncreated */
-    boolean knwn)     /* True: hero knows it exists */
+    boolean mod,      /* True: exists, False: being un-created */
+    unsigned flgs)    /* ONAME_xyz flags; not relevant if !mod */
 {
     register const struct artifact *a;
 
@@ -278,8 +289,20 @@ artifact_exists(
                 otmp->age = 0;
                 if (otmp->otyp == RIN_INCREASE_DAMAGE)
                     otmp->spe = 0;
-                artiexist[m].exists = mod ? 1 : 0;
-                artiexist[m].found = (mod && knwn) ? 1 : 0;
+                if (mod) { /* means being created rather than un-created */
+                    /* one--and only one--of these should always be set */
+                    if ((flgs & (ONAME_VIA_NAMING | ONAME_WISH | ONAME_GIFT
+                                 | ONAME_VIA_DIP | ONAME_LEVEL_DEF
+                                 | ONAME_BONES | ONAME_RANDOM)) == 0)
+                        flgs |= ONAME_RANDOM; /* the default origin */
+                    /* 'exists' bit will become set (in artifact_origin();
+                       there's no ONAME_ flag) and flgs might also contain
+                       the know_arti bit (hero knows that artifact exists) */
+                    artifact_origin(otmp, flgs);
+                } else { /* uncreate */
+                    /* clear all the flag bits */
+                    artiexist[m] = zero_artiexist;
+                }
                 break;
             }
     return;
@@ -289,7 +312,12 @@ artifact_exists(
 void
 found_artifact(int a)
 {
-    artiexist[a].found = 1;
+    if (a < 1 || a > NROFARTIFACTS)
+        impossible("found_artifact: invalid artifact index! (%d)", a);
+    else if (!artiexist[a].exists)
+        impossible("found_artifact: artifact doesn't exist yet? (%d)", a);
+    else
+        artiexist[a].found = 1;
 }
 
 /* if an artifact hasn't already been designated 'found', do that now
@@ -300,7 +328,6 @@ find_artifact(struct obj *otmp)
     int a = otmp->oartifact;
 
     if (a && !artiexist[a].found) {
-        char buf[BUFSZ];
         const char *where;
 
         found_artifact(a); /* artiexist[a].found = 1 */
@@ -330,8 +357,8 @@ find_artifact(struct obj *otmp)
                         blind but now seen; there's no previous_where to
                         figure out how it got here */
                      : "");
-        (void) strsubst(strcpy(buf, artiname(a)), "The ", "the ");
-        livelog_printf(LL_ARTIFACT, "found %s%s", buf, where);
+        livelog_printf(LL_ARTIFACT, "found %s%s",
+                       bare_artifactname(otmp), where);
     }
 }
 
@@ -345,6 +372,48 @@ nartifact_exist(void)
             ++a;
 
     return a;
+}
+
+/* set artifact tracking flags;
+   calling sequence: oname() -> artifact_exists() -> artifact_origin() or
+   mksobj(),others -> mk_artifact() -> artifact_origin(random) possibly
+   followed by mksobj(),others -> artifact_origin(non-random origin) */
+void
+artifact_origin(
+    struct obj *arti, /* new artifact */
+    unsigned aflags)  /* ONAME_xxx flags, shared by artifact_exists() */
+{
+    int ct, a = arti->oartifact;
+
+    if (a) {
+        /* start by clearing all bits; most are mutually exclusive */
+        artiexist[a] = zero_artiexist;
+        /* set 'exists' bit back on; not specified via flag bit in aflags */
+        artiexist[a].exists = 1;
+        /* 'hero knows it exists' is expected for wish, gift, viadip, or
+           named and could eventually become set for any of the others */
+        if ((aflags & ONAME_KNOW_ARTI) != 0)
+            artiexist[a].found = 1;
+        /* should be exactly one of wish, gift, via_dip, via_naming,
+           level_def (quest), bones, and random (floor or monst's minvent) */
+        ct = 0;
+        if ((aflags & ONAME_WISH) != 0)
+            artiexist[a].wish = 1, ++ct;
+        if ((aflags & ONAME_GIFT) != 0)
+            artiexist[a].gift = 1, ++ct;
+        if ((aflags & ONAME_VIA_DIP) != 0)
+            artiexist[a].viadip = 1, ++ct;
+        if ((aflags & ONAME_VIA_NAMING) != 0)
+            artiexist[a].named = 1, ++ct;
+        if ((aflags & ONAME_LEVEL_DEF) != 0)
+            artiexist[a].lvldef = 1, ++ct;
+        if ((aflags & ONAME_BONES) != 0)
+            artiexist[a].bones = 1, ++ct;
+        if ((aflags & ONAME_RANDOM) != 0)
+            artiexist[a].rndm = 1, ++ct;
+        if (ct != 1)
+            impossible("invalid artifact origin: %4o", aflags);
+    }
 }
 
 boolean
@@ -937,7 +1006,6 @@ discover_artifact(xchar m)
     for (i = 0; i < NROFARTIFACTS; i++)
         if (artidisco[i] == 0 || artidisco[i] == m) {
             artidisco[i] = m;
-            artiexist[i].found = 1; /* (we expect this to already be set) */
             return;
         }
     /* there is one slot per artifact, so we should never reach the
@@ -966,6 +1034,7 @@ int
 disp_artifact_discoveries(winid tmpwin) /* supplied by dodiscover() */
 {
     int i, m, otyp;
+    const char *algnstr;
     char buf[BUFSZ];
 
     for (i = 0; i < NROFARTIFACTS; i++) {
@@ -978,11 +1047,50 @@ disp_artifact_discoveries(winid tmpwin) /* supplied by dodiscover() */
             putstr(tmpwin, iflags.menu_headings, "Artifacts");
         m = artidisco[i];
         otyp = artilist[m].otyp;
+        algnstr = align_str(artilist[m].alignment);
+        if (!strcmp(algnstr, "unaligned"))
+            algnstr = "non-aligned";
+
         Sprintf(buf, "  %s [%s %s]", artiname(m),
-                align_str(artilist[m].alignment), simple_typename(otyp));
+                algnstr, simple_typename(otyp));
         putstr(tmpwin, 0, buf);
     }
     return i;
+}
+
+/* (wizard mode only) show all artifacts and their flags */
+void
+dump_artifact_info(winid tmpwin)
+{
+    int m;
+    char buf[BUFSZ], buf2[BUFSZ];
+
+    putstr(tmpwin, iflags.menu_headings, "Artifacts");
+    for (m = 1; m <= NROFARTIFACTS; ++m) {
+        Snprintf(buf2, sizeof buf2,
+                "[%s%s%s%s%s%s%s%s%s]", /* 9 bits overall */
+                artiexist[m].exists ? "exists;" : "",
+                artiexist[m].found  ? " hero knows;" : "",
+                /* .exists and .found have different punctuation because
+                   they're expected to be combined with one of these */
+                artiexist[m].gift   ? " gift"   : "",
+                artiexist[m].wish   ? " wish"   : "",
+                artiexist[m].named  ? " named"  : "",
+                artiexist[m].viadip ? " viadip" : "",
+                artiexist[m].lvldef ? " lvldef" : "",
+                artiexist[m].bones  ? " bones"  : "",
+                artiexist[m].rndm   ? " random" : "");
+#if 0   /* 'tmpwin' here is a text window, not a menu */
+        if (iflags.menu_tab_sep)
+            Sprintf(buf, "  %s\t%s", artiname(m), buf2);
+        else
+#else
+            /* "The Platinum Yendorian Express Card" is 35 characters */
+            Snprintf(buf, sizeof buf, "  %-36.36s%s", artiname(m), buf2);
+#endif
+        putstr(tmpwin, 0, buf);
+    }
+    return;
 }
 
 /*

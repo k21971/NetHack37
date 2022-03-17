@@ -209,7 +209,7 @@ NH_panictrace_libc(void)
 {
 #ifdef PANICTRACE_LIBC
     void *bt[20];
-    size_t count, x;
+    int count, x;
     char **info, buf[BUFSZ];
 
     raw_print("  Generating more information you may report:\n");

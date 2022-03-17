@@ -537,7 +537,7 @@ doengrave(void)
     const char *everb;          /* Present tense of engraving type */
     const char *eloc; /* Where the engraving is (ie dust/floor/...) */
     char *sp;         /* Place holder for space count of engr text */
-    int len;          /* # of nonspace chars of new engraving text */
+    size_t len;          /* # of nonspace chars of new engraving text */
     struct engr *oep = engr_at(u.ux, u.uy);
     /* The current engraving */
     struct obj *otmp; /* Object selected with which to engrave */
@@ -1448,7 +1448,8 @@ make_grave(int x, int y, const char *str)
     if ((levl[x][y].typ != ROOM && levl[x][y].typ != GRAVE) || t_at(x, y))
         return;
     /* Make the grave */
-    levl[x][y].typ = GRAVE;
+    if (!set_levltyp(x, y, GRAVE))
+        return;
     /* Engrave the headstone */
     del_engr_at(x, y);
     if (!str)

@@ -1,4 +1,4 @@
-/* NetHack 3.7	options.c	$NHDT-Date: 1645000577 2022/02/16 08:36:17 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.540 $ */
+/* NetHack 3.7	options.c	$NHDT-Date: 1647472681 2022/03/16 23:18:01 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.542 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Michael Allison, 2008. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -5839,6 +5839,19 @@ initoptions_init(void)
     /* only used by curses */
     iflags.wc2_windowborders = 2; /* 'Auto' */
 
+    /*
+     * A few menus have certain items (typically operate-on-everything or
+     * change-subset or sort or help entries) flagged as 'skip-invert' to
+     * control how whole-page and whole-menu operations affect them.
+     * 'menuinvertmode' controls how that functions:
+     * 0: ignore 'skip-invert' flag on menu items (used to be the default);
+     * 1: don't toggle 'skip-invert' items On for set-all/set-page/invert-
+     *    all/invert-page but do toggle Off if already set (default);
+     * 2: don't toggle 'skip-invert' items either On of Off for set-all/
+     *    set-page/unset-all/unset-page/invert-all/invert-page.
+     */
+    iflags.menuinvertmode = 1;
+
     /* since this is done before init_objects(), do partial init here */
     objects[SLIME_MOLD].oc_name_idx = SLIME_MOLD;
     nmcpy(g.pl_fruit, OBJ_NAME(objects[SLIME_MOLD]), PL_FSIZ);
@@ -6662,7 +6675,8 @@ msgtype_parse_add(char *str)
         int i;
 
         for (i = 0; i < SIZE(msgtype_names); i++)
-            if (!strncmpi(msgtype_names[i].name, msgtype, strlen(msgtype))) {
+            if (streq(msgtype_names[i].name, msgtype, TRUE)) {
+            //if (!strncmpi(msgtype_names[i].name, msgtype, strlen(msgtype))) {
                 typ = msgtype_names[i].msgtyp;
                 break;
             }
