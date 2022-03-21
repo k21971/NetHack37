@@ -97,9 +97,10 @@ struct sp_coder {
  */
 
 #define packed_coord long
+typedef uint32_t getloc_flags_t;
 typedef struct {
     xchar is_random;
-    long getloc_flags;
+    getloc_flags_t getloc_flags;
     int x, y;
 } unpacked_coord;
 
@@ -138,7 +139,7 @@ typedef struct {
         paralyzed, stunned, confused, waiting;
     long seentraps;
     short has_invent;
-    long mm_flags; /* makemon flags */
+    mmflags_nht mm_flags; /* makemon flags */
 } monster;
 
 typedef struct {

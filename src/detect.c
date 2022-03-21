@@ -85,7 +85,7 @@ browse_map(int ter_typ, const char *ter_explain)
     save_autodescribe = iflags.autodescribe;
     iflags.autodescribe = TRUE;
     iflags.terrainmode = ter_typ;
-    getpos(&dummy_pos, FALSE, ter_explain);
+    (void) getpos(&dummy_pos, FALSE, ter_explain);
     iflags.terrainmode = 0;
     iflags.autodescribe = save_autodescribe;
 }
@@ -805,8 +805,7 @@ monster_detect(struct obj *otmp, /* detecting object (if any) */
                     && mclass == S_WORM_TAIL))
                 map_monst(mtmp, TRUE);
 
-            if (otmp && otmp->cursed
-                && (mtmp->msleeping || !mtmp->mcanmove)) {
+            if (otmp && otmp->cursed && helpless(mtmp)) {
                 mtmp->msleeping = mtmp->mfrozen = 0;
                 mtmp->mcanmove = 1;
                 woken = TRUE;

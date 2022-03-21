@@ -383,7 +383,7 @@ savenames(NHFILE* nhfp)
     for (i = 0; i < NUM_OBJECTS; i++)
         if (objects[i].oc_uname) {
             if (perform_bwrite(nhfp)) {
-                len = strlen(objects[i].oc_uname) + 1;
+                len = Strlen(objects[i].oc_uname) + 1;
                 if (nhfp->structlevel) {
                     bwrite(nhfp->fd, (genericptr_t)&len, sizeof len);
                     bwrite(nhfp->fd, (genericptr_t)objects[i].oc_uname, len);
@@ -614,7 +614,8 @@ dodiscovered(void) /* free after Robert Viduya */
     char *s, *p, oclass, prev_class,
          classes[MAXOCLASSES], buf[BUFSZ],
          *sorted_lines[NUM_OBJECTS]; /* overkill */
-    int i, j, sortindx, dis, ct, uniq_ct, arti_ct, sorted_ct;
+    int i, j, dis, ct, uniq_ct, arti_ct, sorted_ct;
+    long sortindx;  // should be ptrdiff_t, but we don't require that exists
     boolean alphabetized, alphabyclass, lootsort;
 
     if (!flags.discosort || !(p = index(disco_order_let, flags.discosort)))

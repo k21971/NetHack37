@@ -247,7 +247,7 @@ save_gamelog(NHFILE *nhfp)
         tmp2 = tmp->next;
         if (perform_bwrite(nhfp)) {
             if (nhfp->structlevel) {
-                slen = strlen(tmp->text);
+                slen = Strlen(tmp->text);
                 bwrite(nhfp->fd, (genericptr_t) &slen, sizeof slen);
                 bwrite(nhfp->fd, (genericptr_t) tmp->text, slen);
                 bwrite(nhfp->fd, (genericptr_t) tmp,
@@ -1012,7 +1012,7 @@ save_msghistory(NHFILE* nhfp)
         /* ask window port for each message in sequence */
         while ((msg = getmsghistory(init)) != 0) {
             init = FALSE;
-            msglen = strlen(msg);
+            msglen = Strlen(msg);
             if (msglen < 1)
                 continue;
             /* sanity: truncate if necessary (shouldn't happen);

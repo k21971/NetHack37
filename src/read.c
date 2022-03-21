@@ -3023,7 +3023,7 @@ create_particular_creation(struct _create_particular_data* d)
         whichpm = &mons[d->which];
     }
     for (i = 0; i < d->quan; i++) {
-        long mmflags = NO_MM_FLAGS;
+        mmflags_nht mmflags = NO_MM_FLAGS;
 
         if (d->monclass != MAXMCLASSES)
             whichpm = mkclass(d->monclass, 0);

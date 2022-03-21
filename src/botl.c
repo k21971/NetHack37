@@ -366,19 +366,19 @@ title_to_mon(const char *str, int *rank_indx, int *title_length)
         /* loop through each of the rank titles for role #i */
         for (j = 0; j < 9; j++) {
             if (roles[i].rank[j].m
-                && streq(str, roles[i].rank[j].m, TRUE)) {
+                && str_start_is(str, roles[i].rank[j].m, TRUE)) {
                 if (rank_indx)
                     *rank_indx = j;
                 if (title_length)
-                    *title_length = strlen(roles[i].rank[j].m);
+                    *title_length = Strlen(roles[i].rank[j].m);
                 return roles[i].mnum;
             }
             if (roles[i].rank[j].f
-                && streq(str, roles[i].rank[j].m, TRUE)) {
+                && str_start_is(str, roles[i].rank[j].f, TRUE)) {
                 if (rank_indx)
                     *rank_indx = j;
                 if (title_length)
-                    *title_length = strlen(roles[i].rank[j].f);
+                    *title_length = Strlen(roles[i].rank[j].f);
                 return roles[i].mnum;
             }
         }
@@ -1041,8 +1041,7 @@ menualpha_cmp(const genericptr vptr1, const genericptr vptr2)
 int
 parse_cond_option(boolean negated, char *opts)
 {
-    int i;
-    size_t sl;
+    int i, sl;
     const char *compareto, *uniqpart, prefix[] = "cond_";
 
     if (!opts || strlen(opts) <= sizeof prefix - 1)
@@ -1050,7 +1049,7 @@ parse_cond_option(boolean negated, char *opts)
     uniqpart = opts + (sizeof prefix - 1);
     for (i = 0; i < CONDITION_COUNT; ++i) {
         compareto = condtests[i].useroption;
-        sl = strlen(compareto);
+        sl = Strlen(compareto);
         if (match_optname(uniqpart, compareto, (sl >= 4) ? 4 : sl, FALSE)) {
             condopt(i, &condtests[i].choice, negated);
             return 0;

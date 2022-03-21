@@ -161,8 +161,15 @@ static const struct paranoia_opts {
     { ~0, "all", 3, 0, 0, 0 }, /* ditto */
 };
 
-static NEARDATA const char *menutype[] = {
-    "traditional",  "combination",  "full",     "partial"
+static NEARDATA const char *menutype[][3] = { /* 'menustyle' settings */
+    { "traditional",  "[prompt for object class(es), then",
+                      " ask y/n for each item in those classes]" },
+    { "combination",  "[prompt for object class(es), then",
+                      " use menu for items in those classes]" },
+    { "full",         "[use menu to choose class(es), then",
+                      " use another menu for items in those]" },
+    { "partial",      "[skip class filtering; always",
+                      " use menu of all available items]" }
 };
 static NEARDATA const char *burdentype[] = {
     "unencumbered", "burdened",     "stressed",
@@ -371,7 +378,7 @@ parseoptions(register char *opts, boolean tinitial, boolean tfrom_file)
         got_match = FALSE;
 
         if (allopt[i].pfx) {
-            if (!strncmpi(opts, allopt[i].name, strlen(allopt[i].name))) {
+            if (str_start_is(opts, allopt[i].name, TRUE)) {
                 matchidx = i;
                 got_match = TRUE;
             }
@@ -1721,7 +1728,7 @@ optfn_menustyle(int optidx, int req, boolean negated, char *opts, char *op)
     if (req == get_val) {
         if (!opts)
             return optn_err;
-        Sprintf(opts, "%s", menutype[(int) flags.menu_style]);
+        Sprintf(opts, "%s", menutype[(int) flags.menu_style][0]);
         return optn_ok;
     }
     if (req == do_handler) {
@@ -2717,13 +2724,13 @@ optfn_runmode(int optidx, int req, boolean negated, char *opts, char *op)
         if (negated) {
             flags.runmode = RUN_TPORT;
         } else if (op != empty_optstr) {
-            if (!strncmpi(op, "teleport", strlen(op)))
+            if (str_start_is("teleport", op, TRUE))
                 flags.runmode = RUN_TPORT;
-            else if (!strncmpi(op, "run", strlen(op)))
+            else if (str_start_is("run", op, TRUE))
                 flags.runmode = RUN_LEAP;
-            else if (!strncmpi(op, "walk", strlen(op)))
+            else if (str_start_is("walk", op, TRUE))
                 flags.runmode = RUN_STEP;
-            else if (!strncmpi(op, "crawl", strlen(op)))
+            else if (str_start_is("crawl", op, TRUE))
                 flags.runmode = RUN_CRAWL;
             else {
                 config_error_add("Unknown %s parameter '%s'",
@@ -4291,27 +4298,41 @@ handler_menustyle(void)
 {
     winid tmpwin;
     anything any;
-    int i;
-    const char *style_name;
+    boolean chngd;
+    int i, n, old_menu_style = flags.menu_style;
+    char buf[BUFSZ], sep = iflags.menu_tab_sep ? '\t' : ' ';
     menu_item *style_pick = (menu_item *) 0;
 
     tmpwin = create_nhwindow(NHW_MENU);
     start_menu(tmpwin, MENU_BEHAVE_STANDARD);
     any = cg.zeroany;
     for (i = 0; i < SIZE(menutype); i++) {
-        style_name = menutype[i];
-        /* note: separate `style_name' variable used
-           to avoid an optimizer bug in VAX C V2.3 */
+        Sprintf(buf, "%-12.12s%c%.60s", menutype[i][0], sep, menutype[i][1]);
         any.a_int = i + 1;
-        add_menu(tmpwin, &nul_glyphinfo, &any, *style_name, 0,
-                 ATR_NONE, style_name, MENU_ITEMFLAGS_NONE);
+        add_menu(tmpwin, &nul_glyphinfo, &any, *buf, 0, ATR_NONE, buf,
+                 (i == flags.menu_style) ? MENU_ITEMFLAGS_SELECTED
+                                         : MENU_ITEMFLAGS_NONE);
+        /* second line is prefixed by spaces that "c - " would use */
+        Sprintf(buf, "%4s%-12.12s%c%.60s", "", "", sep, menutype[i][2]);
+        any.a_int = 0;
+        add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE, buf,
+                 MENU_ITEMFLAGS_NONE);
     }
     end_menu(tmpwin, "Select menustyle:");
-    if (select_menu(tmpwin, PICK_ONE, &style_pick) > 0) {
-        flags.menu_style = style_pick->item.a_int - 1;
+    n = select_menu(tmpwin, PICK_ONE, &style_pick);
+    if (n > 0) {
+        i = style_pick[0].item.a_int - 1;
+        /* if there are two picks, use the one that wasn't pre-selected */
+        if (n > 1 && i == old_menu_style)
+            i = style_pick[1].item.a_int - 1;
+        flags.menu_style = i;
         free((genericptr_t) style_pick);
     }
     destroy_nhwindow(tmpwin);
+    chngd = (flags.menu_style != old_menu_style);
+    if (chngd || flags.verbose)
+        pline("'menustyle' %s \"%s\".", chngd ? "changed to" : "is still",
+              menutype[(int) flags.menu_style][0]);
     return optn_ok;
 }
 
@@ -5156,7 +5177,7 @@ handler_menu_colors(void)
                     (tmp->attr != ATR_NONE) ? "&" : "",
                     (tmp->attr != ATR_NONE) ? sattr : "");
             /* now main string */
-            ln = sizeof buf - strlen(buf) - 1; /* length available */
+            ln = sizeof buf - Strlen(buf) - 1; /* length available */
             Strcpy(mcbuf, "\"");
             if (strlen(tmp->origstr) > ln)
                 Strcat(strncat(mcbuf, tmp->origstr, ln - 3), "...");
@@ -5229,7 +5250,7 @@ handler_msgtype(void)
             mtype = msgtype2name(tmp->msgtype);
             any.a_int = ++mt_idx;
             Sprintf(mtbuf, "%-5s \"", mtype);
-            ln = sizeof mtbuf - strlen(mtbuf) - sizeof "\"";
+            ln = sizeof mtbuf - Strlen(mtbuf) - sizeof "\"";
             if (strlen(tmp->pattern) > ln)
                 Strcat(strncat(mtbuf, tmp->pattern, ln - 3), "...\"");
             else
@@ -5334,7 +5355,7 @@ determine_ambiguities(void)
         }
     }
     for (i = 0; i < SIZE(allopt) - 1; ++i) {
-        len = strlen(allopt[i].name);
+        len = Strlen(allopt[i].name);
         allopt[i].minmatch = (needed[i] < 3) ? 3
                                 : (needed[i] <= len) ? needed[i] : len;
     }
@@ -5682,7 +5703,9 @@ txt2key(char *txt)
 void
 initoptions(void)
 {
+#ifdef SYSCF_FILE
     int i;
+#endif
 
     initoptions_init();
 #ifdef SYSCF
@@ -6675,8 +6698,7 @@ msgtype_parse_add(char *str)
         int i;
 
         for (i = 0; i < SIZE(msgtype_names); i++)
-            if (streq(msgtype_names[i].name, msgtype, TRUE)) {
-            //if (!strncmpi(msgtype_names[i].name, msgtype, strlen(msgtype))) {
+            if (str_start_is(msgtype_names[i].name, msgtype, TRUE)) {
                 typ = msgtype_names[i].msgtyp;
                 break;
             }
@@ -7347,8 +7369,9 @@ longest_option_name(int startpass, int endpass)
                 || (is_wc2_option(name) && !wc2_supported(name)))
                 continue;
 
-            if (strlen(name) > longest_name_len)
-                longest_name_len = strlen(name);
+            unsigned len = Strlen(name);
+            if (len > longest_name_len)
+                longest_name_len = len;
         }
     return longest_name_len;
 }
@@ -8023,7 +8046,7 @@ match_sym(char *buf)
         { "S_explode8" , "S_expl_bc" },
         { "S_explode9" , "S_expl_br" },
     };
-    size_t len = strlen(buf);
+    unsigned len = Strlen(buf);
     const char *p = index(buf, ':'), *q = index(buf, '=');
     struct symparse *sp = loadsyms;
 
@@ -8037,7 +8060,7 @@ match_sym(char *buf)
         len = (int) (p - buf);
     }
     while (sp->range) {
-        if ((len >= strlen(sp->name)) && !strncmpi(buf, sp->name, len))
+        if ((len >= Strlen(sp->name)) && !strncmpi(buf, sp->name, len))
             return sp;
         sp++;
     }
@@ -8234,7 +8257,7 @@ next_opt(winid datawin, const char *str)
             Strcpy(s - 2, "."); /* replace last ", " */
         i = COLNO;              /* (greater than COLNO - 2) */
     } else {
-        i = strlen(buf) + strlen(str) + 2;
+        i = Strlen(buf) + Strlen(str) + 2;
     }
 
     if (i > COLNO - 2) { /* rule of thumb */
@@ -8446,7 +8469,7 @@ set_option_mod_status(const char *optnam, int status)
         return;
     }
     for (k = 0; allopt[k].name; k++) {
-        if (!strncmpi(allopt[k].name, optnam, strlen(optnam))) {
+        if (str_start_is(allopt[k].name, optnam, TRUE)) {
             allopt[k].setwhere = status;
             return;
         }

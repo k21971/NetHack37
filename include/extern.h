@@ -248,7 +248,7 @@ extern const char *cmdname_from_func(int(*)(void), char *, boolean);
 extern boolean redraw_cmd(char);
 extern const char *levltyp_to_name(int);
 extern void reset_occupations(void);
-extern void set_occupation(int(*)(void), const char *, cmdcount_t);
+extern void set_occupation(int(*)(void), const char *, cmdcount_nht);
 extern void cmdq_add_ec(int(*)(void));
 extern void cmdq_add_key(char);
 extern struct _cmd_queue *cmdq_pop(void);
@@ -280,7 +280,7 @@ extern const char *directionname(int);
 extern int isok(int, int);
 extern int get_adjacent_loc(const char *, const char *, xchar, xchar, coord *);
 extern const char *click_to_cmd(int, int, int);
-extern char get_count(char *, char, long, cmdcount_t *, boolean);
+extern char get_count(char *, char, long, cmdcount_nht *, boolean);
 #ifdef HANGUPHANDLING
 extern void hangup(int);
 extern void end_of_input(void);
@@ -898,7 +898,7 @@ extern boolean Death_quote(char *, int);
 #ifdef EXTRAINFO_FN
 extern void mk_dgl_extrainfo(void);
 #endif
-extern void livelog_add(long, const char *);
+extern void livelog_add(long ll_type, const char *);
 
 /* ### fountain.c ### */
 
@@ -977,6 +977,8 @@ extern char *strip_newline(char *);
 extern char *stripchars(char *, const char *, const char *);
 extern char *stripdigits(char *);
 extern char *eos(char *);
+extern unsigned Strlen_(const char *, const char *, int);
+extern boolean str_start_is(const char *, const char *, boolean);
 extern boolean str_end_is(const char *, const char *);
 extern int str_lines_maxlen(const char *);
 extern char *strkitten(char *, char);
@@ -1008,7 +1010,6 @@ extern int strncmpi(const char *, const char *, int);
 #ifndef STRSTRI
 extern char *strstri(const char *, const char *);
 #endif
-extern int streq(const char *, const char *, boolean);
 extern boolean fuzzymatch(const char *, const char *, const char *, boolean);
 extern void init_random(int(*fn)(int));
 extern void reseed_random(int(*fn)(int));
@@ -1039,6 +1040,10 @@ extern void shuffle_int_array(int *, int);
     nh_snprintf(__func__, __LINE__, str, size, __VA_ARGS__)
 extern void nh_snprintf(const char *func, int line, char *str, size_t size,
                         const char *fmt, ...) PRINTF_F(5, 6);
+#define FITSint(x) FITSint_(x, __func__, __LINE__)
+extern int FITSint_(long long, const char *, int);
+#define FITSuint(x) FITSuint_(x, __func__, __LINE__)
+extern unsigned FITSuint_(unsigned long long, const char *, int);
 
 /* ### insight.c ### */
 
@@ -1237,7 +1242,7 @@ extern void newmonhp(struct monst *, int);
 extern struct mextra *newmextra(void);
 extern void copy_mextra(struct monst *, struct monst *);
 extern void dealloc_mextra(struct monst *);
-extern struct monst *makemon(struct permonst *, int, int, long);
+extern struct monst *makemon(struct permonst *, int, int, mmflags_nht);
 extern struct monst *unmakemon(struct monst *, long);
 extern boolean create_critters(int, struct permonst *, boolean);
 extern struct permonst *rndmonst(void);
@@ -1769,7 +1774,7 @@ extern void lcheck_param_table(lua_State *);
 extern schar get_table_mapchr(lua_State *, const char *);
 extern schar get_table_mapchr_opt(lua_State *, const char *, schar);
 extern short nhl_get_timertype(lua_State *, int);
-extern void nhl_add_table_entry_int(lua_State *, const char *, int);
+extern void nhl_add_table_entry_int(lua_State *, const char *, lua_Integer);
 extern void nhl_add_table_entry_char(lua_State *, const char *, char);
 extern void nhl_add_table_entry_str(lua_State *, const char *, const char *);
 extern void nhl_add_table_entry_bool(lua_State *, const char *, boolean);

@@ -212,7 +212,7 @@ nhl_get_timertype(lua_State *L, int idx)
 }
 
 void
-nhl_add_table_entry_int(lua_State *L, const char *name, int value)
+nhl_add_table_entry_int(lua_State *L, const char *name, lua_Integer value)
 {
     lua_pushstring(L, name);
     lua_pushinteger(L, value);
@@ -923,7 +923,7 @@ nhl_dnum_name(lua_State *L)
     int argc = lua_gettop(L);
 
     if (argc == 1) {
-        int dnum = luaL_checkinteger(L, 1);
+        lua_Integer dnum = luaL_checkinteger(L, 1);
 
         if (dnum >= 0 && dnum < g.n_dgns)
             lua_pushstring(L, g.dungeons[dnum].dname);
@@ -1382,7 +1382,7 @@ nhl_loadlua(lua_State *L, const char *fname)
     long buflen, ct, cnt;
     int llret;
 
-    altfname = (char *) alloc(strlen(fname) + 3); /* 3: '('...')\0' */
+    altfname = (char *) alloc(Strlen(fname) + 3); /* 3: '('...')\0' */
     /* don't know whether 'fname' is inside a dlb container;
        if we did, we could choose between "nhdat(<fname>)" and "<fname>"
        but since we don't, compromise */
@@ -1399,7 +1399,7 @@ nhl_loadlua(lua_State *L, const char *fname)
     dlb_fseek(fh, 0L, SEEK_SET);
 
     /* extra +1: room to add final '\n' if missing */
-    buf = bufout = (char *) alloc(buflen + 1 + 1);
+    buf = bufout = (char *) alloc(FITSint(buflen + 1 + 1));
     buf[0] = '\0';
     bufin = bufout = buf;
 
@@ -1416,7 +1416,7 @@ nhl_loadlua(lua_State *L, const char *fname)
          * in use, and fseek(SEEK_END) only yields an upper bound on
          * the actual amount of data in that situation.]
          */
-        if ((cnt = dlb_fread(bufin, 1, min(buflen, LOADCHUNKSIZE), fh)) < 0L)
+        if ((cnt = dlb_fread(bufin, 1, min((int)buflen, LOADCHUNKSIZE), fh)) < 0L)
             break;
         buflen -= cnt; /* set up for next iteration, if any */
         if (cnt == 0L) {
