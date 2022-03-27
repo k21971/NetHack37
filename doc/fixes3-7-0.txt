@@ -1,4 +1,4 @@
-NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.839 $ $NHDT-Date: 1646953027 2022/03/10 22:57:07 $
+NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.849 $ $NHDT-Date: 1648318980 2022/03/26 18:23:00 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -838,6 +838,18 @@ for #knownclass with menustyle=Tradtional, allow player to ask for `a even if
 	no artifacts have been discovered yet, same as `<any-object-class>;
 	likewise for `u to ask to see unique items
 reduce eucalyptus leaf nutrition to 1
+life-saving might increase max HP; if level drain triggers that, don't let max
+	HP go up because it confuses healing for monster wielding Stormbringer
+HP recovery and/or max HP boost from eating royal jelly didn't perform a
+	status update to show the change
+if poly'd hero is hiding under food and eats or #offers that food, stop hiding
+hide-under monsters who can be turned to stone aren't able to hide under a
+	cockatrice corpse unless there is something else present but make sure
+	that the other items aren't all more cockatrice corpses
+don't stop travel when going past a closed door (eg. when traveling along
+	a room wall)
+some monster corpses can now convey temporary acid or stoning resistance
+fix travel getting stuck oscillating between two locations
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1089,6 +1101,8 @@ changes to stair internals resulted in summoned Kops blockcading the stairs up
 	rather than intended stairs down
 dumplog's list of "major events" showed all logged events, not just major ones
 pickup via menu ignored player-specified count when picking up gold
+changes in encumbrance sometimes went unreported, leaving stale status line
+	info until hero's next move
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1494,6 +1508,7 @@ looking at a monster will indicate whether it is asleep, and waking up a
 extend farlook's "<mon>, asleep" to "<mon>, can't move (paralyzed or sleeping
 	or busy)" for timed sleep and also "<mon>, meditating" for monster
 	that is waiting for hero to approach
+add body part terminology for spiders; enhance it for cockatrices
 
 
 Platform- and/or Interface-Specific New Features
