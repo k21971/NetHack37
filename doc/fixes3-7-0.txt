@@ -854,6 +854,8 @@ kicking a trapped chest and getting the exploding chest result destroyed items
 	at the hero's location rather than the chest's location; because of
 	that it left the exploded chest intact
 it was possible to destroy a Rider corpse with an exploding chest
+when teleporting, don't consider pits/spiked pits/trap doors/holes as unsafe
+	destination locations if hero is levitating or flying
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1000,6 +1002,9 @@ if an invisible hero managed to convert an unaligned altar to an aligned one
 	with color enabled, altar wasn't immediately redrawn with new color
 repair some regressions to (a)pply introduced by "getobj refactor" patch
 getobj too: allow attempting to (E)ngrave with any item in inventory
+getobj refactor also allowed non-nameable items on floor to be assigned names
+exploting the bug to assign type name to glob on floor allowed wishing for
+	"N assigned-glob-name" to create a glob with quantity N instead of 1
 fix ^X feedback when held typo: "unseen createure" -> "unseen creature"
 if a <foo> corpse was set to revive as a <foo> zombie and corpse was partly
 	eaten at revival time and monster <foo> is defined as providing more
@@ -1094,7 +1099,7 @@ have com_pager() check for failed nhl_init(); probably can't actually happen
 rearranging first-kill and first-hit gamelog messages to get hit before kill
 	ordering resulted in "hit with a wielded weapon for first time" being
 	given twice if that hit was delivered via applied polearm
-rearranging the feedback for first-kill and first-hit  introduced a bug by
+rearranging the feedback for first-kill and first-hit introduced a bug by
 	not verifying that the wielded item used to hit was a weapon, giving
 	erroneous event feedback and potentially giving it over and over for
 	other non-weapon hits for as long as never-hit conduct stayed unbroken
@@ -1107,6 +1112,9 @@ dumplog's list of "major events" showed all logged events, not just major ones
 pickup via menu ignored player-specified count when picking up gold
 changes in encumbrance sometimes went unreported, leaving stale status line
 	info until hero's next move
+taking off yellow dragon scales/mail or having temporary stoning resistance
+	time out while wielding a cockatrice corpse without gloves left that
+	corpse safely wielded instead of petrifying the hero
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
