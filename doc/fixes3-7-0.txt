@@ -856,6 +856,14 @@ kicking a trapped chest and getting the exploding chest result destroyed items
 it was possible to destroy a Rider corpse with an exploding chest
 when teleporting, don't consider pits/spiked pits/trap doors/holes as unsafe
 	destination locations if hero is levitating or flying
+try to avoid locations with engraved Elbereth or scare monster scroll when
+	creating new monsters or picking teleport destinations for monsters
+	who are susceptible to those
+be more flexible when wishing checks for artifact name matches; now allows
+	"firebrand" or "fire-brand" to yield "Fire Brand"
+exclude unique monsters from pacification when untrapped from web
+ask to kick a door open, if it's locked and you don't have unlocking tool
+give a message when stinking cloud is created on top of hero
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1145,6 +1153,9 @@ tty: redraw unexplored locations as S_unexplored rather than <space> after
 	map has been partially overwritten by popup menu or text display
 tty: previous change resulted in remnants of previous level being shown on
 	new level after level change when S_unexplored is <space>
+tty: for #wizidentify, using ^I as an unseen group accelerator to pick the
+	'all' choice was incorrectly checking menuitem_invert_test() and
+	failing, so the 'all' choice wasn't being toggled on if user typed ^I
 Unix: after lua changes to Makefiles, 'make spotless' for dat subdirectory
 	left some generated data files which should have been deleted
 Windows: new tile additions in win/share did not trigger the creation of a new
