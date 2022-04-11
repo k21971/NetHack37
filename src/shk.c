@@ -156,7 +156,7 @@ money2u(struct monst* mon, long amount)
 }
 
 static struct monst *
-next_shkp(register struct monst* shkp, register boolean withbill)
+next_shkp(register struct monst *shkp, boolean withbill)
 {
     for (; shkp; shkp = shkp->nmon) {
         if (DEADMONSTER(shkp))
@@ -1982,9 +1982,11 @@ find_oid(unsigned int id)
 /* Returns the price of an arbitrary item in the shop,
    0 if the item doesn't belong to a shopkeeper or hero is not in the shop. */
 long
-get_cost_of_shop_item(register struct obj* obj, int* nochrg)
-             /* alternate return value: 1: no charge, 0: shop owned,        */
-{            /* -1: not in a shop (so should't be formatted as "no charge") */
+get_cost_of_shop_item(
+    struct obj *obj,
+    int *nochrg) /* alternate return value: 1: no charge, 0: shop owned,
+                  * -1: not in a shop (so don't format as "no charge") */
+{
     struct monst *shkp;
     struct obj *top;
     xchar x, y;
@@ -3631,7 +3633,7 @@ discard_damage_owned_by(struct monst *shkp)
 
 /* Shopkeeper tries to repair damage belonging to them */
 static void
-shk_fixes_damage(struct monst* shkp)
+shk_fixes_damage(struct monst *shkp)
 {
     struct damage *dam = find_damage(shkp);
     boolean shk_closeby;
@@ -3648,7 +3650,7 @@ shk_fixes_damage(struct monst* shkp)
     else if (!Deaf && shk_closeby)
         You_hear("someone muttering an incantation.");
 
-    (void) repair_damage(shkp, dam, FALSE);
+    (void) repair_damage(shkp, dam);
 
     discard_damage_struct(dam);
 }
@@ -3768,19 +3770,19 @@ litter_newsyms(xchar *litter, xchar x, xchar y)
 int
 repair_damage(
     struct monst *shkp,
-    struct damage *tmp_dam,
-    boolean catchup) /* restoring a level */
+    struct damage *tmp_dam)
 {
     xchar x, y;
     xchar *litter;
     struct obj *otmp;
     struct trap *ttmp;
     int k, disposition = 1;
-    boolean stop_picking = FALSE;
+    boolean catchup, stop_picking = FALSE;
 
     if (!repairable_damage(tmp_dam, shkp))
         return 0;
 
+    catchup = g.moves > tmp_dam->when + REPAIR_DELAY;
     x = tmp_dam->place.x;
     y = tmp_dam->place.y;
 
@@ -3872,11 +3874,25 @@ repair_damage(
     return disposition;
 }
 
+/* normally repair is done when a shopkeeper moves, but we also try to
+   catch up for lost time when reloading a previously visited level */
+void
+fix_shop_damage(void)
+{
+    struct monst *shkp;
+
+    for (shkp = next_shkp(fmon, FALSE); shkp;
+         shkp = next_shkp(shkp->nmon, FALSE)) {
+        if (shkp->mcanmove && inhishop(shkp))
+            shk_fixes_damage(shkp);
+    }
+}
+
 /*
  * shk_move: return 1: moved  0: didn't  -1: let m_move do it  -2: died
  */
 int
-shk_move(struct monst* shkp)
+shk_move(struct monst *shkp)
 {
     xchar gx, gy, omx, omy;
     int udist;
@@ -4775,15 +4791,22 @@ block_entry(register xchar x, register xchar y)
 
 /* "your " or "Foobar's " (note the trailing space) */
 char *
-shk_your(char *buf, struct obj* obj)
+shk_your(char *buf, struct obj *obj)
 {
-    if (!shk_owns(buf, obj) && !mon_owns(buf, obj))
+    boolean chk_pm = obj->otyp == CORPSE && obj->corpsenm >= LOW_PM;
+
+    buf[0] = '\0';
+    if (chk_pm && type_is_pname(&mons[obj->corpsenm]))
+        return buf; /* skip ownership prefix and space: "Medusa's corpse" */
+    else if (chk_pm && the_unique_pm(&mons[obj->corpsenm]))
+        Strcpy(buf, "the"); /* override ownership: "the Oracle's corpse" */
+    else if (!shk_owns(buf, obj) && !mon_owns(buf, obj))
         Strcpy(buf, the_your[carried(obj) ? 1 : 0]);
     return strcat(buf, " ");
 }
 
 char *
-Shk_Your(char* buf, struct obj* obj)
+Shk_Your(char *buf, struct obj *obj)
 {
     (void) shk_your(buf, obj);
     *buf = highc(*buf);
@@ -4791,7 +4814,7 @@ Shk_Your(char* buf, struct obj* obj)
 }
 
 static char *
-shk_owns(char* buf, struct obj* obj)
+shk_owns(char *buf, struct obj *obj)
 {
     struct monst *shkp;
     xchar x, y;
@@ -4806,7 +4829,7 @@ shk_owns(char* buf, struct obj* obj)
 }
 
 static char *
-mon_owns(char* buf, struct obj* obj)
+mon_owns(char *buf, struct obj *obj)
 {
     if (obj->where == OBJ_MINVENT)
         return strcpy(buf, s_suffix(y_monnam(obj->ocarry)));

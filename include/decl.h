@@ -668,6 +668,7 @@ enum cmdq_cmdtypes {
     CMDQ_KEY = 0, /* a literal character, cmdq_add_key() */
     CMDQ_EXTCMD,  /* extended command, cmdq_add_ec() */
     CMDQ_DIR,     /* direction, cmdq_add_dir() */
+    CMDQ_USER_INPUT, /* placeholder for user input, cmdq_add_userinput() */
 };
 
 struct _cmd_queue {
@@ -957,6 +958,7 @@ struct instance_globals {
     winid cached_pickinv_win;
     /* query objlist callback: return TRUE if obj type matches "this_type" */
     int this_type;
+    const char *this_title; /* title for inventory list of specific type */
     /* query objlist callback: return TRUE if obj is at given location */
     coord only;
 

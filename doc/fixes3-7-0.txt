@@ -1,4 +1,4 @@
-NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.851 $ $NHDT-Date: 1648428942 2022/03/28 00:55:42 $
+HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.870 $ $NHDT-Date: 1649530942 2022/04/09 19:02:22 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -864,6 +864,19 @@ be more flexible when wishing checks for artifact name matches; now allows
 exclude unique monsters from pacification when untrapped from web
 ask to kick a door open, if it's locked and you don't have unlocking tool
 give a message when stinking cloud is created on top of hero
+when being life-saved prevents the hero from moving again during current turn,
+	avoid logfile annotation "while helpless" if hero dies a second time
+if drinking from a fountain randomly gave the 'detect monsters' effect but
+	there were no monsters on the level then there was no feedback
+object detection always showed a mimic imitating a statue as a tengu even if
+	it had information available about some other type of monster
+avoid "the Lord Surtur's corpse glows iridescently" when shk_your() or the()
+	is applied to the corpse of unique monster with a personal name
+restoring while attached ball or chain is on floor in a breach of a shop wall
+	could have it be moved out of wall gap as that gets repaired, then
+	might trigger an impossible about being positioned too far from hero
+don't try to catch up for lost time for shop damage repair in restdamage()
+	called from getlev(); let normal shopkeeper movement take care of it
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1011,7 +1024,7 @@ if an invisible hero managed to convert an unaligned altar to an aligned one
 repair some regressions to (a)pply introduced by "getobj refactor" patch
 getobj too: allow attempting to (E)ngrave with any item in inventory
 getobj refactor also allowed non-nameable items on floor to be assigned names
-exploting the bug to assign type name to glob on floor allowed wishing for
+exploiting the bug to assign type name to glob on floor allowed wishing for
 	"N assigned-glob-name" to create a glob with quantity N instead of 1
 fix ^X feedback when held typo: "unseen createure" -> "unseen creature"
 if a <foo> corpse was set to revive as a <foo> zombie and corpse was partly
@@ -1123,6 +1136,7 @@ changes in encumbrance sometimes went unreported, leaving stale status line
 taking off yellow dragon scales/mail or having temporary stoning resistance
 	time out while wielding a cockatrice corpse without gloves left that
 	corpse safely wielded instead of petrifying the hero
+special level loading wasn't honoring gender specified in lua code
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1166,6 +1180,7 @@ Windows: nhl_loadlua() was missing the RDBMODE argument on the [dlb_]fopen(),
 	fseek(), ftell() and fread()
 Windows: when VIRTUAL_TERMINAL_SEQUENCES was not defined, the preprocessing
 	would fail on consoletty.c
+X11: fix build failure if STATUS_HILITES is disabled
 X11: was still initializing map to 'stone' instead of 'unexplored' after they
 	became separate glyphs
 X11: for text map without color, add support for black&white ice; draw it in
@@ -1356,6 +1371,7 @@ X11: with 'slow' resource set to False, the pop up yn_function didn't always
 X11: (possibly X11+OSX): if persistent inventory was displayed at time of
 	end-of-game prompting, prompting would stall until that window was
 	manually dismissed
+X11: set all selectable menu lines to the same length, left justified
 
 
 General New Features
@@ -1532,6 +1548,7 @@ extend farlook's "<mon>, asleep" to "<mon>, can't move (paralyzed or sleeping
 	or busy)" for timed sleep and also "<mon>, meditating" for monster
 	that is waiting for hero to approach
 add body part terminology for spiders; enhance it for cockatrices
+context sensitive item usage menu from inventory, aka "item actions"
 
 
 Platform- and/or Interface-Specific New Features

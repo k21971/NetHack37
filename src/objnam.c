@@ -1,4 +1,4 @@
-/* NetHack 3.7	objnam.c	$NHDT-Date: 1646688068 2022/03/07 21:21:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.348 $ */
+/* NetHack 3.7	objnam.c	$NHDT-Date: 1649529937 2022/04/09 18:45:37 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.359 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2011. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1333,8 +1333,9 @@ doname_base(
     case BALL_CLASS:
     case CHAIN_CLASS:
         add_erosion_words(obj, prefix);
-        if (obj->owornmask & W_BALL)
-            Strcat(bp, " (chained to you)");
+        if (obj->owornmask & (W_BALL | W_CHAIN))
+            Sprintf(eos(bp), " (%s to you)",
+                    (obj->owornmask & W_BALL) ? "chained" : "attached");
         break;
     }
 
@@ -1560,11 +1561,6 @@ corpse_xname(
         mnam = OBJ_NAME(objects[otmp->otyp]); /* "glob of <monster>" */
     } else if (omndx == NON_PM) { /* paranoia */
         mnam = "thing";
-        /* [Possible enhancement:  check whether corpse has monster traits
-            attached in order to use priestname() for priests and minions.] */
-    } else if (omndx == PM_ALIGNED_CLERIC) {
-        /* avoid "aligned priest"; it just exposes internal details */
-        mnam = "priest";
     } else {
         mnam = obj_pmname(otmp);
         if (the_unique_pm(&mons[omndx]) || type_is_pname(&mons[omndx])) {
@@ -1911,7 +1907,10 @@ the(const char* str)
         /* some objects have capitalized adjectives in their names */
         if (((tmp = rindex(str, ' ')) != 0 || (tmp = rindex(str, '-')) != 0)
             && (tmp[1] < 'A' || tmp[1] > 'Z')) {
-            insert_the = TRUE;
+            /* insert "the" unless we have an apostrophe (where we assume
+               we're dealing with "Unique's corpse" when "Unique" wasn't
+               caught by CapitalMon() above) */
+            insert_the = !index(str, '\'');
         } else if (tmp && index(str, ' ') < tmp) { /* has spaces */
             /* it needs an article if the name contains "of" */
             tmp = strstri(str, " of ");
@@ -1939,7 +1938,7 @@ the(const char* str)
 }
 
 char *
-The(const char* str)
+The(const char *str)
 {
     char *tmp = the(str);
 
@@ -1949,7 +1948,7 @@ The(const char* str)
 
 /* returns "count cxname(otmp)" or just cxname(otmp) if count == 1 */
 char *
-aobjnam(struct obj* otmp, const char* verb)
+aobjnam(struct obj *otmp, const char *verb)
 {
     char prefix[PREFIX];
     char *bp = cxname(otmp);
