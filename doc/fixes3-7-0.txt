@@ -877,6 +877,11 @@ restoring while attached ball or chain is on floor in a breach of a shop wall
 	might trigger an impossible about being positioned too far from hero
 don't try to catch up for lost time for shop damage repair in restdamage()
 	called from getlev(); let normal shopkeeper movement take care of it
+putting objects into a container with menustyle=traditional and then taking
+	them back out with #tip would result in complaints about obj bypass
+	bit being set if sanity_check was On
+when drinking or dipping, allow the 'm' prefix to be used to skip asking
+	about fountains and pools
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1137,6 +1142,17 @@ taking off yellow dragon scales/mail or having temporary stoning resistance
 	time out while wielding a cockatrice corpse without gloves left that
 	corpse safely wielded instead of petrifying the hero
 special level loading wasn't honoring gender specified in lua code
+add '#tip' for containers to context-sensitive invent handling
+sequencing confusion: picking an item when viewing inventory and picking an
+	action to do with it caused the inventory command to use time, then
+	on next turn the action was performed without taking any time
+program would access freed memory if charging caused a ring to explode
+arriving on Valkyrie quest final level could produce impossible warning
+	"mkstairs: placing stairs up on molten lava at <68,13>"
+if the repeat command was used after prefix+command, only the command part got
+	repeated
+the change for repeat after prefix+command would result in a crash if repeat
+	was attempted after an unassigned key
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support

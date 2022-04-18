@@ -1552,6 +1552,12 @@ getobj(const char *word,
         allownone = TRUE;
         *ap++ = HANDS_SYM;
         break;
+    case GETOBJ_EXCLUDE_NONINVENT: /* player skipped some alternative that's
+                                    * not in inventory, now the hands/self
+                                    * possibility is telling us so */
+        forceprompt = FALSE;
+        inaccess++;
+        break;
     default:
         break;
     }
@@ -1595,6 +1601,7 @@ getobj(const char *word,
             break;
         case GETOBJ_SUGGEST:
             break; /* adding otmp->invlet is all that's needed */
+        case GETOBJ_EXCLUDE_NONINVENT: /* not applicable for invent items */
         default:
             impossible("bad return from getobj callback");
         }
@@ -2051,15 +2058,16 @@ ggetobj(const char *word, int (*fn)(OBJ_P), int mx,
  * Walk through the chain starting at objchn and ask for all objects
  * with olet in olets (if nonNULL) and satisfying ckfn (if nonnull)
  * whether the action in question (i.e., fn) has to be performed.
- * If allflag then no questions are asked.  Mx gives the max number
- * of objects to be treated.  Return the number of objects treated.
  */
 int
-askchain(struct obj **objchn, /* *objchn might change */
-         const char *olets,   /* olets is an Obj Class char array */
-         int allflag,
-         int (*fn)(OBJ_P), int (*ckfn)(OBJ_P),
-         int mx, const char *word)
+askchain(
+    struct obj **objchn, /* *objchn might change */
+    const char *olets,   /* olets is an Obj Class char array */
+    int allflag,         /* bypass prompting about individual items */
+    int (*fn)(OBJ_P),    /* action to perform on selected items */
+    int (*ckfn)(OBJ_P),  /* callback to decided if an item is selectable */
+    int mx,              /* if non-0, maximum number of objects to process */
+    const char *word)    /* name of the action */
 {
     struct obj *otmp, *otmpo;
     char sym, ilet;
@@ -2202,7 +2210,10 @@ askchain(struct obj **objchn, /* *objchn might change */
         pline("No applicable objects.");
  ret:
     unsortloot(&sortedchn);
-    bypass_objlist(*objchn, FALSE);
+    /* can't just clear bypass bit of items in objchn because the action
+       applied to selected ones might move them to a different chain */
+    /*bypass_objlist(*objchn, FALSE);*/
+    clear_bypasses();
     return cnt;
 }
 
@@ -2497,6 +2508,7 @@ RESTORE_WARNING_FORMAT_NONLITERAL
 
 enum item_action_actions {
     IA_NONE          = 0,
+    IA_UNWIELD, /* hack for 'w-' */
     IA_APPLY_OBJ,
     IA_DIP_OBJ,
     IA_DROP_OBJ,
@@ -2509,13 +2521,13 @@ enum item_action_actions {
     IA_RUB_OBJ,
     IA_THROW_OBJ,
     IA_TAKEOFF_OBJ,
+    IA_TIP_CONTAINER,
     IA_INVOKE_OBJ,
     IA_WIELD_OBJ,
     IA_WEAR_OBJ,
     IA_SWAPWEAPON,
     IA_ZAP_OBJ,
     IA_SACRIFICE,
-    IA_UNWIELD
 };
 
 static void
@@ -2534,12 +2546,12 @@ static int
 itemactions(struct obj *otmp)
 {
     int n, act = IA_NONE;
-    int ret = ECMD_TIME;
     winid win;
     char buf[BUFSZ];
     menu_item *selected;
     struct monst *mtmp;
     const char *light = otmp->lamplit ? "Extinguish" : "Light";
+    boolean already_worn = (otmp->owornmask & (W_ARMOR | W_ACCESSORY)) != 0;
 
     win = create_nhwindow(NHW_MENU);
     start_menu(win, MENU_BEHAVE_STANDARD);
@@ -2563,8 +2575,10 @@ itemactions(struct obj *otmp)
     else if (otmp->otyp == GRAPPLING_HOOK)
         ia_addmenu(win, IA_APPLY_OBJ, 'a', "Grapple something with this hook");
     else if (otmp->otyp == BAG_OF_TRICKS && objects[otmp->otyp].oc_name_known)
+        /* bag of tricks skips this unless discovered */
         ia_addmenu(win, IA_APPLY_OBJ, 'a', "Reach into this bag");
-    else if (Is_container(otmp) || otmp->otyp == BAG_OF_TRICKS)
+    else if (Is_container(otmp))
+        /* bag of tricks gets here only if not yet discovered */
         ia_addmenu(win, IA_APPLY_OBJ, 'a', "Open this container");
     else if (otmp->otyp == CAN_OF_GREASE)
         ia_addmenu(win, IA_APPLY_OBJ, 'a', "Use the can to grease an item");
@@ -2604,16 +2618,21 @@ itemactions(struct obj *otmp)
     } else if (otmp->otyp == POT_OIL && objects[otmp->otyp].oc_name_known) {
         Sprintf(buf, "%s this oil", light);
         ia_addmenu(win, IA_APPLY_OBJ, 'a', buf);
-    } else if (otmp->oclass == POTION_CLASS)
-        ia_addmenu(win, IA_DIP_OBJ, 'a', "Dip something into this potion");
-    else if (otmp->otyp == EXPENSIVE_CAMERA)
+    } else if (otmp->oclass == POTION_CLASS) {
+        /* FIXME? this should probably be moved to 'D' rather than be 'a' */
+        Sprintf(buf, "Dip something into %s potion%s",
+                is_plural(otmp) ? "one of these" : "this", plur(otmp->quan));
+        ia_addmenu(win, IA_DIP_OBJ, 'a', buf);
+    } else if (otmp->otyp == EXPENSIVE_CAMERA)
         ia_addmenu(win, IA_APPLY_OBJ, 'a', "Take a photograph");
     else if (otmp->otyp == TOWEL)
-        ia_addmenu(win, IA_APPLY_OBJ, 'a', "Clean yourself off with this towel");
+        ia_addmenu(win, IA_APPLY_OBJ, 'a',
+                   "Clean yourself off with this towel");
     else if (otmp->otyp == CRYSTAL_BALL)
         ia_addmenu(win, IA_APPLY_OBJ, 'a', "Peer into this crystal ball");
     else if (otmp->otyp == MAGIC_MARKER)
-        ia_addmenu(win, IA_APPLY_OBJ, 'a', "Write on something with this marker");
+        ia_addmenu(win, IA_APPLY_OBJ, 'a',
+                   "Write on something with this marker");
     else if (otmp->otyp == FIGURINE)
         ia_addmenu(win, IA_APPLY_OBJ, 'a', "Make this figurine transform");
     else if (otmp->otyp == UNICORN_HORN)
@@ -2629,8 +2648,11 @@ itemactions(struct obj *otmp)
     else if (otmp->oclass == WAND_CLASS)
         ia_addmenu(win, IA_APPLY_OBJ, 'a', "Break this wand");
 
-    /* d: drop item, works on everything */
-    ia_addmenu(win, IA_DROP_OBJ, 'd', "Drop this item");
+    /* d: drop item, works on everything except worn items; those will
+       always have a takeoff/remove choice so we don't have to worry
+       about the menu maybe being empty when 'd' is suppressed */
+    if (!already_worn)
+        ia_addmenu(win, IA_DROP_OBJ, 'd', "Drop this item");
 
     /* e: eat item */
     if (otmp->otyp == TIN && uwep && uwep->otyp == TIN_OPENER)
@@ -2651,13 +2673,29 @@ itemactions(struct obj *otmp)
         ia_addmenu(win, IA_ENGRAVE_OBJ, 'E',
                    "Write on the floor with this object");
 
+    /* O: offer sacrifice */
+    if (IS_ALTAR(levl[u.ux][u.uy].typ) && !u.uswallow) {
+        /* FIXME: this doesn't match #offer's likely candidates, which don't
+           include corpses on Astral and don't include amulets off Astral */
+        if (otmp->otyp == CORPSE)
+            ia_addmenu(win, IA_SACRIFICE, 'O',
+                       "Offer this corpse as a sacrifice at this altar");
+        else if (otmp->otyp == AMULET_OF_YENDOR
+                 || otmp->otyp == FAKE_AMULET_OF_YENDOR)
+            ia_addmenu(win, IA_SACRIFICE, 'O',
+                       "Offer this amulet as a sacrifice at this altar");
+    }
+
     /* p: pay for unpaid utems */
-    if ((mtmp = shop_keeper(*in_rooms(u.ux, u.uy, SHOPBASE))) &&
-        inhishop(mtmp) && otmp->unpaid)
+    if (otmp->unpaid
+        /* FIXME: should also handle player owned container (so not
+           flagged 'unpaid') holding shop owned items */
+        && (mtmp = shop_keeper(*in_rooms(u.ux, u.uy, SHOPBASE))) != 0
+        && inhishop(mtmp))
         ia_addmenu(win, IA_BUY_OBJ, 'p', "Buy this unpaid item");
 
     /* P: put on accessory */
-    if (!(otmp->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL))) {
+    if (!already_worn) {
         if (otmp->oclass == RING_CLASS || otmp->otyp == MEAT_RING)
             ia_addmenu(win, IA_WEAR_OBJ, 'P', "Put this ring on");
         else if (otmp->oclass == AMULET_CLASS)
@@ -2694,7 +2732,7 @@ itemactions(struct obj *otmp)
         ia_addmenu(win, IA_READ_OBJ, 'r', "Study this spellbook");
 
     /* R: remove accessory or rub item */
-    if (otmp->owornmask & (W_RING | W_AMUL | W_TOOL))
+    if (otmp->owornmask & W_ACCESSORY)
         ia_addmenu(win, IA_TAKEOFF_OBJ, 'R', "Remove this accessory");
     if (otmp->otyp == OIL_LAMP || otmp->otyp == MAGIC_LAMP
         || otmp->otyp == BRASS_LANTERN) {
@@ -2704,7 +2742,7 @@ itemactions(struct obj *otmp)
         ia_addmenu(win, IA_RUB_OBJ, 'R', "Rub something on this stone");
 
     /* t: throw item */
-    if (!(otmp->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL))) {
+    if (!already_worn) {
         const char *verb = ammo_and_launcher(otmp, uwep) ? "Shoot" : "Throw";
 
         /*
@@ -2722,13 +2760,20 @@ itemactions(struct obj *otmp)
         ia_addmenu(win, IA_THROW_OBJ, 't', buf);
     }
 
-    /* T: take off armor */
+    /* T: take off armor, tip carried container */
     if (otmp->owornmask & W_ARMOR)
         ia_addmenu(win, IA_TAKEOFF_OBJ, 'T', "Take off this armor");
+    if ((Is_container(otmp) && (Has_contents(otmp) || !otmp->cknown))
+        || (otmp->otyp == HORN_OF_PLENTY && (otmp->spe > 0 || !otmp->known)))
+        ia_addmenu(win, IA_TIP_CONTAINER, 'T',
+                   "Tip all the contents out of this container");
 
     /* V: invoke */
-    if ((otmp->otyp == FAKE_AMULET_OF_YENDOR && !otmp->known) ||
-        otmp->oartifact || objects[otmp->otyp].oc_unique)
+    if ((otmp->otyp == FAKE_AMULET_OF_YENDOR && !otmp->known)
+        || otmp->oartifact || objects[otmp->otyp].oc_unique
+        /* non-artifact crystal balls don't have any unique power but
+           the #invoke command lists them as likely candidates */
+        || otmp->otyp == CRYSTAL_BALL)
         ia_addmenu(win, IA_INVOKE_OBJ, 'V',
                    "Try to invoke a unique power of this object");
 
@@ -2741,38 +2786,30 @@ itemactions(struct obj *otmp)
         ia_addmenu(win, IA_WIELD_OBJ, 'w', "Wield this as your weapon");
     else if (otmp->otyp == TIN_OPENER)
         ia_addmenu(win, IA_WIELD_OBJ, 'w', "Hold the tin opener to open tins");
-    else
+    else if (!already_worn)
         /* FIXME: there's no concept of "holding an item" that's any
            different from having it in inventory; 'w' means wield as weapon */
         ia_addmenu(win, IA_WIELD_OBJ, 'w', "Hold this item in your hands");
 
     /* W: wear armor */
-    if (!(otmp->owornmask & (W_ARMOR | W_RING | W_AMUL | W_TOOL))) {
+    if (!already_worn) {
         if (otmp->oclass == ARMOR_CLASS)
             ia_addmenu(win, IA_WEAR_OBJ, 'W', "Wear this armor");
     }
 
     /* x: Swap main and readied weapon */
     if (otmp == uwep && uswapwep)
-        ia_addmenu(win, IA_SWAPWEAPON, 'x', "Swap this with your alternate weapon");
+        ia_addmenu(win, IA_SWAPWEAPON, 'x',
+                   "Swap this with your alternate weapon");
     else if (otmp == uwep)
-        ia_addmenu(win, IA_SWAPWEAPON, 'x', "Ready this as an alternate weapon");
+        ia_addmenu(win, IA_SWAPWEAPON, 'x',
+                   "Ready this as an alternate weapon");
     else if (otmp == uswapwep)
         ia_addmenu(win, IA_SWAPWEAPON, 'x', "Swap this with your main weapon");
 
     /* z: Zap wand */
     if (otmp->oclass == WAND_CLASS)
         ia_addmenu(win, IA_ZAP_OBJ, 'z', "Zap this wand to release its magic");
-
-    if (IS_ALTAR(levl[u.ux][u.uy].typ) && !u.uswallow) {
-        if (otmp->otyp == CORPSE)
-            ia_addmenu(win, IA_SACRIFICE, 'O',
-                       "Offer this corpse as a sacrifice at this altar");
-        else if (otmp->otyp == AMULET_OF_YENDOR
-                 || otmp->otyp == FAKE_AMULET_OF_YENDOR)
-            ia_addmenu(win, IA_SACRIFICE, 'O',
-                       "Offer this amulet as a sacrifice at this altar");
-    }
 
     Sprintf(buf, "Do what with %s?", the(cxname(otmp)));
     end_menu(win, buf);
@@ -2788,13 +2825,20 @@ itemactions(struct obj *otmp)
             impossible("Unknown item action");
         case IA_NONE:
             break;
+        case IA_UNWIELD:
+            cmdq_add_ec(dowield);
+            cmdq_add_key('-');
+            break;
         case IA_APPLY_OBJ:
             cmdq_add_ec(doapply);
             cmdq_add_key(otmp->invlet);
             break;
         case IA_DIP_OBJ:
-            cmdq_add_ec(dodip);
-            cmdq_add_userinput();
+            /* #altdip instead of normal #dip - takes potion to dip into
+               first (the inventory item instigating this) and item to
+               be dipped second, also ignores floor features such as
+               fountain/sink so we don't need to force m-prefix here */
+            cmdq_add_ec(dip_into);
             cmdq_add_key(otmp->invlet);
             break;
         case IA_DROP_OBJ:
@@ -2802,7 +2846,9 @@ itemactions(struct obj *otmp)
             cmdq_add_key(otmp->invlet);
             break;
         case IA_EAT_OBJ:
-            /* FIXME: can't add this! cmdq_add_key('m');*/ /* m-prefix: eat, skip floor obj */
+            /* start with m-prefix; for #eat, it means ignore floor food
+               if present and eat food from invent */
+            cmdq_add_ec(do_reqmenu);
             cmdq_add_ec(doeat);
             cmdq_add_key(otmp->invlet);
             break;
@@ -2815,6 +2861,9 @@ itemactions(struct obj *otmp)
             cmdq_add_key(otmp->invlet);
             break;
         case IA_QUAFF_OBJ:
+            /* start with m-prefix; for #quaff, it means ignore fountain
+               or sink if present and drink a potion from invent */
+            cmdq_add_ec(do_reqmenu);
             cmdq_add_ec(dodrink);
             cmdq_add_key(otmp->invlet);
             break;
@@ -2836,6 +2885,10 @@ itemactions(struct obj *otmp)
             break;
         case IA_TAKEOFF_OBJ:
             cmdq_add_ec(dotakeoff);
+            cmdq_add_key(otmp->invlet);
+            break;
+        case IA_TIP_CONTAINER:
+            cmdq_add_ec(dotip);
             cmdq_add_key(otmp->invlet);
             break;
         case IA_INVOKE_OBJ:
@@ -2861,16 +2914,13 @@ itemactions(struct obj *otmp)
             cmdq_add_ec(dosacrifice);
             cmdq_add_key(otmp->invlet);
             break;
-        case IA_UNWIELD:
-            cmdq_add_ec(dowield);
-            cmdq_add_key('-');
-            break;
         }
-    } else
-        ret = !n ? ECMD_CANCEL : ECMD_OK; /* cancelled */
+    }
     destroy_nhwindow(win);
 
-    return ret;
+    /* finish the 'i' command:  no time elapses and cancelling without
+       selecting an action doesn't matter */
+    return ECMD_OK;
 }
 
 
@@ -2881,12 +2931,11 @@ ddoinv(void)
     struct obj *otmp;
     char c = display_inventory((char *) 0, TRUE);
 
-    if (!c)
-        return ECMD_OK;
-    for (otmp = g.invent; otmp; otmp = otmp->nobj)
-        if (otmp->invlet == c)
-            return itemactions(otmp);
-
+    if (c && c != '\033') {
+        for (otmp = g.invent; otmp; otmp = otmp->nobj)
+            if (otmp->invlet == c)
+                return itemactions(otmp);
+    }
     return ECMD_OK;
 }
 
@@ -3939,11 +3988,10 @@ look_here(int obj_cnt, /* obj_cnt > 0 implies that autopickup is in progress */
             There("is %s object here.", picked_some ? "another" : "an");
         else
             There("are %s%s objects here.",
-                  (obj_cnt < 5)
-                      ? "a few"
-                      : (obj_cnt < 10)
-                          ? "several"
-                          : "many",
+                  (obj_cnt == 2) ? "two"
+                  : (obj_cnt < 5) ? "a few"
+                  : (obj_cnt < 10) ? "several"
+                  : "many",
                   picked_some ? " more" : "");
         for (; otmp; otmp = otmp->nexthere)
             if (otmp->otyp == CORPSE && will_feel_cockatrice(otmp, FALSE)) {
