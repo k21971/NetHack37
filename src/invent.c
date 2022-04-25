@@ -34,7 +34,10 @@ static void menu_identify(int);
 static boolean tool_being_used(struct obj *);
 static int adjust_ok(struct obj *);
 static int adjust_gold_ok(struct obj *);
+static int doorganize_core(struct obj *);
 static char obj_to_let(struct obj *);
+static boolean item_naming_classification(struct obj *, char *, char *);
+static int item_reading_classification(struct obj *, char *);
 static void mime_action(const char *);
 
 /* wizards can wish for venom, which will become an invisible inventory
@@ -1487,9 +1490,10 @@ any_obj_ok(struct obj *obj)
  * case.
  */
 struct obj *
-getobj(const char *word,
-       int (*obj_ok)(OBJ_P), /* callback */
-       unsigned int ctrlflags)
+getobj(
+    const char *word,       /* usually a direct verb such as "drop" */
+    int (*obj_ok)(OBJ_P),   /* callback to classify an object's suitability */
+    unsigned int ctrlflags) /* some control to fine-tune the behavior */
 {
     register struct obj *otmp;
     register char ilet = 0;
@@ -1502,41 +1506,47 @@ getobj(const char *word,
             allownone = FALSE;
     int inaccess = 0; /* counts GETOBJ_EXCLUDE_INACCESS items to decide
                        * between "you don't have anything to <foo>"
-                       * versus "you don't have anything _else_ to <foo>" */
+                       * versus "you don't have anything _else_ to <foo>"
+                       * (also used for GETOBJ_EXCLUDE_NONINVENT) */
     long cnt;
     boolean cntgiven = FALSE;
     boolean msggiven = FALSE;
     boolean oneloop = FALSE;
     Loot *sortedinvent, *srtinv;
+    struct _cmd_queue cq, *cmdq;
 
-    struct _cmd_queue *cmdq = cmdq_pop();
+    if ((cmdq = cmdq_pop()) != 0) {
+        cq = *cmdq;
+        free(cmdq);
+        /* user-input means pick something interactively now, with more
+           in the command queue for after that; if not user-input, it
+           has to be a key here */
+        if (cq.typ != CMDQ_USER_INPUT) {
+            otmp = 0; /* in case of non-key or lookup failure */
+            if (cq.typ == CMDQ_KEY) {
+                int v;
 
-    if (cmdq && cmdq->typ != CMDQ_USER_INPUT) {
-        int v;
-
-        /* it's not a key, abort */
-        if (cmdq->typ != CMDQ_KEY) {
-            free(cmdq);
-            return (struct obj *) 0;
-        }
-        for (otmp = g.invent; otmp; otmp = otmp->nobj)
-            if (otmp->invlet == cmdq->key) {
-                v = (*obj_ok)(otmp);
-                if (v == GETOBJ_SUGGEST || v == GETOBJ_DOWNPLAY)
-                    break;
+                if (cq.key == HANDS_SYM) {
+                    /* check whether the hands/self choice is suitable */
+                    v = (*obj_ok)((struct obj *) 0);
+                    if (v == GETOBJ_SUGGEST || v == GETOBJ_DOWNPLAY)
+                        otmp = (struct obj *) &cg.zeroobj;
+                } else {
+                    /* there could be more than one match if key is '#';
+                       take first one which passes the obj_ok callback */
+                    for (otmp = g.invent; otmp; otmp = otmp->nobj)
+                        if (otmp->invlet == cq.key) {
+                            v = (*obj_ok)(otmp);
+                            if (v == GETOBJ_SUGGEST || v == GETOBJ_DOWNPLAY)
+                                break;
+                        }
+                }
             }
-        if (!otmp) {
-            v = (*obj_ok)((struct obj *) 0);
-            if (v == GETOBJ_SUGGEST || v == GETOBJ_DOWNPLAY)
-                otmp = (struct obj *) &cg.zeroobj; /* cast away const */
-        }
-        free(cmdq);
-        if (!otmp)
-            cmdq_clear();
-        return otmp;
-    }
-    if (cmdq)
-        free(cmdq);
+            if (!otmp)        /* didn't find what we were looking for, */
+                cmdq_clear(); /* so discard any other queued commands  */
+            return otmp;
+        } /* !CMDQ_USER_INPUT */
+    } /* cmdq */
 
     /* is "hands"/"self" a valid thing to do this action on? */
     switch ((*obj_ok)((struct obj *) 0)) {
@@ -1650,7 +1660,7 @@ getobj(const char *word,
                 pline("No count allowed with this command.");
                 continue;
             }
-            ilet = get_count(NULL, ilet, LARGEST_INT, &tmpcnt, TRUE);
+            ilet = get_count(NULL, ilet, LARGEST_INT, &tmpcnt, GC_SAVEHIST);
             if (tmpcnt) {
                 cnt = tmpcnt;
                 cntgiven = TRUE;
@@ -1741,9 +1751,10 @@ getobj(const char *word,
             }
         }
         if (cntgiven && !strcmp(word, "throw")) {
-            /* permit counts for throwing gold, but don't accept
-             * counts for other things since the throw code will
-             * split off a single item anyway */
+            /* permit counts for throwing gold, but don't accept counts
+               for other things since the throw code will split off a
+               single item anyway; if populating quiver, 'word' will be
+               "ready" or "fire" and this restriction doesn't apply */
             if (cnt == 0)
                 return (struct obj *) 0;
             if (cnt > 1 && (ilet != def_oc_syms[COIN_CLASS].sym
@@ -1825,6 +1836,13 @@ silly_thing(const char *word,
               !(is_plural(otmp) || pair_of(otmp)) ? "that" : "those", s3);
     else
 #endif
+    /* see comment about Amulet of Yendor in objtyp_is_callable(do_name.c);
+       known fakes yield the silly thing feedback */
+    if (!strcmp(word, "call")
+        && (otmp->otyp == AMULET_OF_YENDOR
+            || (otmp->otyp == FAKE_AMULET_OF_YENDOR && !otmp->known)))
+        pline_The("Amulet doesn't like being called names.");
+    else
         pline(silly_thing_to, word);
 }
 
@@ -2509,12 +2527,17 @@ RESTORE_WARNING_FORMAT_NONLITERAL
 enum item_action_actions {
     IA_NONE          = 0,
     IA_UNWIELD, /* hack for 'w-' */
-    IA_APPLY_OBJ,
-    IA_DIP_OBJ,
-    IA_DROP_OBJ,
-    IA_EAT_OBJ,
-    IA_ENGRAVE_OBJ,
-    IA_BUY_OBJ,
+    IA_APPLY_OBJ, /* 'a' */
+    IA_DIP_OBJ, /* 'a' on a potion == dip */
+    IA_NAME_OBJ, /* 'c' name individual item */
+    IA_NAME_OTYP, /* 'C' name item's type */
+    IA_DROP_OBJ, /* 'd' */
+    IA_EAT_OBJ, /* 'e' */
+    IA_ENGRAVE_OBJ, /* 'E' */
+    IA_ADJUST_OBJ, /* 'i' #adjust inventory letter */
+    IA_ADJUST_STACK, /* 'I' #adjust with count to split stack */
+    IA_SACRIFICE, /* 'O' offer sacrifice */
+    IA_BUY_OBJ, /* 'p' pay shopkeeper */
     IA_QUAFF_OBJ,
     IA_QUIVER_OBJ,
     IA_READ_OBJ,
@@ -2527,8 +2550,83 @@ enum item_action_actions {
     IA_WEAR_OBJ,
     IA_SWAPWEAPON,
     IA_ZAP_OBJ,
-    IA_SACRIFICE,
 };
+
+/* construct text for the menu entries for IA_NAME_OBJ and IA_NAME_OTYP */
+static boolean
+item_naming_classification(struct obj *obj, char *onamebuf, char *ocallbuf)
+{
+    static const char Name[] = "Name", Rename[] = "Rename or un-name",
+                      /* "re-call" seems a bit weird, but "recall" and
+                         "rename" don't fit for changing a type name */
+                      Call[] = "Call", Recall[] = "Re-call or un-call";
+
+    onamebuf[0] = ocallbuf[0] = '\0';
+    if (name_ok(obj) == GETOBJ_SUGGEST) {
+        Sprintf(onamebuf, "%s %s %s",
+                (!has_oname(obj) || !*ONAME(obj)) ? Name : Rename,
+                the_unique_obj(obj) ? "the"
+                : !is_plural(obj) ? "this"
+                  : "these",
+                simpleonames(obj));
+    }
+    if (call_ok(obj) == GETOBJ_SUGGEST) {
+        char *callname = simpleonames(obj);
+
+        /* prefix known unique item with "the", make all other types plural */
+        if (the_unique_obj(obj)) /* treats unID'd fake amulets as if real */
+            callname = the(callname);
+        else if (!is_plural(obj))
+            callname = makeplural(callname);
+        Sprintf(ocallbuf, "%s the type for %s",
+                (!objects[obj->otyp].oc_uname
+                 || !*objects[obj->otyp].oc_uname) ? Call : Recall,
+                callname);
+    }
+    return (*onamebuf || *ocallbuf) ? TRUE : FALSE;
+}
+
+/* construct text for the menu entries for IA_READ_OBJ */
+static int
+item_reading_classification(struct obj *obj, char *outbuf)
+{
+    int otyp = obj->otyp, res = IA_READ_OBJ;
+
+    *outbuf = '\0';
+    if (otyp == FORTUNE_COOKIE) {
+        Strcpy(outbuf, "Read the message inside this cookie");
+    } else if (otyp == T_SHIRT) {
+        Strcpy(outbuf, "Read the slogan on the shirt");
+    } else if (otyp == ALCHEMY_SMOCK) {
+        Strcpy(outbuf, "Read the slogan on the apron");
+    } else if (otyp == HAWAIIAN_SHIRT) {
+        Strcpy(outbuf, "Look at the pattern on the shirt");
+    } else if (obj->oclass == SCROLL_CLASS) {
+        const char *magic = ((obj->dknown
+#ifdef MAIL_STRUCTURES
+                              && otyp != SCR_MAIL
+#endif
+                              && (otyp != SCR_BLANK_PAPER
+                                  || !objects[otyp].oc_name_known))
+                             ? " to activate its magic" : "");
+
+        Sprintf(outbuf, "Read this scroll%s", magic);
+    } else if (obj->oclass == SPBOOK_CLASS) {
+        boolean novel = (otyp == SPE_NOVEL),
+                blank = (otyp == SPE_BLANK_PAPER
+                         && objects[otyp].oc_name_known),
+                tome = (otyp == SPE_BOOK_OF_THE_DEAD
+                        && objects[otyp].oc_name_known);
+
+        Sprintf(outbuf, "%s this %s",
+                (novel || blank) ? "Read" : tome ? "Examine" : "Study",
+                novel ? simpleonames(obj) /* "novel" or "paperback book" */
+                      : tome ? "tome" : "spellbook");
+    } else {
+        res = IA_NONE;
+    }
+    return res;
+}
 
 static void
 ia_addmenu(winid win, int act, char let, const char *txt)
@@ -2547,7 +2645,7 @@ itemactions(struct obj *otmp)
 {
     int n, act = IA_NONE;
     winid win;
-    char buf[BUFSZ];
+    char buf[BUFSZ], buf2[BUFSZ];
     menu_item *selected;
     struct monst *mtmp;
     const char *light = otmp->lamplit ? "Extinguish" : "Light";
@@ -2557,13 +2655,20 @@ itemactions(struct obj *otmp)
     start_menu(win, MENU_BEHAVE_STANDARD);
 
     /* -: unwield; picking current weapon offers an opportunity for 'w-'
-       to wield bare/gloved hands */
-    if (otmp == uwep) {
-        /* TODO: if uwep is ammo, tell player that to shoot instead of toss,
-         *       the corresponding launcher must be wielded */
-        Sprintf(buf,  "Wield '-' to unwield this %s",
-                (otmp->oclass == WEAPON_CLASS || is_weptool(otmp)) ? "weapon"
-                : "item");
+       to wield bare/gloved hands; likewise for 'Q-' with quivered item(s) */
+    if (otmp == uwep || otmp == uswapwep || otmp == uquiver) {
+        const char *verb = (otmp == uquiver) ? "Quiver" : "Wield",
+                   *action = (otmp == uquiver) ? "un-ready" : "un-wield",
+                   *which = is_plural(otmp) ? "these" : "this",
+                   *what = ((otmp->oclass == WEAPON_CLASS || is_weptool(otmp))
+                            ? "weapon" : "item");
+        /*
+         * TODO: if uwep is ammo, tell player that to shoot instead of toss,
+         *       the corresponding launcher must be wielded;
+         */
+        Sprintf(buf,  "%s '%c' to %s %s %s",
+                verb, HANDS_SYM, action, which,
+                is_plural(otmp) ? makeplural(what) : what);
         ia_addmenu(win, IA_UNWIELD, '-', buf);
     }
 
@@ -2648,6 +2753,14 @@ itemactions(struct obj *otmp)
     else if (otmp->oclass == WAND_CLASS)
         ia_addmenu(win, IA_APPLY_OBJ, 'a', "Break this wand");
 
+    /* 'c', 'C' - call an item or its type something */
+    if (item_naming_classification(otmp, buf, buf2)) {
+        if (*buf)
+            ia_addmenu(win, IA_NAME_OBJ, 'c', buf);
+        if (*buf2)
+            ia_addmenu(win, IA_NAME_OTYP, 'C', buf2);
+    }
+
     /* d: drop item, works on everything except worn items; those will
        always have a takeoff/remove choice so we don't have to worry
        about the menu maybe being empty when 'd' is suppressed */
@@ -2672,6 +2785,16 @@ itemactions(struct obj *otmp)
              || otmp->oclass == GEM_CLASS || otmp->oclass == RING_CLASS)
         ia_addmenu(win, IA_ENGRAVE_OBJ, 'E',
                    "Write on the floor with this object");
+
+    /* i: #adjust inventory letter; gold can't be adjusted unless there
+       is some in a slot other than '$' (which shouldn't be possible) */
+    if (otmp->oclass != COIN_CLASS || check_invent_gold("item-action"))
+        ia_addmenu(win, IA_ADJUST_OBJ, 'i',
+                   "Adjust inventory by assigning new letter");
+    /* I: #adjust inventory item by splitting its stack  */
+    if (otmp->quan > 1L && otmp->oclass != COIN_CLASS)
+        ia_addmenu(win, IA_ADJUST_STACK, 'I',
+                   "Adjust inventory by splitting this stack");
 
     /* O: offer sacrifice */
     if (IS_ALTAR(levl[u.ux][u.uy].typ) && !u.uswallow) {
@@ -2712,24 +2835,14 @@ itemactions(struct obj *otmp)
         ia_addmenu(win, IA_QUAFF_OBJ, 'q', "Quaff this potion");
 
     /* Q: quiver throwable item */
-    if (otmp->oclass == GEM_CLASS || otmp->oclass == WEAPON_CLASS)
+    if ((otmp->oclass == GEM_CLASS || otmp->oclass == WEAPON_CLASS)
+        && otmp != uquiver)
         ia_addmenu(win, IA_QUIVER_OBJ, 'Q',
                    "Quiver this item for easy throwing");
 
     /* r: read item */
-    if (otmp->otyp == FORTUNE_COOKIE)
-        ia_addmenu(win, IA_READ_OBJ, 'r',
-                   "Read the message inside this cookie");
-    else if (otmp->otyp == T_SHIRT)
-        ia_addmenu(win, IA_READ_OBJ, 'r', "Read the slogan on the shirt");
-    else if (otmp->otyp == ALCHEMY_SMOCK)
-        ia_addmenu(win, IA_READ_OBJ, 'r', "Read the slogan on the apron");
-    else if (otmp->otyp == HAWAIIAN_SHIRT)
-        ia_addmenu(win, IA_READ_OBJ, 'r', "Look at the pattern on the shirt");
-    else if (otmp->oclass == SCROLL_CLASS)
-        ia_addmenu(win, IA_READ_OBJ, 'r', "Cast the spell on this scroll");
-    else if (otmp->oclass == SPBOOK_CLASS)
-        ia_addmenu(win, IA_READ_OBJ, 'r', "Study this spellbook");
+    if (item_reading_classification(otmp, buf) == IA_READ_OBJ)
+        ia_addmenu(win, IA_READ_OBJ, 'r', buf);
 
     /* R: remove accessory or rub item */
     if (otmp->owornmask & W_ACCESSORY)
@@ -2826,7 +2939,10 @@ itemactions(struct obj *otmp)
         case IA_NONE:
             break;
         case IA_UNWIELD:
-            cmdq_add_ec(dowield);
+            cmdq_add_ec((otmp == uwep) ? dowield
+                        : (otmp == uswapwep) ? remarm_swapwep
+                          : (otmp == uquiver) ? dowieldquiver
+                            : donull); /* can't happen */
             cmdq_add_key('-');
             break;
         case IA_APPLY_OBJ:
@@ -2839,6 +2955,12 @@ itemactions(struct obj *otmp)
                be dipped second, also ignores floor features such as
                fountain/sink so we don't need to force m-prefix here */
             cmdq_add_ec(dip_into);
+            cmdq_add_key(otmp->invlet);
+            break;
+        case IA_NAME_OBJ:
+        case IA_NAME_OTYP:
+            cmdq_add_ec(docallcmd);
+            cmdq_add_key((act == IA_NAME_OBJ) ? 'i' : 'o');
             cmdq_add_key(otmp->invlet);
             break;
         case IA_DROP_OBJ:
@@ -2854,6 +2976,18 @@ itemactions(struct obj *otmp)
             break;
         case IA_ENGRAVE_OBJ:
             cmdq_add_ec(doengrave);
+            cmdq_add_key(otmp->invlet);
+            break;
+        case IA_ADJUST_OBJ:
+            cmdq_add_ec(doorganize); /* #adjust */
+            cmdq_add_key(otmp->invlet);
+            break;
+        case IA_ADJUST_STACK:
+            cmdq_add_ec(adjust_split); /* #altadjust */
+            cmdq_add_key(otmp->invlet);
+            break;
+        case IA_SACRIFICE:
+            cmdq_add_ec(dosacrifice);
             cmdq_add_key(otmp->invlet);
             break;
         case IA_BUY_OBJ:
@@ -2908,10 +3042,6 @@ itemactions(struct obj *otmp)
             break;
         case IA_ZAP_OBJ:
             cmdq_add_ec(dozap);
-            cmdq_add_key(otmp->invlet);
-            break;
-        case IA_SACRIFICE:
-            cmdq_add_ec(dosacrifice);
             cmdq_add_key(otmp->invlet);
             break;
         }
@@ -3793,8 +3923,12 @@ dotypeinv(void)
     if (query_objlist((char *) 0, &g.invent,
                       ((flags.invlet_constant ? USE_INVLET : 0)
                        | INVORDER_SORT | INCLUDE_VENOM),
-                      &pick_list, PICK_NONE, this_type_only) > 0)
+                      &pick_list, PICK_ONE, this_type_only) > 0) {
+        struct obj *otmp = pick_list[0].item.a_obj;
+
         free((genericptr_t) pick_list);
+        (void) itemactions(otmp); /* always returns ECMD_OK */
+    }
 
  doI_done:
     g.this_type = 0;
@@ -4639,18 +4773,8 @@ adjust_gold_ok(struct obj *obj)
 int
 doorganize(void) /* inventory organizer by Del Lamb */
 {
-    struct obj *obj, *otmp, *splitting, *bumped;
-    int ix, cur, trycnt;
-    char let;
-#define GOLD_INDX   0
-#define GOLD_OFFSET 1
-#define OVRFLW_INDX (GOLD_OFFSET + 52) /* past gold and 2*26 letters */
-    char lets[1 + 52 + 1 + 1]; /* room for '$a-zA-Z#\0' */
-    char qbuf[QBUFSZ];
-    char *objname, *otmpname;
-    const char *adj_type;
     int (*adjust_filter)(struct obj *);
-    boolean ever_mind = FALSE, collect, isgold;
+    struct obj *obj;
 
     /* when no invent, or just gold in '$' slot, there's nothing to adjust */
     if (!g.invent || (g.invent->oclass == COIN_CLASS
@@ -4668,8 +4792,80 @@ doorganize(void) /* inventory organizer by Del Lamb */
 
     /* get object the user wants to organize (the 'from' slot) */
     obj = getobj("adjust", adjust_filter, GETOBJ_PROMPT | GETOBJ_ALLOWCNT);
+
+    return doorganize_core(obj);
+}
+
+/* alternate version of #adjust used by itemactions() for splitting */
+int
+adjust_split(void)
+{
+    struct obj *obj;
+    cmdcount_nht splitamount = 0L;
+    char let, dig = '\0';
+
+    /* invlet should be queued so no getobj prompting is expected */
+    obj = getobj("split", adjust_ok, GETOBJ_NOFLAGS);
+    if (!obj || obj->quan < 2L || obj->otyp == GOLD_PIECE)
+        return ECMD_FAIL; /* caller has set things up to avoid this */
+
+    if (obj->quan == 2L) {
+        splitamount = 1L;
+    } else {
+        /* get first digit; doesn't wait for <return> */
+        dig = yn_function("Split off how many?", (char *) 0, '\0');
+        if (!digit(dig)) {
+            pline1(Never_mind);
+            return ECMD_CANCEL;
+        }
+        /* got first digit, get more until next non-digit (except for
+           backspace/delete which will take away most recent digit and
+           keep going; we expect one of ' ', '\n', or '\r') */
+        let = get_count(NULL, dig, LARGEST_INT, &splitamount, GC_ECHOFIRST);
+        /* \033 is in quitchars[] so we need to check for it separately
+           in order to treat it as cancel rather than as accept */
+        if (!let || let == '\033' || !index(quitchars, let)) {
+            pline1(Never_mind);
+            return ECMD_CANCEL;
+        }
+    }
+    if (splitamount < 1L || splitamount >= obj->quan) {
+        static const char
+            Amount[] = "Amount to split from current stack must be";
+
+        if (splitamount < 1L)
+            pline("%s at least 1.", Amount);
+        else
+            pline("%s less than %ld.", Amount, obj->quan);
+        return ECMD_CANCEL;
+    }
+
+    /* normally a split would take place in getobj() if player supplies
+       a count there, so doorganize_core() figures out 'splitamount'
+       from the object; it will undo the split if player cancels while
+       selecting the destination slot */
+    obj = splitobj(obj, (long) splitamount);
+    return doorganize_core(obj);
+}
+
+static int
+doorganize_core(struct obj *obj)
+{
+    struct obj *otmp, *splitting, *bumped;
+    int ix, cur, trycnt;
+    char let;
+#define GOLD_INDX   0
+#define GOLD_OFFSET 1
+#define OVRFLW_INDX (GOLD_OFFSET + 52) /* past gold and 2*26 letters */
+    char lets[1 + 52 + 1 + 1]; /* room for '$a-zA-Z#\0' */
+    char qbuf[QBUFSZ];
+    char *objname, *otmpname;
+    const char *adj_type;
+    boolean ever_mind = FALSE, collect, isgold;
+
     if (!obj)
         return ECMD_CANCEL;
+
     /* can only be gold if check_invent_gold() found a problem:  multiple '$'
        stacks and/or gold in some other slot, otherwise (*adjust_filter)()
        won't allow gold to be picked; if player has picked any stack of gold
@@ -4695,7 +4891,7 @@ doorganize(void) /* inventory organizer by Del Lamb */
     lets[sizeof lets - 1] = '\0';
     /* for floating inv letters, truncate list after the first open slot */
     if (!flags.invlet_constant && (ix = inv_cnt(FALSE)) < 52)
-        lets[ix + (splitting ? 0 : 1)] = '\0';
+        lets[ix + (splitting ? 1 : 2)] = '\0';
 
     /* blank out all the letters currently in use in the inventory
        except those that will be merged with the selected object */
@@ -4722,7 +4918,11 @@ doorganize(void) /* inventory organizer by Del Lamb */
         compactify(lets);
 
     /* get 'to' slot to use as destination */
-    Sprintf(qbuf, "Adjust letter to what [%s]%s?", lets,
+    if (!splitting)
+        Strcpy(qbuf, "Adjust letter");
+    else /* note: splitting->quan is the amount being left in original slot */
+        Sprintf(qbuf, "Split %ld", obj->quan);
+    Sprintf(eos(qbuf), " to what [%s]%s?", lets,
             g.invent ? " (? see used letters)" : "");
     for (trycnt = 1; ; ++trycnt) {
         let = !isgold ? yn_function(qbuf, (char *) 0, '\0') : GOLD_SYM;

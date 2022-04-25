@@ -2353,7 +2353,7 @@ query_arrayvalue(
 static void
 status_hilite_add_threshold(int fld, struct hilite_s *hilite)
 {
-    struct hilite_s *new_hilite;
+    struct hilite_s *new_hilite, *old_hilite;
 
     if (!hilite)
         return;
@@ -2364,8 +2364,16 @@ status_hilite_add_threshold(int fld, struct hilite_s *hilite)
 
     new_hilite->set = TRUE;
     new_hilite->fld = fld;
-    new_hilite->next = g.blstats[0][fld].thresholds;
-    g.blstats[0][fld].thresholds = new_hilite;
+    new_hilite->next = (struct hilite_s *) 0;
+    /* insert new entry at the end of the list */
+    if (!g.blstats[0][fld].thresholds) {
+        g.blstats[0][fld].thresholds = new_hilite;
+    } else {
+        for (old_hilite = g.blstats[0][fld].thresholds; old_hilite->next;
+             old_hilite = old_hilite->next)
+            continue;
+        old_hilite->next = new_hilite;
+    }
     /* sort_hilites(fld) */
 
     /* current and prev must both point at the same hilites */
@@ -3682,12 +3690,11 @@ status_hilite_menu_add(int origfld)
             hilite.rel = TXT_VALUE;
             Strcpy(hilite.textmatch, aligntxt[rv]);
         } else if (fld == BL_HUNGER) {
-            static const char *const hutxt[] = { "Satiated", (char *) 0, "Hungry",
-                                           "Weak", "Fainting", "Fainted",
-                                           "Starved" };
-            int rv = query_arrayvalue(qry_buf,
-                                      hutxt,
-                                      SATIATED, STARVED + 1);
+            static const char *const hutxt[] = {
+                "Satiated", (char *) 0, "Hungry", "Weak",
+                "Fainting", "Fainted", "Starved"
+            };
+            int rv = query_arrayvalue(qry_buf, hutxt, SATIATED, STARVED + 1);
 
             if (rv < SATIATED)
                 goto choose_behavior;
@@ -3888,7 +3895,7 @@ status_hilite_menu_fld(int fld)
     int count = status_hilite_linestr_countfield(fld);
     struct _status_hilite_line_str *hlstr;
     char buf[BUFSZ];
-    boolean acted = FALSE;
+    boolean acted;
 
     if (!count) {
         if (status_hilite_menu_add(fld)) {
@@ -3946,55 +3953,37 @@ status_hilite_menu_fld(int fld)
         any = cg.zeroany;
         any.a_int = -2;
         add_menu(tmpwin, &nul_glyphinfo, &any, 'Z', 0, ATR_NONE,
-                 "Add a new hilite", MENU_ITEMFLAGS_NONE);
+                 "Add new hilites", MENU_ITEMFLAGS_NONE);
     }
 
     Sprintf(buf, "Current %s hilites:", initblstats[fld].fldname);
     end_menu(tmpwin, buf);
 
+    acted = FALSE;
     if ((res = select_menu(tmpwin, PICK_ANY, &picks)) > 0) {
-        int mode = 0;
+        int idx;
+        unsigned mode = 0;
 
         for (i = 0; i < res; i++) {
-            int idx = picks[i].item.a_int;
-
-            if (idx == -1) {
-                /* delete selected hilites */
-                if (mode)
-                    goto shlmenu_free;
-                mode = -1;
-                break;
-            } else if (idx == -2) {
-                /* create a new hilite */
-                if (mode)
-                    goto shlmenu_free;
-                mode = -2;
-                break;
+            idx = picks[i].item.a_int;
+            if (idx == -1)
+                mode |= 1; /* delete selected hilites */
+            else if (idx == -2)
+                mode |= 2; /* create new hilites */
+        }
+        if (mode & 1) { /* delete selected hilites */
+            for (i = 0; i < res; i++) {
+                idx = picks[i].item.a_int;
+                if (idx > 0 && status_hilite_remove(idx))
+                    acted = TRUE;
             }
         }
-
-        if (mode == -1) {
-            /* delete selected hilites */
-            for (i = 0; i < res; i++) {
-                int idx = picks[i].item.a_int;
-
-                if (idx > 0)
-                    (void) status_hilite_remove(idx);
-            }
-            reset_status_hilites();
-            acted = TRUE;
-        } else if (mode == -2) {
-            /* create a new hilite */
-            if (status_hilite_menu_add(fld))
+        if (mode & 2) { /* create new hilites */
+            while (status_hilite_menu_add(fld))
                 acted = TRUE;
         }
-
-        free((genericptr_t) picks);
+        free((genericptr_t) picks), picks = 0;
     }
-
- shlmenu_free:
-
-    picks = (menu_item *) 0;
     destroy_nhwindow(tmpwin);
     return acted;
 }
@@ -4074,10 +4063,12 @@ status_hilite_menu(void)
     end_menu(tmpwin, "Status hilites:");
     if ((res = select_menu(tmpwin, PICK_ONE, &picks)) > 0) {
         i = picks->item.a_int - 1;
-        if (i < 0)
+        if (i < 0) {
             status_hilites_viewall();
-        else
-            (void) status_hilite_menu_fld(i);
+        } else {
+            if (status_hilite_menu_fld(i))
+                reset_status_hilites();
+        }
         free((genericptr_t) picks), picks = (menu_item *) 0;
         redo = TRUE;
     }

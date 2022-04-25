@@ -882,6 +882,13 @@ putting objects into a container with menustyle=traditional and then taking
 	bit being set if sanity_check was On
 when drinking or dipping, allow the 'm' prefix to be used to skip asking
 	about fountains and pools
+calling real or fake Amulet something could give away information about them
+throwing gold while inside a purple worm would yield "The gold disappears
+	in the the purple worm's entrails." (note doubled "the")
+inventory #adjust for !fixinv, after picking 'from' slot the prompt for 'to'
+	slot was supposed to include the next letter beyond those in use as
+	a candidate for destination but an off by 1 error only showed a-x
+	where x is last letter used (despite that, y could still be picked)
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1153,6 +1160,16 @@ if the repeat command was used after prefix+command, only the command part got
 	repeated
 the change for repeat after prefix+command would result in a crash if repeat
 	was attempted after an unassigned key
+items obtained via wishing while blind were erroneously being marked as 'seen
+	up close' so behaving differently from items picked up off the floor
+corpses of neuter monsters had random chance to be flagged as female so would
+	only stack with others that made the same random choice
+one-shot food testing ability conferred by blessed scroll of food detection
+	didn't warn about globs of green slime because the relevant code was
+	only executed for corpses, eggs, and tins, not for globs
+worn ring of slow digestion blocks per-turn hunger but not the hunger caused
+	by wearing it; white dragon scales/mail was blocking per-turn hunger
+	and didn't cause any hunger itself; change to treat it like the ring
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1565,7 +1582,9 @@ extend farlook's "<mon>, asleep" to "<mon>, can't move (paralyzed or sleeping
 	that is waiting for hero to approach
 add body part terminology for spiders; enhance it for cockatrices
 context sensitive item usage menu from inventory, aka "item actions"
-
+pets are more likely to follow you closely if you are carrying something they
+	really like to eat; behave as if you are carrying such whenever you
+	are standing on stairs so that pets will try harder to come to you
 
 Platform- and/or Interface-Specific New Features
 ------------------------------------------------

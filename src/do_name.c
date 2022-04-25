@@ -21,8 +21,6 @@ static void truncate_to_map(int *, int *, schar, schar);
 static void do_mgivenname(void);
 static boolean alreadynamed(struct monst *, char *, char *);
 static void do_oname(struct obj *);
-static int name_ok(struct obj *);
-static int call_ok(struct obj *);
 static char *docall_xname(struct obj *);
 static void namefloorobj(void);
 
@@ -1231,7 +1229,7 @@ do_mgivenname(void)
  * allocates a replacement object, so that old risk is gone.
  */
 static void
-do_oname(register struct obj *obj)
+do_oname(struct obj *obj)
 {
     char *bufp, buf[BUFSZ], bufcpy[BUFSZ], qbuf[QBUFSZ];
     const char *aname;
@@ -1367,11 +1365,21 @@ objtyp_is_callable(int i)
         return TRUE;
 
     switch(objects[i].oc_class) {
+    case AMULET_CLASS:
+        /* 3.7: calling these used to be allowed but that enabled the
+           player to tell whether two unID'd amulets of yendor were both
+           fake or one was real by calling them distinct names and then
+           checking discoveries to see whether first name was replaced
+           by second or both names stuck; with more than two available
+           to work with, if they weren't all fake it was possible to
+           determine which one was the real one */
+        if (i == AMULET_OF_YENDOR || i == FAKE_AMULET_OF_YENDOR)
+            break; /* return FALSE */
+        /*FALLTHRU*/
     case SCROLL_CLASS:
     case POTION_CLASS:
     case WAND_CLASS:
     case RING_CLASS:
-    case AMULET_CLASS:
     case GEM_CLASS:
     case SPBOOK_CLASS:
     case ARMOR_CLASS:
@@ -1387,17 +1395,20 @@ objtyp_is_callable(int i)
 }
 
 /* getobj callback for object to name (specific item) - anything but gold */
-static int
+int
 name_ok(struct obj *obj)
 {
     if (!obj || obj->oclass == COIN_CLASS)
         return GETOBJ_EXCLUDE;
 
+    if (!obj->dknown || obj->oartifact || obj->otyp == SPE_NOVEL)
+        return GETOBJ_DOWNPLAY;
+
     return GETOBJ_SUGGEST;
 }
 
 /* getobj callback for object to call (name its type) */
-static int
+int
 call_ok(struct obj *obj)
 {
     if (!obj || !objtyp_is_callable(obj->otyp))
@@ -1414,10 +1425,18 @@ docallcmd(void)
     winid win;
     anything any;
     menu_item *pick_list = 0;
-    char ch;
+    struct _cmd_queue *cmdq;
+    char ch = 0;
     /* if player wants a,b,c instead of i,o when looting, do that here too */
     boolean abc = flags.lootabc;
 
+    if ((cmdq = cmdq_pop()) != 0) {
+        if (cmdq->typ == CMDQ_KEY)
+            ch = cmdq->key;
+        else
+            cmdq_clear();
+        goto docallcmd;
+    }
     win = create_nhwindow(NHW_MENU);
     start_menu(win, MENU_BEHAVE_STANDARD);
     any = cg.zeroany;
@@ -1456,6 +1475,7 @@ docallcmd(void)
         ch = 'q';
     destroy_nhwindow(win);
 
+ docallcmd:
     switch (ch) {
     default:
     case 'q':
