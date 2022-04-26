@@ -1,4 +1,4 @@
-/* NetHack 3.7	zap.c	$NHDT-Date: 1646870848 2022/03/10 00:07:28 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.402 $ */
+/* NetHack 3.7	zap.c	$NHDT-Date: 1650838839 2022/04/24 22:20:39 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.408 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -12,6 +12,7 @@
  */
 #define MAGIC_COOKIE 1000
 
+static void probe_objchain(struct obj *);
 static boolean zombie_can_dig(xchar x, xchar y);
 static void polyuse(struct obj *, int, int);
 static void create_polymon(struct obj *, int);
@@ -508,24 +509,28 @@ release_hold(void)
     }
 }
 
+static void
+probe_objchain(struct obj *otmp)
+{
+    for (; otmp; otmp = otmp->nobj) {
+        otmp->dknown = 1; /* treat as "seen" */
+        if (Is_container(otmp) || otmp->otyp == STATUE) {
+            otmp->lknown = 1;
+            if (!SchroedingersBox(otmp))
+                otmp->cknown = 1;
+        }
+    }
+}
+
 void
 probe_monster(struct monst *mtmp)
 {
-    struct obj *otmp;
-
     mstatusline(mtmp);
     if (g.notonhead)
         return; /* don't show minvent for long worm tail */
 
     if (mtmp->minvent) {
-        for (otmp = mtmp->minvent; otmp; otmp = otmp->nobj) {
-            otmp->dknown = 1; /* treat as "seen" */
-            if (Is_container(otmp) || otmp->otyp == STATUE) {
-                otmp->lknown = 1;
-                if (!SchroedingersBox(otmp))
-                    otmp->cknown = 1;
-            }
-        }
+        probe_objchain(mtmp->minvent);
         (void) display_minventory(mtmp, MINV_ALL | MINV_NOLET | PICK_NONE,
                                   (char *) 0);
     } else {
@@ -993,7 +998,7 @@ revive(struct obj *corpse, boolean by_hero)
         /* not useupf(), which charges */
         if (corpse->quan > 1L)
             corpse = splitobj(corpse, 1L);
-        delobj(corpse);
+        delobj_core(corpse, TRUE);
         newsym(x, y);
         break;
     case OBJ_MINVENT:
@@ -2701,22 +2706,12 @@ zapyourself(struct obj *obj, boolean ordinary)
     case SPE_DETECT_UNSEEN:
     case WAN_NOTHING:
         break;
-    case WAN_PROBING: {
-        struct obj *otmp;
-
-        for (otmp = g.invent; otmp; otmp = otmp->nobj) {
-            otmp->dknown = 1;
-            if (Is_container(otmp) || otmp->otyp == STATUE) {
-                otmp->lknown = 1;
-                if (!SchroedingersBox(otmp))
-                    otmp->cknown = 1;
-            }
-        }
+    case WAN_PROBING:
+        probe_objchain(g.invent);
         update_inventory();
         learn_it = TRUE;
         ustatusline();
         break;
-    }
     case SPE_STONE_TO_FLESH: {
         struct obj *otmp, *onxt;
         boolean didmerge;

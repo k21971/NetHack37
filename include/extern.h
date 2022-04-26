@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1646870811 2022/03/10 00:06:51 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1069 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1650875486 2022/04/25 08:31:26 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1109 $ */
 /* Copyright (c) Steve Creps, 1988.				  */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -1104,6 +1104,7 @@ extern void freeinv_core(struct obj *);
 extern void freeinv(struct obj *);
 extern void delallobj(int, int);
 extern void delobj(struct obj *);
+extern void delobj_core(struct obj *, boolean);
 extern struct obj *sobj_at(int, int, int);
 extern struct obj *nxtobj(struct obj *, int, boolean);
 extern struct obj *carrying(int);
@@ -3145,6 +3146,7 @@ extern void set_ulycn(int);
 /* ### wield.c ### */
 
 extern void setuwep(struct obj *);
+extern const char *empty_handed(void);
 extern void setuqwep(struct obj *);
 extern void setuswapwep(struct obj *);
 extern int dowield(void);
