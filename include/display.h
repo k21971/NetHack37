@@ -1,4 +1,4 @@
-/* NetHack 3.7	display.h	$NHDT-Date: 1641940939 2022/01/11 22:42:19 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.64 $ */
+/* NetHack 3.7	display.h	$NHDT-Date: 1651099381 2022/04/27 22:43:01 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.67 $ */
 /* Copyright (c) Dean Luick, with acknowledgements to Kevin Darcy */
 /* and Dave Cohrs, 1990.                                          */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -404,8 +404,8 @@ enum glyphmap_change_triggers { gm_nochange, gm_newgame, gm_levelchange,
  * Altars           Altar (unaligned, chaotic, neutral, lawful, other)
  *                  Count: 5
  *
- * cmap B           S_grave through S_vibrating_square
- *                  Count: (S_vibrating_square - S_grave) + 1 = 37
+ * cmap B           S_grave through S_arrow_trap + TRAPNUM - 1
+ *                  Count: (S_arrow_trap + (TRAPNUM - 1) - S_grave) = 39
  *
  * zap beams        set of four (there are four directions) HI_ZAP.
  *                  Count: 4 * NUM_ZAP
@@ -497,7 +497,9 @@ enum glyph_offsets {
     GLYPH_CMAP_A_OFF     = (((S_trwall - S_vwall) + 1) + GLYPH_CMAP_SOKO_OFF),
     GLYPH_ALTAR_OFF = (((S_brdnladder - S_ndoor) + 1) + GLYPH_CMAP_A_OFF),
     GLYPH_CMAP_B_OFF = (5 + GLYPH_ALTAR_OFF),
-    GLYPH_ZAP_OFF = (((S_vibrating_square - S_grave) + 1) + GLYPH_CMAP_B_OFF),
+    /*               (46           + (26  -  1)- 32     ) == 39 */
+    GLYPH_ZAP_OFF = ((S_arrow_trap + MAXTCHARS - S_grave)
+                     + GLYPH_CMAP_B_OFF),
     GLYPH_CMAP_C_OFF = ((NUM_ZAP << 2) + GLYPH_ZAP_OFF),
     GLYPH_SWALLOW_OFF = (((S_goodpos - S_digbeam) + 1) + GLYPH_CMAP_C_OFF),
     GLYPH_EXPLODE_OFF = ((NUMMONS << 3) + GLYPH_SWALLOW_OFF),
@@ -596,7 +598,8 @@ enum glyph_offsets {
         : ((cmap_idx) <= S_trwall) ? cmap_walls_to_glyph(cmap_idx)         \
         : ((cmap_idx) <  S_altar) ? cmap_a_to_glyph(cmap_idx)              \
         : ((cmap_idx) == S_altar) ? altar_to_glyph(AM_NEUTRAL)             \
-        : ((cmap_idx) <= S_vibrating_square) ? cmap_b_to_glyph(cmap_idx)   \
+        : ((cmap_idx) <  S_arrow_trap + MAXTCHARS)                         \
+          ? cmap_b_to_glyph(cmap_idx)                                      \
         : ((cmap_idx) <= S_goodpos) ? cmap_c_to_glyph(cmap_idx)            \
         : NO_GLYPH)
 
@@ -666,7 +669,7 @@ enum glyph_offsets {
         (glyph) < (5 + GLYPH_ALTAR_OFF))
 #define glyph_is_cmap_b(glyph) \
     ((glyph) >= GLYPH_CMAP_B_OFF && \
-        ((glyph) < (((S_vibrating_square - S_grave) + 1) + GLYPH_CMAP_B_OFF)))
+        ((glyph) < ((S_arrow_trap + MAXTCHARS - S_grave) + GLYPH_CMAP_B_OFF)))
 #define glyph_is_cmap_zap(glyph) \
     ((glyph) >= GLYPH_ZAP_OFF && (glyph) < ((NUM_ZAP << 2) + GLYPH_ZAP_OFF))
 #define glyph_is_cmap_c(glyph) \
@@ -932,7 +935,7 @@ enum glyph_offsets {
     (GLYPH_CMAP_B_OFF + (S_arrow_trap - S_grave))
 #define glyph_is_trap(glyph)      \
     ((glyph) >= (GLYPH_TRAP_OFF) && \
-     (glyph) < ((GLYPH_TRAP_OFF) + (TRAPNUM - 1)))
+     (glyph) < ((GLYPH_TRAP_OFF) + MAXTCHARS))
 #define glyph_is_warning(glyph)   \
     ((glyph) >= GLYPH_WARNING_OFF \
      && (glyph) < (GLYPH_WARNING_OFF + WARNCOUNT))

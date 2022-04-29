@@ -7,6 +7,7 @@
 
 extern const char *const destroy_strings[][3]; /* from zap.c */
 
+static void mk_trap_statue(xchar, xchar);
 static boolean keep_saddle_with_steedcorpse(unsigned, struct obj *,
                                             struct obj *);
 static boolean mu_maybe_destroy_web(struct monst *, boolean, struct trap *);
@@ -38,6 +39,7 @@ static int trapeffect_vibrating_square(struct monst *, struct trap *,
                                        unsigned);
 static int trapeffect_selector(struct monst *, struct trap *, unsigned);
 static char *trapnote(struct trap *, boolean);
+static int choose_trapnote(struct trap *);
 static int steedintrap(struct trap *, struct obj *);
 static void launch_drop_spot(struct obj *, xchar, xchar);
 static boolean find_random_launch_coord(struct trap *, coord *);
@@ -341,6 +343,35 @@ grease_protect(
     return FALSE;
 }
 
+/* create a "living" statue at x,y */
+static void
+mk_trap_statue(xchar x, xchar y)
+{
+    struct monst *mtmp;
+    struct obj *otmp, *statue;
+    struct permonst *mptr;
+    int trycount = 10;
+
+    do { /* avoid ultimately hostile co-aligned unicorn */
+        mptr = &mons[rndmonnum()];
+    } while (--trycount > 0 && is_unicorn(mptr)
+             && sgn(u.ualign.type) == sgn(mptr->maligntyp));
+    statue = mkcorpstat(STATUE, (struct monst *) 0, mptr, x, y,
+                        CORPSTAT_NONE);
+    mtmp = makemon(&mons[statue->corpsenm], 0, 0,
+                   MM_NOCOUNTBIRTH|MM_NOMSG);
+    if (!mtmp)
+        return; /* should never happen */
+    while (mtmp->minvent) {
+        otmp = mtmp->minvent;
+        otmp->owornmask = 0;
+        obj_extract_self(otmp);
+        (void) add_to_container(statue, otmp);
+    }
+    statue->owt = weight(statue);
+    mongone(mtmp);
+}
+
 struct trap *
 maketrap(int x, int y, int typ)
 {
@@ -348,6 +379,9 @@ maketrap(int x, int y, int typ)
     boolean oldplace;
     struct trap *ttmp;
     struct rm *lev = &levl[x][y];
+
+    if (typ == TRAPPED_DOOR || typ == TRAPPED_CHEST)
+        return (struct trap *) 0;
 
     if ((ttmp = t_at(x, y)) != 0) {
         if (undestroyable_trap(ttmp->ttyp))
@@ -385,49 +419,12 @@ maketrap(int x, int y, int typ)
     ttmp->ttyp = typ;
 
     switch (typ) {
-    case SQKY_BOARD: {
-        int tavail[12], tpick[12], tcnt = 0, k;
-        struct trap *t;
-
-        for (k = 0; k < 12; ++k)
-            tavail[k] = tpick[k] = 0;
-        for (t = g.ftrap; t; t = t->ntrap)
-            if (t->ttyp == SQKY_BOARD && t != ttmp)
-                tavail[t->tnote] = 1;
-        /* now populate tpick[] with the available indices */
-        for (k = 0; k < 12; ++k)
-            if (tavail[k] == 0)
-                tpick[tcnt++] = k;
-        /* choose an unused note; if all are in use, pick a random one */
-        ttmp->tnote = (short) ((tcnt > 0) ? tpick[rn2(tcnt)] : rn2(12));
+    case SQKY_BOARD:
+        ttmp->tnote = choose_trapnote(ttmp);
         break;
-    }
-    case STATUE_TRAP: { /* create a "living" statue */
-        struct monst *mtmp;
-        struct obj *otmp, *statue;
-        struct permonst *mptr;
-        int trycount = 10;
-
-        do { /* avoid ultimately hostile co-aligned unicorn */
-            mptr = &mons[rndmonnum()];
-        } while (--trycount > 0 && is_unicorn(mptr)
-                 && sgn(u.ualign.type) == sgn(mptr->maligntyp));
-        statue = mkcorpstat(STATUE, (struct monst *) 0, mptr, x, y,
-                            CORPSTAT_NONE);
-        mtmp = makemon(&mons[statue->corpsenm], 0, 0,
-                       MM_NOCOUNTBIRTH|MM_NOMSG);
-        if (!mtmp)
-            break; /* should never happen */
-        while (mtmp->minvent) {
-            otmp = mtmp->minvent;
-            otmp->owornmask = 0;
-            obj_extract_self(otmp);
-            (void) add_to_container(statue, otmp);
-        }
-        statue->owt = weight(statue);
-        mongone(mtmp);
+    case STATUE_TRAP: /* create a "living" statue */
+        mk_trap_statue(x, y);
         break;
-    }
     case ROLLING_BOULDER_TRAP: /* boulder will roll towards trigger */
         (void) mkroll_launch(ttmp, x, y, BOULDER, 1L);
         break;
@@ -908,12 +905,7 @@ set_utrap(unsigned int tim, unsigned int typ)
         g.context.botl = TRUE;
 
     u.utrap = tim;
-    /* FIXME:
-     * utraptype==0 is bear trap rather than 'none'; we probably ought
-     * to change that but can't do so until save file compatability is
-     * able to be broken.
-     */
-    u.utraptype = tim ? typ : 0;
+    u.utraptype = tim ? typ : TT_NONE;
 
     float_vs_flight(); /* maybe block Lev and/or Fly */
 }
@@ -2546,6 +2538,27 @@ trapnote(struct trap* trap, boolean noprefix)
     if (!noprefix)
         (void) just_an(tnbuf, tn);
     return strcat(tnbuf, tn);
+}
+
+/* choose a note not used by any trap on current level,
+   ignoring ttmp; if all are in use, pick a random one */
+static int
+choose_trapnote(struct trap *ttmp)
+{
+    int tavail[12], tpick[12], tcnt = 0, k;
+    struct trap *t;
+
+    for (k = 0; k < 12; ++k)
+        tavail[k] = tpick[k] = 0;
+    for (t = g.ftrap; t; t = t->ntrap)
+        if (t->ttyp == SQKY_BOARD && t != ttmp)
+            tavail[t->tnote] = 1;
+    /* now populate tpick[] with the available indices */
+    for (k = 0; k < 12; ++k)
+        if (tavail[k] == 0)
+            tpick[tcnt++] = k;
+    /* choose an unused note; if all are in use, pick a random one */
+    return ((tcnt > 0) ? tpick[rn2(tcnt)] : rn2(12));
 }
 
 static int
