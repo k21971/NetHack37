@@ -1500,17 +1500,17 @@ const glyph_info *bkglyphinfo UNUSED;
         fprintf(dumphtml_file, "<span class=\"nh_screen\">  ");
     cc.x = x;
     cc.y = y;
-    desc_found = do_screen_description(cc, TRUE, glyphinfo->gm.symidx, buf,
+    desc_found = do_screen_description(cc, TRUE, glyphinfo->gm.sym.symidx, buf,
                                        &firstmatch, (struct permonst **) 0);
     if (desc_found)
         fprintf(dumphtml_file, "<div class=\"tooltip\">");
     attr = mg_hl_attr(glyphinfo->gm.glyphflags);
-    dump_set_color_attr(glyphinfo->gm.color, attr, TRUE);
-    if (htmlsym[glyphinfo->gm.symidx])
-        fprintf(dumphtml_file, "&#%d;", htmlsym[glyphinfo->gm.symidx]);
+    dump_set_color_attr(glyphinfo->gm.sym.color, attr, TRUE);
+    if (htmlsym[glyphinfo->gm.sym.symidx])
+        fprintf(dumphtml_file, "&#%d;", htmlsym[glyphinfo->gm.sym.symidx]);
     else
         html_dump_char(dumphtml_file, (char)glyphinfo->ttychar);
-    dump_set_color_attr(glyphinfo->gm.color, attr, FALSE);
+    dump_set_color_attr(glyphinfo->gm.sym.color, attr, FALSE);
     if (desc_found)
        fprintf(dumphtml_file,
                "<span class=\"tooltiptext\">%s</span></div>", firstmatch);
