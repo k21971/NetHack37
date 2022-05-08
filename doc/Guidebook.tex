@@ -46,7 +46,7 @@
 \author{Original version - Eric S. Raymond\\
 (Edited and expanded for 3.7 by Mike Stephenson and others)}
 %DO NOT REMOVE NH_DATESUB \date{DATE(%B %-d, %Y)}
-\date{February 27, 2022}
+\date{May 7, 2022}
 
 \maketitle
 
@@ -3970,19 +3970,42 @@ If no weapon is found or the option is
 false, the `t' (throw) command is executed instead.  Persistent.
 %.lp
 \item[\ib{autounlock}]
+%\hyphenation{apply\-key}%this needs to be tested...
 Controls what action to take when attempting to walk into a locked door
 or to loot a locked container.
 Takes a plus-sign separated list of values:
-{\it apply-key\/} which will attempt to use a key or other unlocking tool
-if you have one;
-{\it kick\/} which will kick the door (if you lack a key or omit apply-key;
+% paranoid
+% au => autounlock
+\newlength{\auwidth}
+%.PS Apply-Key
+\settowidth{\auwidth}{\tt Apply-Key}
+\addtolength{\auwidth}{\labelsep}
+\blist{\leftmargin \auwidth \topsep 1mm \itemsep 0mm}
+%.PL Untrap
+\item[{\tt Untrap}]
+prompt about whether to attempt to find a trap;
+it might fail to find one even when present; if it does find one, it
+will ask whether you want to try to disarm the trap; if you decline,
+your character will forget that the door or box is trapped;
+%.PL Apply-Key
+\item[{\tt Apply-Key}]
+if carrying a key or other unlocking tool, prompt about using it;
+%.PL Kick
+\item[{\tt Kick}]
+kick the door (if you omit untrap or decline to attempt untrap and
+you omit apply-key or you lack a key or you decline to use the key;
 has no effect on containers);
-{\it force\/} which will try to force a container's lid with your currently
-wielded weapon (if you lack a key or omit apply-key; has no effect on
-doors); or
-{\it none\/} which can't be combined with the other choices.
-\\
-%.lp ""
+%.PL Force
+\item[{\tt Force}]
+try to force a container's lid with your currently
+wielded weapon (if you omit untrap or decline to attempt untrap and
+you omit apply-key or you lack a key or you decline to use the key;
+has no effect on doors);
+%.PL None
+\item[{\tt None}]
+none of the above; can't be combined with the other choices.
+%.PE
+\elist
 Omitting the value is treated as if {\tt autounlock:apply-key}.
 Preceding {\tt autounlock} with `{\tt !}' or ``{\tt no}'' is treated as
 {\tt autounlock:none}.
@@ -3994,7 +4017,7 @@ Successfully forcing a container open will break its lock and might also
 destroy some of its contents or damage your weapon or both.
 \\
 %.lp ""
-The default is {\it apply-key\/}.
+The default is Apply-Key.
 Persistent.
 %.lp
 \item[\ib{blind}]
@@ -6047,6 +6070,46 @@ Statues and boulders are the rock being referred to, but since
 version 3.6.0, statues are displayed as the monster they depict.
 So S\verb+_+rock is only used for boulders and not used at all if
 overridden by the more specific S\verb+_+boulder.
+
+%.lp
+%.hn 2
+\subsection*{Customizing Map Glyph Representations Using Unicode}
+
+%.pg
+If your platform or terminal supports the display of UTF-8 character
+sequences, you can customize your game display by assigning Unicode
+codepoint values and red-green-blue colors to glyph
+representations. The customizations can be specified for use with a symset that
+has a UTF8 handler within the symbols file such as the enhanced1 set, or
+individually within your own nethack.rc file.
+
+The format for defining a glyph representation is:\\
+\begin{verbatim}
+OPTIONS=glyph:glyphid/U+nnnn/R-G-B
+\end{verbatim}
+
+The window port that is active needs to provide support for displaying UTF-8
+character sequences and explicit 24-bit red-green-blue colors in order for the glyph
+representation to be visible as specified.
+
+For example, the following line in your configuration file will cause
+the glyph representation for glyphid G_pool to use Unicode codepoint U+224B
+and the color represented by R-G-B value 0-0-160:\\
+\begin{verbatim}
+OPTIONS=glyph:G_pool/U+224B/0-0-160
+\end{verbatim}
+
+The list of acceptable glyphid's can be produced by 
+\begin{verbatim}
+    nethack --glyphids
+\end{verbatim}
+Individual NetHack glyphs can be specified using the G\verb+_+ prefix,
+or you can use an S\verb+_+ symbol for a glyphid and store the custom
+representation for all NetHack glyphs that would map to that
+particular symbol.
+
+You will need to select a symset with a UTF8 handler to enable the
+display of the customizations, such as the Enhanced symset.
 
 %.pg
 %.hn 2

@@ -1,4 +1,4 @@
-/* NetHack 3.7	monmove.c	$NHDT-Date: 1603507386 2020/10/24 02:43:06 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.146 $ */
+/* NetHack 3.7	monmove.c	$NHDT-Date: 1651886999 2022/05/07 01:29:59 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.179 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Michael Allison, 2006. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -109,14 +109,26 @@ watch_on_duty(register struct monst* mtmp)
     }
 }
 
+/* move a monster; if a threat to busy hero, stop doing whatever it is */
 int
-dochugw(register struct monst* mtmp)
+dochugw(
+    register struct monst *mtmp,
+    boolean chug) /* True: monster is moving;
+                   * False: monster was just created or has teleported
+                   * so perform stop-what-you're-doing-if-close-enough-
+                   * to-be-a-threat check but don't move mtmp */
 {
-    int x = mtmp->mx, y = mtmp->my;
-    boolean already_saw_mon = !g.occupation ? 0 : canspotmon(mtmp);
-    int rd = dochug(mtmp);
+    int x = mtmp->mx, y = mtmp->my; /* 'mtmp's location before dochug() */
+    /* skip canspotmon() if occupation is Null */
+    boolean already_saw_mon = (chug && g.occupation) ? canspotmon(mtmp) : 0;
+    int rd = chug ? dochug(mtmp) : 0;
 
-    /* a similar check is in monster_nearby() in hack.c */
+    /*
+     * A similar check is in monster_nearby() in hack.c.
+     * [The two checks have a lot of differences and chances are high
+     * that some of those are unintentional.]
+     */
+
     /* check whether hero notices monster and stops current activity */
     if (g.occupation && !rd
         /* monster is hostile and can attack (or hallu distorts knowledge) */

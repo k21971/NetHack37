@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1650875486 2022/04/25 08:31:26 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1109 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1651886993 2022/05/07 01:29:53 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1112 $ */
 /* Copyright (c) Steve Creps, 1988.				  */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -1056,6 +1056,9 @@ extern void nh_snprintf(const char *func, int line, char *str, size_t size,
 extern int FITSint_(long long, const char *, int);
 #define FITSuint(x) FITSuint_(x, __func__, __LINE__)
 extern unsigned FITSuint_(unsigned long long, const char *, int);
+#ifdef ENHANCED_SYMBOLS
+extern int unicodeval_to_utf8str(int, uint8 *, size_t);
+#endif
 
 /* ### insight.c ### */
 
@@ -1290,6 +1293,9 @@ extern int buzzmu(struct monst *, struct attack *);
 extern void runtime_info_init(void);
 extern const char *do_runtime_info(int *);
 extern void release_runtime_info(void);
+#ifdef ENHANCED_SYMBOLS
+extern void dump_glyphids(void);
+#endif
 
 /* ### mhitm.c ### */
 
@@ -1631,7 +1637,7 @@ extern boolean itsstuck(struct monst *);
 extern boolean mb_trapped(struct monst *, boolean);
 extern boolean monhaskey(struct monst *, boolean);
 extern void mon_regen(struct monst *, boolean);
-extern int dochugw(struct monst *);
+extern int dochugw(struct monst *, boolean);
 extern boolean onscary(int, int, struct monst *);
 extern struct monst *find_pmmonst(int);
 extern int bee_eat_jelly(struct monst *, struct obj *);
@@ -1837,6 +1843,10 @@ extern void synch_cursor(void);
 extern void nethack_enter_consoletty(void);
 extern void consoletty_exit(void);
 extern int set_keyhandling_via_option(void);
+#ifdef ENHANCED_SYMBOLS
+extern void tty_utf8graphics_fixup(void);
+extern void tty_ibmgraphics_fixup(void);
+#endif /* ENHANCED_SYMBOLS */
 #endif /* WIN32 */
 
 /* ### o_init.c ### */
@@ -1956,10 +1966,6 @@ extern void set_wc2_option_mod_status(unsigned long, int);
 extern void set_option_mod_status(const char *, int);
 extern int add_autopickup_exception(const char *);
 extern void free_autopickup_exceptions(void);
-extern int load_symset(const char *, int);
-extern void free_symsets(void);
-extern boolean parsesymbols(char *, int);
-extern struct symparse *match_sym(char *);
 extern void set_playmode(void);
 extern int sym_val(const char *);
 extern int query_color(const char *);
@@ -2632,11 +2638,25 @@ extern void init_rogue_symbols(void);
 extern void init_ov_primary_symbols(void);
 extern void init_ov_rogue_symbols(void);
 extern void clear_symsetentry(int, boolean);
-extern void update_primary_symset(struct symparse *, int);
-extern void update_rogue_symset(struct symparse *, int);
-extern void update_ov_primary_symset(struct symparse *, int);
-extern void update_ov_rogue_symset(struct symparse *, int);
+extern void update_primary_symset(const struct symparse *, int);
+extern void update_rogue_symset(const struct symparse *, int);
+extern void update_ov_primary_symset(const struct symparse *, int);
+extern void update_ov_rogue_symset(const struct symparse *, int);
 extern nhsym get_othersym(int, int);
+extern boolean symset_is_compatible(enum symset_handling_types, unsigned long);
+extern void set_symhandling(char *handling, int which_set);
+extern boolean proc_symset_line(char *);
+extern int do_symset(boolean);
+extern int load_symset(const char *, int);
+extern void free_symsets(void);
+extern const struct symparse *match_sym(char *);
+extern boolean parsesymbols(char *, int);
+#ifdef ENHANCED_SYMBOLS
+extern struct customization_detail *find_matching_symset_customization(
+               const char *symset_name, int custtype,
+               enum graphics_sets which_set);
+extern void apply_customizations_to_symset(enum graphics_sets which_set);
+#endif
 
 /* ### sys.c ### */
 
@@ -2762,8 +2782,9 @@ extern void water_damage_chain(struct obj *, boolean);
 extern boolean drown(void);
 extern void drain_en(int);
 extern int dountrap(void);
+extern int could_untrap(boolean, boolean);
 extern void cnv_trap_obj(int, int, struct trap *, boolean);
-extern int untrap(boolean);
+extern int untrap(boolean, int, int, struct obj *);
 extern boolean openholdingtrap(struct monst *, boolean *);
 extern boolean closeholdingtrap(struct monst *, boolean *);
 extern boolean openfallingtrap(struct monst *, boolean, boolean *);
@@ -2921,6 +2942,9 @@ extern void setftty(void);
 extern void intron(void);
 extern void introff(void);
 extern void error (const char *, ...) PRINTF_F(1, 2);
+#ifdef ENHANCED_SYMBOLS
+extern void tty_utf8graphics_fixup(void);
+#endif
 #endif /* UNIX || __BEOS__ */
 
 /* ### unixunix.c ### */
@@ -2949,6 +2973,24 @@ extern boolean file_exists(const char *);
 extern int hide_privileges(boolean);
 #endif
 #endif /* UNIX */
+
+/* ### utf8map.c ### */
+
+#ifdef ENHANCED_SYMBOLS
+extern int glyphrep(const char *);
+extern char *mixed_to_utf8(char *buf, size_t bufsz, const char *str, int *);
+extern int match_glyph(char *);
+extern void dump_all_glyphids(FILE *fp);
+extern void fill_glyphid_cache(void);
+extern void free_glyphid_cache(void);
+extern boolean glyphid_cache_status(void);
+extern int glyphrep_to_custom_map_entries(const char *op, int *glyph);
+void free_all_glyphmap_u(void);
+int add_custom_urep_entry(const char *symset_name, int glyphidx,
+                          const uint8 *utf8str, long ucolor,
+                          enum graphics_sets which_set);
+int set_map_u(glyph_map *gm, const uint8 *utf8str, long ucolor);
+#endif /* ENHANCED_SYMBOLS */
 
 /* ### vault.c ### */
 
@@ -3203,6 +3245,7 @@ extern int has_color(int);
 extern int glyph2ttychar(int);
 extern int glyph2symidx(int);
 extern char *encglyph(int);
+extern int decode_glyph(const char *str, int *glyph_ptr);
 extern char *decode_mixed(char *, const char *);
 extern void genl_putmixed(winid, int, const char *);
 extern boolean menuitem_invert_test(int, unsigned, boolean);

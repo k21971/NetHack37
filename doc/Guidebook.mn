@@ -36,7 +36,7 @@
 .ds f0 "\*(vr
 .ds f1
 .\"DO NOT REMOVE NH_DATESUB .ds f2 "DATE(%B %-d, %Y)
-.ds f2 "February 27, 2022
+.ds f2 "May 7, 2022
 .
 .\" A note on some special characters:
 .\" \(lq = left double quote
@@ -3662,15 +3662,26 @@ Persistent.
 Controls what action to take when attempting to walk into a locked door
 or to loot a locked container.
 Takes a plus-sign separated list of values:
-\fIapply-key\fP which will attempt to use a key or other unlocking tool
-if you have one;
-\fIkick\fP which will kick the door (if you lack a key or omit apply-key;
+.PS Apply-Key
+.PL Untrap
+prompt about whether to attempt to find a trap;
+it might fail to find one even when present; if it does find one, it
+will ask whether you want to try to disarm the trap; if you decline,
+your character will forget that the door or box is trapped;
+.PL Apply-Key
+if carrying a key or other unlocking tool, prompt about using it;
+.PL Kick
+kick the door (if you omit untrap or decline to attempt untrap and
+you omit apply-key or you lack a key or you decline to use the key;
 has no effect on containers);
-\fIforce\fP which will try to force a container's lid with your currently
-wielded weapon (if you lack a key or omit apply-key; has no effect on
-doors); or
-\fInone\fP which can't be combined with the other choices.
-.lp ""
+.PL Force
+try to force a container's lid with your currently
+wielded weapon (if you omit untrap or decline to attempt untrap and
+you omit apply-key or you lack a key or you decline to use the key;
+has no effect on doors);
+.PL None
+none of the above; can't be combined with the other choices.
+.PE
 Omitting the value is treated as if \f(CRautounlock:apply-key\fP.
 Preceding \f(CRautounlock\fP with \(oq!\(cq or \(lqno\(rq is treated as
 \f(CRautounlock:none\fP.
@@ -3680,7 +3691,7 @@ Successfully kicking a door will break it and wake up nearby monsters.
 Successfully forcing a container open will break its lock and might also
 destroy some of its contents or damage your weapon or both.
 .lp ""
-The default is \fIapply-key\fP.
+The default is Apply-Key.
 Persistent.
 .lp blind
 Start the character permanently blind (default false).
@@ -5506,6 +5517,41 @@ Statues and boulders are the rock being referred to, but since
 version 3.6.0, statues are displayed as the monster they depict.
 So S_rock is only used for boulders and not used at all if
 overridden by the more specific S_boulder.
+.pg
+.hn 2
+Customizing Map Glyph Representations Using Unicode
+.pg
+If your platform or terminal supports the display of UTF-8 character
+sequences, you can customize your game display by assigning Unicode
+codepoint values and \fIred-green-blue\fP colors to glyph
+representations. The customizations can be specified for use with a symset that
+has a UTF8 handler within the symbols file such as the enhanced1 set, or 
+individually within your nethack.rc file.
+
+.pg
+The format for defining a glyph representation is:
+.SD n
+\f(CROPTIONS=glyph:glyphid\fIU+nnnn\fP/\fIR-G-B\fP\fP
+.ED
+.pg
+The window port that is active needs to provide support for displaying
+UTF-8 character sequences and explicit red-green-blue colors in order
+for the glyph representation to be visible.
+For example, the following line in your configuration file will cause
+the glyph representation for glyphid G_pool to use Unicode codepoint
+U+224B and the color represented by R-G-B value 0-0-160
+.SD n
+\f(CROPTIONS=glyph:G_pool/U+224B/0-0-160\fP
+.ED
+The list of acceptable glyphid's can be produced by 
+\fBnethack \-\-dumpglyphids\fP.
+Individual NetHack glyphs can be specified using the G_ prefix,
+or you can use an S_ symbol for a glyphid and store the custom
+representation for all NetHack glyphs that would map to that
+particular symbol.
+
+You will need to select a symset with a UTF8 handler to enable the
+display of the customizations, such as the Enhanced symset.
 .pg
 .hn 2
 Configuring NetHack for Play by the Blind

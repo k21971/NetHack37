@@ -1,4 +1,4 @@
-HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.903 $ $NHDT-Date: 1651298443 2022/04/30 06:00:43 $
+HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.907 $ $NHDT-Date: 1651908301 2022/05/07 07:25:01 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -903,6 +903,10 @@ using wizard mode ^V in endgame to return to previously visited Plane of Water
 	likewise for clouds on Plane of Air
 on tty at least, "version incompatibility for save/123xyzzy" was invisible:
 	a blank message of appropriate length followed by --More--
+fix a pair of off-by-one bugs when doling out initial characteristics points,
+	resulting in an unintentional bias toward Str and away from Cha;
+	negligible effect on individual games but had a minor cumulative
+	effect across a large set of games
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1197,6 +1201,10 @@ using #wizmakemap on Plane of Water added a new set of air bubbles each time
 	it was run and eventually replaced just about all the water; likewise
 	with clouds on Plane of Air
 avoid new "where are we?" panic if player quits during character selection
+add Untrap as a potential 'autounlock' action
+if a zombie revived near the hero, a busy hero would keep doing whatever
+	action was in progress instead of stopping because the zombify didn't
+	walk across the threshold from no-threat to threat
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
