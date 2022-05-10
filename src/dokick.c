@@ -19,6 +19,8 @@ static int really_kick_object(xchar, xchar);
 static char *kickstr(char *, const char *);
 static boolean watchman_thief_arrest(struct monst *);
 static boolean watchman_door_damage(struct monst *, xchar, xchar);
+static void kick_dumb(int, int);
+static void kick_ouch(int, int, const char *);
 static void otransit_msg(struct obj *, boolean, boolean, long);
 static void drop_to(coord *, schar, xchar, xchar);
 
@@ -800,13 +802,57 @@ watchman_door_damage(struct monst *mtmp, xchar x, xchar y)
     return FALSE;
 }
 
+static void
+kick_dumb(int x, int y)
+{
+    exercise(A_DEX, FALSE);
+    if (martial() || ACURR(A_DEX) >= 16 || rn2(3)) {
+        You("kick at empty space.");
+        if (Blind)
+            feel_location(x, y);
+    } else {
+        pline("Dumb move!  You strain a muscle.");
+        exercise(A_STR, FALSE);
+        set_wounded_legs(RIGHT_SIDE, 5 + rnd(5));
+    }
+    if ((Is_airlevel(&u.uz) || Levitation) && rn2(2))
+        hurtle(-u.dx, -u.dy, 1, TRUE);
+}
+
+static void
+kick_ouch(int x, int y, const char *kickobjnam)
+{
+    int dmg;
+    char buf[BUFSZ];
+
+    pline("Ouch!  That hurts!");
+    exercise(A_DEX, FALSE);
+    exercise(A_STR, FALSE);
+    if (isok(x, y)) {
+        if (Blind)
+            feel_location(x, y); /* we know we hit it */
+        if (is_drawbridge_wall(x, y) >= 0) {
+            pline_The("drawbridge is unaffected.");
+            /* update maploc to refer to the drawbridge */
+            (void) find_drawbridge(&x, &y);
+            g.maploc = &levl[x][y];
+        }
+    }
+    if (!rn2(3))
+        set_wounded_legs(RIGHT_SIDE, 5 + rnd(5));
+    dmg = rnd(ACURR(A_CON) > 15 ? 3 : 5);
+    losehp(Maybe_Half_Phys(dmg), kickstr(buf, kickobjnam), KILLED_BY);
+    if (Is_airlevel(&u.uz) || Levitation)
+        hurtle(-u.dx, -u.dy, rn1(2, 4), TRUE); /* assume it's heavy */
+}
+
 /* the #kick command */
 int
 dokick(void)
 {
     int x, y;
     int avrg_attrib;
-    int dmg = 0, glyph, oldglyph = -1;
+    int glyph, oldglyph = -1;
     register struct monst *mtmp;
     boolean no_kick = FALSE;
     char buf[BUFSZ], kickobjnam[BUFSZ];
@@ -930,7 +976,8 @@ dokick(void)
 
     if (!isok(x, y)) {
         g.maploc = &g.nowhere;
-        goto ouch;
+        kick_ouch(x, y, kickobjnam);
+        return ECMD_TIME;
     }
     g.maploc = &levl[x][y];
 
@@ -998,7 +1045,8 @@ dokick(void)
                 hurtle(-u.dx, -u.dy, 1, TRUE); /* assume it's light */
             return ECMD_TIME;
         }
-        goto ouch;
+        kick_ouch(x, y, kickobjnam);
+        return ECMD_TIME;
     }
 
     if (!IS_DOOR(g.maploc->typ)) {
@@ -1023,8 +1071,10 @@ dokick(void)
                     || g.maploc->doormask == D_NODOOR)
                     unblock_point(x, y); /* vision */
                 return ECMD_TIME;
-            } else
-                goto ouch;
+            } else {
+                kick_ouch(x, y, kickobjnam);
+                return ECMD_TIME;
+            }
         }
         if (g.maploc->typ == SCORR) {
             if (!Levitation && rn2(30) < avrg_attrib) {
@@ -1034,13 +1084,17 @@ dokick(void)
                 feel_newsym(x, y); /* we know it's gone */
                 unblock_point(x, y); /* vision */
                 return ECMD_TIME;
-            } else
-                goto ouch;
+            } else {
+                kick_ouch(x, y, kickobjnam);
+                return ECMD_TIME;
+            }
         }
         if (IS_THRONE(g.maploc->typ)) {
             register int i;
-            if (Levitation)
-                goto dumb;
+            if (Levitation) {
+                kick_dumb(x, y);
+                return ECMD_TIME;
+            }
             if ((Luck < 0 || g.maploc->doormask) && !rn2(3)) {
                 g.maploc->typ = ROOM;
                 g.maploc->doormask = 0; /* don't leave loose ends.. */
@@ -1075,27 +1129,38 @@ dokick(void)
                 if (dunlev(&u.uz) < dunlevs_in_dungeon(&u.uz)) {
                     fall_through(FALSE, 0);
                     return ECMD_TIME;
-                } else
-                    goto ouch;
+                } else {
+                    kick_ouch(x, y, kickobjnam);
+                    return ECMD_TIME;
+                }
             }
-            goto ouch;
+            kick_ouch(x, y, kickobjnam);
+            return ECMD_TIME;
         }
         if (IS_ALTAR(g.maploc->typ)) {
-            if (Levitation)
-                goto dumb;
+            if (Levitation) {
+                kick_dumb(x, y);
+                return ECMD_TIME;
+            }
             You("kick %s.", (Blind ? something : "the altar"));
             altar_wrath(x, y);
-            if (!rn2(3))
-                goto ouch;
+            if (!rn2(3)) {
+                kick_ouch(x, y, kickobjnam);
+                return ECMD_TIME;
+            }
             exercise(A_DEX, TRUE);
             return ECMD_TIME;
         }
         if (IS_FOUNTAIN(g.maploc->typ)) {
-            if (Levitation)
-                goto dumb;
+            if (Levitation) {
+                kick_dumb(x, y);
+                return ECMD_TIME;
+            }
             You("kick %s.", (Blind ? something : "the fountain"));
-            if (!rn2(3))
-                goto ouch;
+            if (!rn2(3)) {
+                kick_ouch(x, y, kickobjnam);
+                return ECMD_TIME;
+            }
             /* make metal boots rust */
             if (uarmf && rn2(3))
                 if (water_damage(uarmf, "metal boots", TRUE) == ER_NOTHING) {
@@ -1106,10 +1171,14 @@ dokick(void)
             return ECMD_TIME;
         }
         if (IS_GRAVE(g.maploc->typ)) {
-            if (Levitation)
-                goto dumb;
-            if (rn2(4))
-                goto ouch;
+            if (Levitation) {
+                kick_dumb(x, y);
+                return ECMD_TIME;
+            }
+            if (rn2(4)) {
+                kick_ouch(x, y, kickobjnam);
+                return ECMD_TIME;
+            }
             exercise(A_WIS, FALSE);
             if (Role_if(PM_ARCHEOLOGIST) || Role_if(PM_SAMURAI)
                 || ((u.ualign.type == A_LAWFUL) && (u.ualign.record > -10))) {
@@ -1127,8 +1196,10 @@ dokick(void)
             }
             return ECMD_TIME;
         }
-        if (g.maploc->typ == IRONBARS)
-            goto ouch;
+        if (g.maploc->typ == IRONBARS) {
+            kick_ouch(x, y, kickobjnam);
+            return ECMD_TIME;
+        }
         if (IS_TREE(g.maploc->typ)) {
             struct obj *treefruit;
 
@@ -1136,7 +1207,8 @@ dokick(void)
             if (rn2(3)) {
                 if (!rn2(6) && !(g.mvitals[PM_KILLER_BEE].mvflags & G_GONE))
                     You_hear("a low buzzing."); /* a warning */
-                goto ouch;
+                kick_ouch(x, y, kickobjnam);
+                return ECMD_TIME;
             }
             if (rn2(15) && !(g.maploc->looted & TREE_LOOTED)
                 && (treefruit = rnd_treefruit_at(x, y))) {
@@ -1184,13 +1256,16 @@ dokick(void)
                 g.maploc->looted |= TREE_SWARM;
                 return ECMD_TIME;
             }
-            goto ouch;
+            kick_ouch(x, y, kickobjnam);
+            return ECMD_TIME;
         }
         if (IS_SINK(g.maploc->typ)) {
             int gend = poly_gender();
 
-            if (Levitation)
-                goto dumb;
+            if (Levitation) {
+                kick_dumb(x, y);
+                return ECMD_TIME;
+            }
             if (rn2(5)) {
                 if (!Deaf)
                     pline("Klunk!  The pipes vibrate noisily.");
@@ -1243,58 +1318,33 @@ dokick(void)
                 }
                 return ECMD_TIME;
             }
-            goto ouch;
+            kick_ouch(x, y, kickobjnam);
+            return ECMD_TIME;
         }
         if (g.maploc->typ == STAIRS || g.maploc->typ == LADDER
             || IS_STWALL(g.maploc->typ)) {
-            if (!IS_STWALL(g.maploc->typ) && g.maploc->ladder == LA_DOWN)
-                goto dumb;
- ouch:
-            pline("Ouch!  That hurts!");
-            exercise(A_DEX, FALSE);
-            exercise(A_STR, FALSE);
-            if (isok(x, y)) {
-                if (Blind)
-                    feel_location(x, y); /* we know we hit it */
-                if (is_drawbridge_wall(x, y) >= 0) {
-                    pline_The("drawbridge is unaffected.");
-                    /* update maploc to refer to the drawbridge */
-                    (void) find_drawbridge(&x, &y);
-                    g.maploc = &levl[x][y];
-                }
+            if (!IS_STWALL(g.maploc->typ) && g.maploc->ladder == LA_DOWN) {
+                kick_dumb(x, y);
+                return ECMD_TIME;
             }
-            if (!rn2(3))
-                set_wounded_legs(RIGHT_SIDE, 5 + rnd(5));
-            dmg = rnd(ACURR(A_CON) > 15 ? 3 : 5);
-            losehp(Maybe_Half_Phys(dmg), kickstr(buf, kickobjnam), KILLED_BY);
-            if (Is_airlevel(&u.uz) || Levitation)
-                hurtle(-u.dx, -u.dy, rn1(2, 4), TRUE); /* assume it's heavy */
+            kick_ouch(x, y, kickobjnam);
             return ECMD_TIME;
         }
-        goto dumb;
+        kick_dumb(x, y);
+        return ECMD_TIME;
     }
 
     if (g.maploc->doormask == D_ISOPEN || g.maploc->doormask == D_BROKEN
         || g.maploc->doormask == D_NODOOR) {
- dumb:
-        exercise(A_DEX, FALSE);
-        if (martial() || ACURR(A_DEX) >= 16 || rn2(3)) {
-            You("kick at empty space.");
-            if (Blind)
-                feel_location(x, y);
-        } else {
-            pline("Dumb move!  You strain a muscle.");
-            exercise(A_STR, FALSE);
-            set_wounded_legs(RIGHT_SIDE, 5 + rnd(5));
-        }
-        if ((Is_airlevel(&u.uz) || Levitation) && rn2(2))
-            hurtle(-u.dx, -u.dy, 1, TRUE);
+        kick_dumb(x, y);
         return ECMD_TIME; /* uses a turn */
     }
 
     /* not enough leverage to kick open doors while levitating */
-    if (Levitation)
-        goto ouch;
+    if (Levitation) {
+        kick_ouch(x, y, kickobjnam);
+        return ECMD_TIME;
+    }
 
     exercise(A_DEX, TRUE);
     /* door is known to be CLOSED or LOCKED */
