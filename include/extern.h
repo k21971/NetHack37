@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1651886993 2022/05/07 01:29:53 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1112 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1652391728 2022/05/12 21:42:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1115 $ */
 /* Copyright (c) Steve Creps, 1988.				  */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -394,6 +394,14 @@ extern int wiz_debug_cmd_bury(void);
 
 /* ### display.c ### */
 
+extern int tp_sensemon(struct monst *);
+extern int sensemon(struct monst *);
+extern int mon_warning(struct monst *);
+extern int mon_visible(struct monst *);
+extern int see_with_infrared(struct monst *);
+extern int canseemon(struct monst *);
+extern int knowninvisible(struct monst *);
+extern int is_safemon(struct monst *);
 extern void magic_map_background(xchar, xchar, int);
 extern void map_background(xchar, xchar, int);
 extern void map_trap(struct trap *, int);
@@ -2438,7 +2446,6 @@ extern boolean tended_shop(struct mkroom *);
 extern boolean is_unpaid(struct obj *);
 extern void delete_contents(struct obj *);
 extern void obfree(struct obj *, struct obj *);
-extern void home_shk(struct monst *, boolean);
 extern void make_happy_shk(struct monst *, boolean);
 extern void make_happy_shoppers(boolean);
 extern void hot_pursuit(struct monst *);
@@ -3010,8 +3017,8 @@ extern void vault_gd_watching(unsigned int);
 
 /* ### version.c ### */
 
-extern char *version_string(char *);
-extern char *getversionstring(char *);
+extern char *version_string(char *, size_t bufsz);
+extern char *getversionstring(char *, size_t bufsz);
 extern int doversion(void);
 extern int doextversion(void);
 #ifdef MICRO

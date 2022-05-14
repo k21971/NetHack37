@@ -764,7 +764,7 @@ dump_everything(
        it's conceivable that the game started with a different
        build date+time or even with an older nethack version,
        but we only have access to the one it finished under */
-    putstr(0, ATR_SUBHEAD, getversionstring(pbuf));
+    putstr(0, ATR_SUBHEAD, getversionstring(pbuf, sizeof pbuf));
     putstr(NHW_DUMPTXT, 0, "");
 
     /* game start and end date+time to disambiguate version date+time */
