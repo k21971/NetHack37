@@ -1,4 +1,4 @@
-/* NetHack 3.7	mon.c	$NHDT-Date: 1652478356 2022/05/13 21:45:56 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.426 $ */
+/* NetHack 3.7	mon.c	$NHDT-Date: 1652689648 2022/05/16 08:27:28 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.428 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -2309,7 +2309,7 @@ static void
 mon_leaving_level(struct monst *mon)
 {
     int mx = mon->mx, my = mon->my;
-    boolean onmap = (mx > 0 && mon != u.usteed);
+    boolean onmap = (isok(mx, my) && g.level.monsters[mx][my] == mon);
 
     /* to prevent an infinite relobj-flooreffects-hmon-killed loop */
     mon->mtrapped = 0;
@@ -2322,9 +2322,10 @@ mon_leaving_level(struct monst *mon)
         else
             remove_monster(mx, my);
 
-        mon->mx = mon->my = 0; /* off normal map; if caller wants to use
-                                * mon's coordinates after this, it must
-                                * save those before calling us */
+#if 0   /* mustn't do this; too many places assume that the stale
+           monst->mx,my values are still valid */
+        mon->mx = mon->my = 0; /* off normal map */
+#endif
     }
     if (onmap) {
         mon->mundetected = 0; /* for migration; doesn't matter for death */
@@ -2369,19 +2370,25 @@ m_detach(
     mtmp->mhp = 0; /* simplify some tests: force mhp to 0 */
     if (mtmp->iswiz)
         wizdead();
-    if (mtmp->data->msound == MS_NEMESIS)
+    if (mtmp->data->msound == MS_NEMESIS) {
+        struct permonst *mdat = mtmp->data;
         nemdead();
+        /* The Archeologist, Caveman, and Priest quest texts describe
+           the nemesis's body creating noxious fumes/gas when
+           killed. */
+        if (mdat == &mons[PM_MINION_OF_HUHETOTL]
+            || mdat == &mons[PM_CHROMATIC_DRAGON]
+            || mdat == &mons[PM_NALZOK]) {
+            create_gas_cloud(mx, my, 5, 8);
+        }
+    }
     if (mtmp->data->msound == MS_LEADER)
         leaddead();
     if (mtmp->m_id == g.stealmid)
         thiefdead();
-    /* release (drop onto map) all objects carried by mtmp; first,
-       temporarily restore mtmp's internal location (without actually
-       putting it back on the map) because relobj() relies on that but
-       mon_leaving_level() just cleared that */
-    mtmp->mx = mx, mtmp->my = my;
+    /* release (drop onto map) all objects carried by mtmp; assumes that
+       mtmp->mx,my contains the appropriate location */
     relobj(mtmp, 1, FALSE); /* drop mtmp->minvent, then issue newsym(mx,my) */
-    mtmp->mx = mtmp->my = 0;
 
     if (mtmp->isshk)
         shkgone(mtmp);
@@ -2745,6 +2752,7 @@ mondied(register struct monst* mdef)
     if (!DEADMONSTER(mdef))
         return; /* lifesaved */
 
+    /* this assumes that the dead monster's map coordinates remain accurate */
     if (corpse_chance(mdef, (struct monst *) 0, FALSE)
         && (accessible(mdef->mx, mdef->my) || is_pool(mdef->mx, mdef->my)))
         (void) make_corpse(mdef, CORPSTAT_NONE);
