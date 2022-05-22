@@ -1641,6 +1641,7 @@ display detected door traps and chest traps as trapped doors and trapped
 if built with DEBUG enabled and running in wizard mode, starting play with
 	DEBUGFILES=seethru in environment makes clouds on the Plane of Air,
 	water on Plane of Water, and fumaroles on Plane of Fire be transparent
+add wizard mode #wizkill command to remove monster(s) from play
 
 
 Platform- and/or Interface-Specific New Features
@@ -1793,6 +1794,8 @@ mark high altars in altarmask (pr #748 by entrez)
 split kicking empty space into separate function (pr #754 by argrath)
 split adjusting attributes into separate function (pr #757 by argrath)
 split getting damages with a kick into separate function (pr #758 by argrath)
+split fixing curse trouble into separate function (pr #765 by argrath)
+Handle -eaux plurals in makeplural/makesingular (pr #767 by entrez)
 
 
 Code Cleanup and Reorganization

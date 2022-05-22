@@ -1015,8 +1015,12 @@ revive(struct obj *corpse, boolean by_hero)
             break;
         }
         /*FALLTHRU*/
+    case OBJ_FREE:
+    case OBJ_MIGRATING:
+    case OBJ_ONBILL:
+    case OBJ_LUAFREE:
     default:
-        panic("revive");
+        panic("revive default case %d", (int) corpse->where);
     }
 
     return mtmp;
