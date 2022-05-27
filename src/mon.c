@@ -650,6 +650,7 @@ make_corpse(struct monst *mtmp, unsigned int corpseflags)
             obj = obj_meld(&obj, &otmp);
         }
         free_mgivenname(mtmp);
+        newsym(x, y);
         return obj;
     default:
  default_1:
