@@ -1171,7 +1171,8 @@ meatmetal(struct monst *mtmp)
                     delobj(otmp);
                     ptr = mtmp->data;
                     if (poly) {
-                        if (newcham(mtmp, (struct permonst *) 0, FALSE, vis))
+                        if (newcham(mtmp, (struct permonst *) 0,
+                                    vis ? NC_SHOW_MSG : NO_NC_FLAGS))
                             ptr = mtmp->data;
                     } else if (grow) {
                         ptr = grow_up(mtmp, (struct monst *) 0);
@@ -1333,7 +1334,8 @@ meatobj(struct monst* mtmp) /* for gelatinous cubes */
             delobj(otmp); /* munch */
             ptr = mtmp->data;
             if (poly) {
-                if (newcham(mtmp, (struct permonst *) 0, FALSE, vis))
+                if (newcham(mtmp, (struct permonst *) 0,
+                            vis ? NC_SHOW_MSG : NO_NC_FLAGS))
                     ptr = mtmp->data;
             } else if (grow) {
                 ptr = grow_up(mtmp, (struct monst *) 0);
@@ -1427,7 +1429,8 @@ meatcorpse(struct monst* mtmp) /* for purple worms and other voracious monsters 
         ptr = original_ptr;
         delobj(otmp);
         if (poly) {
-            if (newcham(mtmp, (struct permonst *) 0, FALSE, vis))
+            if (newcham(mtmp, (struct permonst *) 0,
+                        vis ? NC_SHOW_MSG : NO_NC_FLAGS))
                 ptr = mtmp->data;
         } else if (grow) {
             ptr = grow_up(mtmp, (struct monst *) 0);
@@ -2542,7 +2545,7 @@ mondead(register struct monst* mtmp)
                 if (enexto(&new_xy, mtmp->mx, mtmp->my, &mons[mndx]))
                     rloc_to(mtmp, new_xy.x, new_xy.y);
             }
-            (void) newcham(mtmp, &mons[mndx], FALSE, FALSE);
+            (void) newcham(mtmp, &mons[mndx], NO_NC_FLAGS);
             if (mtmp->data == &mons[mndx])
                 mtmp->cham = NON_PM;
             else
@@ -3209,7 +3212,7 @@ mon_to_stone(struct monst* mtmp)
         /* it's a golem, and not a stone golem */
         if (canseemon(mtmp))
             pline("%s solidifies...", Monnam(mtmp));
-        if (newcham(mtmp, &mons[PM_STONE_GOLEM], FALSE, FALSE)) {
+        if (newcham(mtmp, &mons[PM_STONE_GOLEM], NO_NC_FLAGS)) {
             if (canseemon(mtmp))
                 pline("Now it's %s.", an(pmname(mtmp->data, Mgender(mtmp))));
         } else {
@@ -3261,7 +3264,7 @@ vamp_stone(struct monst* mtmp)
                 pline("%s!", buf);
                 display_nhwindow(WIN_MESSAGE, FALSE);
             }
-            (void) newcham(mtmp, &mons[mndx], FALSE, FALSE);
+            (void) newcham(mtmp, &mons[mndx], NO_NC_FLAGS);
             if (mtmp->data == &mons[mndx])
                 mtmp->cham = NON_PM;
             else
@@ -3281,7 +3284,7 @@ vamp_stone(struct monst* mtmp)
         mtmp->mfrozen = 0;
         set_mon_min_mhpmax(mtmp, 10); /* mtmp->mhpmax=max(mtmp->m_lev+1,10) */
         mtmp->mhp = mtmp->mhpmax;
-        (void) newcham(mtmp, &mons[mtmp->cham], FALSE, TRUE);
+        (void) newcham(mtmp, &mons[mtmp->cham], NC_SHOW_MSG);
         newsym(mtmp->mx, mtmp->my);
         return FALSE;   /* didn't petrify */
     }
@@ -3816,7 +3819,7 @@ normal_shape(struct monst *mon)
     if (mcham >= LOW_PM) {
         unsigned mcan = mon->mcan;
 
-        (void) newcham(mon, &mons[mcham], FALSE, FALSE);
+        (void) newcham(mon, &mons[mcham], NC_SHOW_MSG);
         mon->cham = NON_PM;
         /* newcham() may uncancel a polymorphing monster; override that */
         if (mcan)
@@ -4132,7 +4135,7 @@ decide_to_shapeshift(struct monst* mon, int shiftflags)
         }
     }
     if (dochng) {
-        if (newcham(mon, ptr, FALSE, msg) && is_vampshifter(mon)) {
+        if (newcham(mon, ptr, msg ? NC_SHOW_MSG : 0) && is_vampshifter(mon)) {
             /* for vampshift, override the 10% chance for sex change */
             ptr = mon->data;
             if (!is_male(ptr) && !is_female(ptr) && !is_neuter(ptr))
@@ -4448,12 +4451,12 @@ mgender_from_permonst(struct monst* mtmp, struct permonst* mdat)
 int
 newcham(
     struct monst *mtmp,
-    struct permonst *mdat,
-    boolean polyspot, /* change is the result of wand or spell of polymorph */
-    boolean msg)      /* "The oldmon turns into a newmon!" */
+    struct permonst *mdat, unsigned ncflags)
 {
-    int hpn, hpd;
-    int mndx, tryct;
+    boolean polyspot = ((ncflags & NC_VIA_WAND_OR_SPELL) !=0),
+            /* "The oldmon turns into a newmon!" */
+            msg = ((ncflags & NC_SHOW_MSG) != 0);
+    int hpn, hpd, mndx, tryct;
     struct permonst *olddata = mtmp->data;
     char *p, oldname[BUFSZ], l_oldname[BUFSZ], newname[BUFSZ];
 
@@ -4800,7 +4803,7 @@ kill_genocided_monsters(void)
                      && (g.mvitals[mtmp->cham].mvflags & G_GENOD));
         if ((g.mvitals[mndx].mvflags & G_GENOD) || kill_cham) {
             if (mtmp->cham >= LOW_PM && !kill_cham)
-                (void) newcham(mtmp, (struct permonst *) 0, FALSE, TRUE);
+                (void) newcham(mtmp, (struct permonst *) 0, NC_SHOW_MSG);
             else
                 mondead(mtmp);
         }

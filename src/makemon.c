@@ -1273,7 +1273,7 @@ makemon(
     case S_SNAKE:
         if (g.in_mklev)
             if (x && y)
-                (void) mkobj_at(0, x, y, TRUE);
+                (void) mkobj_at(RANDOM_CLASS, x, y, TRUE);
         (void) hideunder(mtmp);
         break;
     case S_LIGHT:
@@ -1326,7 +1326,7 @@ makemon(
                to the level's difficulty but ignoring the changer's usual
                type selection, so was inappropriate for vampshifters.
                Let newcham() pick the shape. */
-            && newcham(mtmp, (struct permonst *) 0, FALSE, FALSE))
+            && newcham(mtmp, (struct permonst *) 0, NO_NC_FLAGS))
             allow_minvent = FALSE;
     } else if (mndx == PM_WIZARD_OF_YENDOR) {
         mtmp->iswiz = TRUE;

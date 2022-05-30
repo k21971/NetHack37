@@ -1763,7 +1763,9 @@ seffect_fire(struct obj **sobjp)
             burn_away_slime();
         }
     }
-    explode(cc.x, cc.y, 11, dam, SCROLL_CLASS, EXPL_FIERY);
+#define ZT_SPELL_O_FIRE 11 /* explained in splatter_burning_oil(explode.c) */
+    explode(cc.x, cc.y, ZT_SPELL_O_FIRE, dam, SCROLL_CLASS, EXPL_FIERY);
+#undef ZT_SPELL_O_FIRE
 }
 
 static void
@@ -3114,7 +3116,7 @@ create_particular_creation(struct _create_particular_data* d)
            for, make it start out looking like what was asked for */
         if (mtmp->cham != NON_PM && firstchoice != NON_PM
             && mtmp->cham != firstchoice)
-            (void) newcham(mtmp, &mons[firstchoice], FALSE, FALSE);
+            (void) newcham(mtmp, &mons[firstchoice], NO_NC_FLAGS);
     }
     return madeany;
 }
