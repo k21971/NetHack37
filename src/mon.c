@@ -1,4 +1,4 @@
-/* NetHack 3.7	mon.c	$NHDT-Date: 1652689648 2022/05/16 08:27:28 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.428 $ */
+/* NetHack 3.7	mon.c	$NHDT-Date: 1654465182 2022/06/05 21:39:42 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.433 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -695,8 +695,12 @@ make_corpse(struct monst *mtmp, unsigned int corpseflags)
     if (Blind && !sensemon(mtmp))
         clear_dknown(obj); /* obj->dknown = 0; */
 
-    stackobj(obj);
+    stackobj(obj); /* 'obj' remains valid if stacking happens */
     newsym(x, y);
+    /* in case the corpse was placed at a different spot from where
+       the monster was (not expected to happen) */
+    if (obj->ox != x || obj->oy != y)
+        newsym(obj->ox, obj->oy);
     return obj;
 }
 
@@ -933,7 +937,7 @@ m_calcdistress(struct monst *mtmp)
     if (mtmp->cham >= LOW_PM)
         decide_to_shapeshift(mtmp, (canspotmon(mtmp)
                                     || engulfing_u(mtmp))
-                             ? SHIFT_MSG : 0);
+                                    ? SHIFT_MSG : 0);
     were_change(mtmp);
 
     /* gradually time out temporary problems */
@@ -2489,7 +2493,7 @@ lifesaved_monster(struct monst* mtmp)
 DISABLE_WARNING_FORMAT_NONLITERAL
 
 void
-mondead(register struct monst* mtmp)
+mondead(struct monst *mtmp)
 {
     struct permonst *mptr;
     boolean be_sad;
@@ -2511,15 +2515,13 @@ mondead(register struct monst* mtmp)
             && !(g.mvitals[mndx].mvflags & G_GENOD)) {
             coord new_xy;
             char buf[BUFSZ];
-            boolean in_door = (amorphous(mtmp->data)
-                               && closed_door(mtmp->mx, mtmp->my)),
-                /* alternate message phrasing for some monster types */
-                spec_mon = (nonliving(mtmp->data)
-                            || noncorporeal(mtmp->data)
-                            || amorphous(mtmp->data)),
-                spec_death = (g.disintegested /* disintegrated or digested */
-                              || noncorporeal(mtmp->data)
-                              || amorphous(mtmp->data));
+            /* alternate message phrasing for some monster types */
+            boolean spec_mon = (nonliving(mtmp->data)
+                                || noncorporeal(mtmp->data)
+                                || amorphous(mtmp->data)),
+                    spec_death = (g.disintegested /* disintegrated/digested */
+                                  || noncorporeal(mtmp->data)
+                                  || amorphous(mtmp->data));
             int x = mtmp->mx, y = mtmp->my;
 
             /* construct a format string before transformation;
@@ -2541,7 +2543,9 @@ mondead(register struct monst* mtmp)
                 else
                     uunstick();
             }
-            if (in_door) {
+            /* if fog cloud is on a closed door space, move it to a more
+               appropriate spot for its intended new form */
+            if (amorphous(mtmp->data) && closed_door(mtmp->mx, mtmp->my)) {
                 if (enexto(&new_xy, mtmp->mx, mtmp->my, &mons[mndx]))
                     rloc_to(mtmp, new_xy.x, new_xy.y);
             }
@@ -3224,7 +3228,7 @@ mon_to_stone(struct monst* mtmp)
 }
 
 boolean
-vamp_stone(struct monst* mtmp)
+vamp_stone(struct monst *mtmp)
 {
     if (is_vampshifter(mtmp)) {
         int mndx = mtmp->cham;
@@ -3234,8 +3238,6 @@ vamp_stone(struct monst* mtmp)
         if (mndx >= LOW_PM && mndx != monsndx(mtmp->data)
             && !(g.mvitals[mndx].mvflags & G_GENOD)) {
             char buf[BUFSZ];
-            boolean in_door = (amorphous(mtmp->data)
-                               && closed_door(mtmp->mx, mtmp->my));
 
             /* construct a format string before transformation */
             Sprintf(buf, "The lapidifying %s %s %s",
@@ -3245,7 +3247,7 @@ vamp_stone(struct monst* mtmp)
                     amorphous(mtmp->data) ? "coalesces on the"
                        : is_flyer(mtmp->data) ? "drops to the"
                           : "writhes on the",
-                    surface(x,y));
+                    surface(x, y));
             mtmp->mcanmove = 1;
             mtmp->mfrozen = 0;
             set_mon_min_mhpmax(mtmp, 10); /* mtmp->mhpmax=max(m_lev+1,10) */
@@ -3253,7 +3255,7 @@ vamp_stone(struct monst* mtmp)
             /* this can happen if previously a fog cloud */
             if (engulfing_u(mtmp))
                 expels(mtmp, mtmp->data, FALSE);
-            if (in_door) {
+            if (amorphous(mtmp->data) && closed_door(mtmp->mx, mtmp->my)) {
                 coord new_xy;
 
                 if (enexto(&new_xy, mtmp->mx, mtmp->my, &mons[mndx])) {
@@ -4085,7 +4087,7 @@ pick_animal(void)
 }
 
 void
-decide_to_shapeshift(struct monst* mon, int shiftflags)
+decide_to_shapeshift(struct monst *mon, int shiftflags)
 {
     struct permonst *ptr = 0;
     int mndx;
@@ -4114,9 +4116,9 @@ decide_to_shapeshift(struct monst* mon, int shiftflags)
                 ptr = &mons[mon->cham];
                 dochng = TRUE;
             } else if (mon->data == &mons[PM_FOG_CLOUD]
-                     && mon->mhp == mon->mhpmax && !rn2(4)
-                     && (!canseemon(mon)
-                         || distu(mon->mx, mon->my) > BOLT_LIM * BOLT_LIM)) {
+                       && mon->mhp == mon->mhpmax && !rn2(4)
+                       && (!canseemon(mon)
+                           || distu(mon->mx, mon->my) > BOLT_LIM * BOLT_LIM)) {
                 /* if a fog cloud, maybe change to wolf or vampire bat;
                    those are more likely to take damage--at least when
                    tame--and then switch back to vampire; they'll also
@@ -4125,6 +4127,14 @@ decide_to_shapeshift(struct monst* mon, int shiftflags)
                 if (mndx >= LOW_PM) {
                     ptr = &mons[mndx];
                     dochng = (ptr != mon->data);
+                }
+            }
+            if (dochng && amorphous(mon->data)
+                && closed_door(mon->mx, mon->my)) {
+                coord new_xy;
+
+                if (enexto(&new_xy, mon->mx, mon->my, ptr)) {
+                    rloc_to(mon, new_xy.x, new_xy.y);
                 }
             }
         } else {
@@ -4325,7 +4335,7 @@ select_newcham_form(struct monst* mon)
 
     /* for debugging: allow control of polymorphed monster */
     if (wizard && iflags.mon_polycontrol) {
-        char pprompt[BUFSZ], parttwo[QBUFSZ], buf[BUFSZ];
+        char pprompt[BUFSZ], parttwo[QBUFSZ], buf[BUFSZ], prevbuf[BUFSZ];
         int monclass, len;
 
         /* construct prompt in pieces */
@@ -4344,7 +4354,7 @@ select_newcham_form(struct monst* mon)
             *(eos(pprompt) - (len - (QBUFSZ - 1))) = '\0';
         Strcat(pprompt, parttwo);
 
-        buf[0] = '\0'; /* clear buffer for EDIT_GETLIN */
+        buf[0] = prevbuf[0] = '\0'; /* clear buffer for EDIT_GETLIN */
 #define TRYLIMIT 5
         tryct = TRYLIMIT;
         do {
@@ -4382,6 +4392,16 @@ select_newcham_form(struct monst* mon)
             }
 
             pline("It can't become that.");
+#ifdef EDIT_GETLIN
+            /* EDIT_GETLIN preloads the input buffer with the previous
+               response but we shouldn't just keep repeating that if player
+               leaves it unchanged; affects retry for empty input too */
+            if (!strcmp(buf, prevbuf))
+                Strcpy(buf, "random");
+            Strcpy(prevbuf, buf);
+#else
+            nhUse(prevbuf);
+#endif
         } while (--tryct > 0);
 
         if (!tryct)
@@ -4405,7 +4425,7 @@ select_newcham_form(struct monst* mon)
 
 /* this used to be inline within newcham() but monpolycontrol needs it too */
 static struct permonst *
-accept_newcham_form(struct monst* mon, int mndx)
+accept_newcham_form(struct monst *mon, int mndx)
 {
     struct permonst *mdat;
 
@@ -4430,16 +4450,18 @@ accept_newcham_form(struct monst* mon, int mndx)
     return polyok(mdat) ? mdat : 0;
 }
 
+/* shapechanger might take on a shape that forces gender change */
 void
-mgender_from_permonst(struct monst* mtmp, struct permonst* mdat)
+mgender_from_permonst(
+    struct monst *mtmp,
+    struct permonst *mdat)
 {
     if (is_male(mdat)) {
-        if (mtmp->female)
-            mtmp->female = FALSE;
+        mtmp->female = FALSE;
     } else if (is_female(mdat)) {
-        if (!mtmp->female)
-            mtmp->female = TRUE;
+        mtmp->female = TRUE;
     } else if (!is_neuter(mdat)) {
+        /* usually leave as-is; same chance to change as polymorphing hero */
         if (!rn2(10))
             mtmp->female = !mtmp->female;
     }
@@ -4451,7 +4473,8 @@ mgender_from_permonst(struct monst* mtmp, struct permonst* mdat)
 int
 newcham(
     struct monst *mtmp,
-    struct permonst *mdat, unsigned ncflags)
+    struct permonst *mdat,
+    unsigned ncflags)
 {
     boolean polyspot = ((ncflags & NC_VIA_WAND_OR_SPELL) !=0),
             /* "The oldmon turns into a newmon!" */

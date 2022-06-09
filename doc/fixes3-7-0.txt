@@ -1,4 +1,4 @@
-HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.933 $ $NHDT-Date: 1654205933 2022/06/02 21:38:53 $
+HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.941 $ $NHDT-Date: 1654717838 2022/06/08 19:50:38 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -917,6 +917,13 @@ if player gave a subset count when removing an item from a container, then got
 	stacks of gold inside a container
 two-handed weapon message stated "welds to monster's hand" instead of
 	"welds to monster's hands"
+when formatting an object, avoid capitalization of "The" in "<item> named
+	The <quest-artifact>"
+be less specific when cause of death is "handling a <ring or wand>" that
+	happened to be silver for current game; list it as "a silver ring" or
+	"a silver wand" rather than "ring of searching" or "wand of locking"
+adjust the row placement of copyright and early startup messages so that
+	aren't partially overwritten by prompts that follow
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1234,6 +1241,9 @@ lua's garbage collection didn't like the way nethack was trying to use it and
 	issued a pair of warnings each time the relevant code got run
 items flagged as just-picked-up were unflagged if you stepped on other items
 	without picking anything up
+activating a magic portal still gave "you feel dizzy for a moment, but the
+	sensation passes" after portal traversal was changed to make the hero
+	be stunned for a few turns
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1820,6 +1830,9 @@ more cases where newcham() gives messages (pr #775 by copperwater)
 lua: instance cleanup should not be applied to classes (by ToxicFrog)
 fix memory leaks related to selection_new() (pr #782 by argrath)
 wished-for doors in wizmode always vertical (pr #788 by entrez)
+vampire shapeshifting in a door (pr #794 by entrez)
+split "act_on_act" into separate function (pr #777 by argrath)
+unnecessary null-check on parsesymbols() (pr #793 by argrath)
 
 
 Code Cleanup and Reorganization

@@ -469,6 +469,8 @@ raw_printf(const char *line, ...)
     va_start(the_args, line);
     vraw_printf(line, the_args);
     va_end(the_args);
+    if (!g.program_state.beyond_savefile_load)
+        g.early_raw_messages++;
 }
 
 DISABLE_WARNING_FORMAT_NONLITERAL
@@ -496,6 +498,8 @@ vraw_printf(const char *line, va_list the_args)
 #if defined(MSGHANDLER)
     execplinehandler(line);
 #endif
+    if (!g.program_state.beyond_savefile_load)
+        g.early_raw_messages++;
 }
 
 void
