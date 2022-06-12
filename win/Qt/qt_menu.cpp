@@ -170,7 +170,12 @@ NetHackQtMenuWindow::NetHackQtMenuWindow(QWidget *parent) :
 
     QGridLayout *grid = new QGridLayout();
     table->setColumnCount(5);
+#if __cplusplus >= 202002L
+    table->setFrameStyle(static_cast<int>(QFrame::Panel)
+                             | static_cast<int>(QFrame::Sunken));
+#else
     table->setFrameStyle(QFrame::Panel|QFrame::Sunken);
+#endif
     table->setLineWidth(2); // note: this is not row spacing
     table->setShowGrid(false);
     table->horizontalHeader()->hide();
@@ -1077,6 +1082,8 @@ void NetHackQtTextWindow::UseRIP(int how, time_t when)
     long cash = std::max(g.done_money, 0L);
     /* force less that 10 digits to satisfy elaborate format checking;
        it's arbitrary but still way, way more than could ever be needed */
+    if (cash < 0)
+        cash = 0;
     if (cash > 999999999L)
         cash = 999999999L;
     (void) snprintf(rip_line[GOLD_LINE], STONE_LINE_LEN + 1, "%ld Au", cash);

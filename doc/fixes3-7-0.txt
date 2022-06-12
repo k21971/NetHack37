@@ -1,4 +1,4 @@
-HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.945 $ $NHDT-Date: 1654886097 2022/06/10 18:34:57 $
+HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.946 $ $NHDT-Date: 1654931291 2022/06/11 07:08:11 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -924,6 +924,7 @@ be less specific when cause of death is "handling a <ring or wand>" that
 	"a silver wand" rather than "ring of searching" or "wand of locking"
 adjust the row placement of copyright and early startup messages so that
 	aren't partially overwritten by prompts that follow
+ball and chain could be accessed after having been freed if bones were saved
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1247,6 +1248,8 @@ activating a magic portal still gave "you feel dizzy for a moment, but the
 after the fix for zombie reviving near hero (which now interrupts hero's
 	occupation), could get "revive panic" when eating a troll corpse if
 	it revived on the same turn that eating the corpse would finish
+a wizard's starting equipment was supposed to include a random spellbook of
+	spell level 1 through 3 but it was being foced to be level 1
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1836,6 +1839,7 @@ wished-for doors in wizmode always vertical (pr #788 by entrez)
 vampire shapeshifting in a door (pr #794 by entrez)
 split "act_on_act" into separate function (pr #777 by argrath)
 unnecessary null-check on parsesymbols() (pr #793 by argrath)
+split cleaning-up on gd_move() into separate function (pr #791 by argrath)
 
 
 Code Cleanup and Reorganization
