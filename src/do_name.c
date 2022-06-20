@@ -1,4 +1,4 @@
-/* NetHack 3.7	do_name.c	$NHDT-Date: 1655161562 2022/06/13 23:06:02 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.252 $ */
+/* NetHack 3.7	do_name.c	$NHDT-Date: 1655663780 2022/06/19 18:36:20 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.254 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Pasi Kallinen, 2018. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1774,9 +1774,8 @@ x_monnam(
     struct permonst *mdat = mtmp->data;
     const char *pm_name = mon_pmname(mtmp);
     boolean do_hallu, do_invis, do_it, do_saddle, do_name, augment_it;
-    boolean name_at_start, has_adjectives,
-            falseCap = (*pm_name != lowc(*pm_name));
-    char *bp;
+    boolean name_at_start, has_adjectives, insertbuf2;
+    char *bp, buf2[BUFSZ];
 
     if (mtmp == &g.youmonst)
         return strcpy(buf, "you"); /* ignore article, "invisible", &c */
@@ -1808,7 +1807,6 @@ x_monnam(
 
     /* priests and minions: don't even use this function */
     if (mtmp->ispriest || mtmp->isminion) {
-        char priestnambuf[BUFSZ] = DUMMY;
         char *name;
         long save_prop = EHalluc_resistance;
         unsigned save_invis = mtmp->minvis;
@@ -1818,14 +1816,14 @@ x_monnam(
             EHalluc_resistance = 1L;
         if (!do_invis)
             mtmp->minvis = 0;
-        name = priestname(mtmp, article, priestnambuf);
+        name = priestname(mtmp, article, buf2);
         EHalluc_resistance = save_prop;
         mtmp->minvis = save_invis;
         if (article == ARTICLE_NONE && !strncmp(name, "the ", 4))
             name += 4;
         return strcpy(buf, name);
     }
-#if 0
+#if 0   /* [now handled by mon_pmname()] */
     /* an "aligned priest" not flagged as a priest or minion should be
        "priest" or "priestess" (normally handled by priestname()) */
     if (mdat == &mons[PM_ALIGNED_CLERIC])
@@ -1846,15 +1844,15 @@ x_monnam(
             Strcpy(buf, "the ");
             Strcat(strcat(buf, adjective), " ");
             Strcat(buf, shkname(mtmp));
-            return buf;
+        } else {
+            Strcat(buf, shkname(mtmp));
+            if (mdat != &mons[PM_SHOPKEEPER] || do_invis){
+                Strcat(buf, " the ");
+                if (do_invis)
+                    Strcat(buf, "invisible ");
+                Strcat(buf, pm_name);
+            }
         }
-        Strcat(buf, shkname(mtmp));
-        if (mdat == &mons[PM_SHOPKEEPER] && !do_invis)
-            return buf;
-        Strcat(buf, " the ");
-        if (do_invis)
-            Strcat(buf, "invisible ");
-        Strcat(buf, pm_name);
         return buf;
     }
 
@@ -1927,37 +1925,29 @@ x_monnam(
         article = ARTICLE_THE;
     }
 
-    if (article == ARTICLE_A && falseCap && !name_at_start) {
-        char buf2[BUFSZ], buf3[BUFSZ];
-
-        /* some type names like "Archon", "Green-elf", and "Uruk-hai" fool
-           an() because of the capitalization and would result in "the " */
-        Strcpy(buf3, buf);
-        *buf3 = lowc(*buf3);
-        (void) just_an(buf2, buf3);
-        Strcat(buf2, buf);
-        return strcpy(buf, buf2);
-    } else {
-        char buf2[BUFSZ];
-
-        switch (article) {
-        case ARTICLE_YOUR:
-            Strcpy(buf2, "your ");
-            Strcat(buf2, buf);
-            Strcpy(buf, buf2);
-            return buf;
-        case ARTICLE_THE:
-            Strcpy(buf2, "the ");
-            Strcat(buf2, buf);
-            Strcpy(buf, buf2);
-            return buf;
-        case ARTICLE_A:
-            return an(buf);
-        case ARTICLE_NONE:
-        default:
-            return buf;
-        }
+    insertbuf2 = TRUE;
+    buf2[0] = '\0'; /* lint suppression */
+    switch (article) {
+    case ARTICLE_YOUR:
+        Strcpy(buf2, "your ");
+        break;
+    case ARTICLE_THE:
+        Strcpy(buf2, "the ");
+        break;
+    case ARTICLE_A:
+        /* avoid an() here */
+        (void) just_an(buf2, buf); /* copy "a " or "an " into buf2[] */
+        break;
+    case ARTICLE_NONE:
+    default:
+        insertbuf2 = FALSE;
+        break;
     }
+    if (insertbuf2) {
+        Strcat(buf2, buf); /* buf2[] isn't viable to return,  */
+        Strcpy(buf, buf2); /* so transfer the result to buf[] */
+    }
+    return buf;
 }
 
 char *
