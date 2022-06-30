@@ -100,7 +100,7 @@ static XtSignalId X11_sig_id;
 
 /* Interface definition, for windows.c */
 struct window_procs X11_procs = {
-    "X11",
+    WPID(X11),
     ( WC_COLOR | WC_INVERSE | WC_HILITE_PET | WC_ASCII_MAP | WC_TILED_MAP
      | WC_PLAYER_SELECTION | WC_PERM_INVENT | WC_MOUSE_SUPPORT ),
     /* status requires VIA_WINDOWPORT(); WC2_FLUSH_STATUS ensures that */
@@ -117,7 +117,7 @@ struct window_procs X11_procs = {
     X11_putstr, genl_putmixed, X11_display_file, X11_start_menu, X11_add_menu,
     X11_end_menu, X11_select_menu,
     genl_message_menu, /* no need for X-specific handling */
-    X11_update_inventory, X11_mark_synch, X11_wait_synch,
+    X11_mark_synch, X11_wait_synch,
 #ifdef CLIPPING
     X11_cliparound,
 #endif
@@ -141,6 +141,8 @@ struct window_procs X11_procs = {
     X11_status_init, X11_status_finish, X11_status_enablefield,
     X11_status_update,
     genl_can_suspend_no, /* XXX may not always be correct */
+    X11_update_inventory,
+    X11_update_invent_slot,
 };
 
 /*
@@ -1270,6 +1272,17 @@ X11_update_inventory(int arg)
     return;
 }
 
+perminvent_info *
+X11_update_invent_slot(
+    winid window UNUSED,  /* window to use, must be of type NHW_MENU */
+    int inventory_slot UNUSED,          /* slot id: 0 - info return to core */
+                                        /*          1 - gold slot */
+                                        /*          2 - 29 obj slots */
+    perminvent_info *pi UNUSED)
+{
+    return (perminvent_info *) 0;
+}
+
 /* The current implementation has all of the saved lines on the screen. */
 int
 X11_doprev_message(void)
@@ -1998,6 +2011,7 @@ X11_display_file(const char *str, boolean complain)
     menu_item *menu_list;
 #define LLEN 128
     char line[LLEN];
+    int clr = 0;
 
     /* Use the port-independent file opener to see if the file exists. */
     fp = dlb_fopen(str, RDTMODE);
@@ -2014,7 +2028,7 @@ X11_display_file(const char *str, boolean complain)
     any = cg.zeroany;
     while (dlb_fgets(line, LLEN, fp)) {
         X11_add_menu(newwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
-                     line, MENU_ITEMFLAGS_NONE);
+                     clr, line, MENU_ITEMFLAGS_NONE);
     }
     (void) dlb_fclose(fp);
 

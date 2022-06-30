@@ -36,7 +36,7 @@ static char *dummy_get_color_string(void);
 
 /* Interface definition, for windows.c */
 struct window_procs curses_procs = {
-    "curses",
+    WPID(curses),
     (WC_ALIGN_MESSAGE | WC_ALIGN_STATUS | WC_COLOR | WC_INVERSE
      | WC_HILITE_PET
 #ifdef NCURSES_MOUSE_VERSION /* (this macro name works for PDCURSES too) */
@@ -77,7 +77,6 @@ struct window_procs curses_procs = {
     curses_end_menu,
     curses_select_menu,
     genl_message_menu,
-    curses_update_inventory,
     curses_mark_synch,
     curses_wait_synch,
 #ifdef CLIPPING
@@ -117,6 +116,8 @@ struct window_procs curses_procs = {
     genl_status_enablefield,
     curses_status_update,
     genl_can_suspend_yes,
+    curses_update_inventory,
+    curses_update_invent_slot,
 };
 
 /*
@@ -556,7 +557,8 @@ curses_start_menu(winid wid, unsigned long mbehavior)
 add_menu(winid wid, const glyph_info *glyphinfo,
                                 const anything identifier,
                                 char accelerator, char groupacc,
-                                int attr, char *str, unsigned int itemflags)
+                                int attr, int color,
+                                char *str, unsigned int itemflags)
                 -- Add a text line str to the given menu window.  If identifier
                    is 0, then the line cannot be selected (e.g. a title).
                    Otherwise, identifier is the value returned if the line is
@@ -589,7 +591,7 @@ void
 curses_add_menu(winid wid, const glyph_info *glyphinfo,
                 const ANY_P *identifier,
                 char accelerator, char group_accel, int attr,
-                const char *str, unsigned itemflags)
+                int clr UNUSED, const char *str, unsigned itemflags)
 {
     int curses_attr;
 
@@ -691,6 +693,17 @@ curses_update_inventory(int arg)
         /* perform scrolling operations on persistent inventory window */
         curs_update_invt(arg);
     }
+}
+
+perminvent_info *
+curses_update_invent_slot(
+    winid window UNUSED,  /* window to use, must be of type NHW_MENU */
+    int inventory_slot UNUSED,          /* slot id: 0 - info return to core */
+                                        /*          1 - gold slot */
+                                        /*          2 - 29 obj slots */
+    perminvent_info *pi UNUSED)
+{
+    return (perminvent_info *) 0;
 }
 
 /*

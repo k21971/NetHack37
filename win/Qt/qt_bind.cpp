@@ -458,7 +458,7 @@ void NetHackQtBind::qt_start_menu(winid wid, unsigned long mbehavior UNUSED)
 }
 
 void NetHackQtBind::qt_add_menu(winid wid, const glyph_info *glyphinfo,
-    const ANY_P * identifier, char ch, char gch, int attr,
+    const ANY_P * identifier, char ch, char gch, int attr, int clr UNUSED,
     const char *str, unsigned itemflags)
 {
     NetHackQtWindow* window=id_to_window[(int)wid];
@@ -488,6 +488,17 @@ void NetHackQtBind::qt_update_inventory(int arg UNUSED)
     if (g.program_state.something_worth_saving && iflags.perm_invent)
         display_inventory(NULL, false);
     */
+}
+
+perminvent_info *NetHackQtBind::qt_update_invent_slot(
+    winid wid UNUSED,  /* window to use, must be of type NHW_MENU */
+    int inventory_slot UNUSED,                 /* slot id: 0 - info return to core */
+                                        /*          1 - gold slot */
+                                        /*          2 - 29 obj slots */
+    perminvent_info *pi UNUSED)
+{
+    NetHackQtWindow* window UNUSED =id_to_window[(int)wid];
+    return (perminvent_info *) 0;
 }
 
 void NetHackQtBind::qt_mark_synch()
@@ -1022,7 +1033,7 @@ static void Qt_positionbar(char *) {}
 } // namespace nethack_qt_
 
 struct window_procs Qt_procs = {
-    "Qt",
+    WPID(Qt),
     (WC_COLOR | WC_HILITE_PET
      | WC_ASCII_MAP | WC_TILED_MAP
      | WC_FONT_MAP | WC_TILE_FILE | WC_TILE_WIDTH | WC_TILE_HEIGHT
@@ -1053,7 +1064,6 @@ struct window_procs Qt_procs = {
     nethack_qt_::NetHackQtBind::qt_end_menu,
     nethack_qt_::NetHackQtBind::qt_select_menu,
     genl_message_menu,      /* no need for Qt-specific handling */
-    nethack_qt_::NetHackQtBind::qt_update_inventory,
     nethack_qt_::NetHackQtBind::qt_mark_synch,
     nethack_qt_::NetHackQtBind::qt_wait_synch,
 #ifdef CLIPPING
@@ -1100,6 +1110,8 @@ struct window_procs Qt_procs = {
     genl_status_update,
 #endif
     genl_can_suspend_yes,
+    nethack_qt_::NetHackQtBind::qt_update_inventory,
+    nethack_qt_::NetHackQtBind::qt_update_invent_slot,
 };
 
 #ifndef WIN32

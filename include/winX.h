@@ -447,10 +447,9 @@ extern void X11_putstr(winid, int, const char *);
 extern void X11_display_file(const char *, boolean);
 extern void X11_start_menu(winid, unsigned long);
 extern void X11_add_menu(winid, const glyph_info *, const ANY_P *, char,
-                         char, int, const char *, unsigned int);
+                         char, int, int, const char *, unsigned int);
 extern void X11_end_menu(winid, const char *);
 extern int X11_select_menu(winid, int, MENU_ITEM_P **);
-extern void X11_update_inventory(int);
 extern void X11_mark_synch(void);
 extern void X11_wait_synch(void);
 #ifdef CLIPPING
@@ -487,5 +486,7 @@ extern void genl_outrip(winid, int, time_t);
 #endif
 
 extern void X11_preference_update(const char *);
+extern void X11_update_inventory(int);
+extern perminvent_info *X11_update_invent_slot(winid, int, perminvent_info *);
 
 #endif /* WINX_H */

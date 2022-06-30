@@ -24,12 +24,11 @@ void chainin_putmixed(winid, int, const char *);
 void chainin_display_file(const char *, boolean);
 void chainin_start_menu(winid, unsigned long);
 void chainin_add_menu(winid, const glyph_info *, const ANY_P *,
-                         char, char, int,
+                         char, char, int, int,
                          const char *, unsigned int);
 void chainin_end_menu(winid, const char *);
 int chainin_select_menu(winid, int, MENU_ITEM_P **);
 char chainin_message_menu(char, int, const char *);
-void chainin_update_inventory(int);
 void chainin_mark_synch(void);
 void chainin_wait_synch(void);
 #ifdef CLIPPING
@@ -75,6 +74,8 @@ void chainin_status_update(int, genericptr_t, int, int, int,
                            unsigned long *);
 
 boolean chainin_can_suspend(void);
+void chainin_update_inventory(int);
+perminvent_info *chainin_update_invent_slot(winid, int, perminvent_info *);
 
 void *chainin_procs_chain(int cmd, int n, void *me, void *nextprocs, void *nextdata);
 void chainin_procs_init(int dir);
@@ -262,12 +263,13 @@ chainin_add_menu(
     char ch,                    /* keyboard accelerator (0 = pick our own) */
     char gch,                   /* group accelerator (0 = no group) */
     int attr,                   /* attribute for string (like tty_putstr()) */
+    int clr,                    /* attribute for string (like tty_putstr()) */
     const char *str,            /* menu string */
     unsigned int itemflags)     /* flags such as item is marked as selected
                                MENU_ITEMFLAGS_SELECTED */
 {
     (*cibase->nprocs->win_add_menu)(cibase->ndata, window, glyphinfo,
-                                    identifier, ch, gch, attr, str, itemflags);
+                                    identifier, ch, gch, attr, clr, str, itemflags);
 }
 
 void
@@ -576,8 +578,23 @@ chainin_can_suspend(void)
     return rv;
 }
 
+perminvent_info *
+chainin_update_invent_slot(
+    winid window,  /* window to use, must be of type NHW_MENU */
+    int inventory_slot,                 /* slot id: 0 - info return to core */
+                                        /*          1 - gold slot */
+                                        /*          2 - 29 obj slots */
+    perminvent_info *pi)
+{
+    boolean rv;
+
+    rv = (*cibase->nprocs->win_update_invent_slot)(cibase->ndata, window,
+                                                   inventory_slot, pi);
+    return rv;
+}
+
 struct window_procs chainin_procs = {
-    "-chainin", 0, /* wincap */
+    WPIDMINUS(chainin), 0, /* wincap */
     0,             /* wincap2 */
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, /* color availability */
     /*
@@ -621,4 +638,6 @@ struct window_procs chainin_procs = {
     chainin_status_init, chainin_status_finish, chainin_status_enablefield,
     chainin_status_update,
     chainin_can_suspend,
+    chainin_update_inventory,
+    chainin_update_invent_slot,
 };

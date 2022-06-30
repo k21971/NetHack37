@@ -54,11 +54,10 @@ public:
 	static void qt_display_file(const char *filename, boolean must_exist);
 	static void qt_start_menu(winid wid, unsigned long mbehavior);
 	static void qt_add_menu(winid wid, const glyph_info *glyphinfo,
-		const ANY_P * identifier, char ch, char gch, int attr,
+		const ANY_P * identifier, char ch, char gch, int attr, int clr,
 		const char *str, unsigned int itemflags);
 	static void qt_end_menu(winid wid, const char *prompt);
 	static int qt_select_menu(winid wid, int how, MENU_ITEM_P **menu_list);
-	static void qt_update_inventory(int);
 	static void qt_mark_synch();
 	static void qt_wait_synch();
 
@@ -89,6 +88,8 @@ public:
 
 	static void qt_outrip(winid wid, int how, time_t when);
 	static int qt_kbhit();
+	static void qt_update_inventory(int);
+        static perminvent_info *qt_update_invent_slot(winid, int, perminvent_info *);
 
 	static QWidget *mainWidget() { return main; }
 

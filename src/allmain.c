@@ -666,7 +666,7 @@ display_gamewindows(void)
     display_nhwindow(WIN_MESSAGE, FALSE);
     clear_glyph_buffer();
     display_nhwindow(WIN_MAP, FALSE);
-}
+ }
 
 void
 newgame(void)

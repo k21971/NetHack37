@@ -1,4 +1,4 @@
-/* NetHack 3.7	wintty.c	$NHDT-Date: 1644531502 2022/02/10 22:18:22 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.283 $ */
+/* NetHack 3.7	wintty.c	$NHDT-Date: 1656014602 2022/06/23 20:03:22 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.306 $ */
 /* Copyright (c) David Cohrs, 1991                                */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -98,8 +98,11 @@ extern void msmsg(const char *, ...);
 
 /* Interface definition, for windows.c */
 struct window_procs tty_procs = {
-    "tty",
+    WPID(tty),
     (0
+#ifdef TTY_PERM_INVENT
+     | WC_PERM_INVENT
+#endif
 #ifdef MSDOS
      | WC_TILED_MAP | WC_ASCII_MAP
 #endif
@@ -132,7 +135,7 @@ struct window_procs tty_procs = {
     tty_destroy_nhwindow, tty_curs, tty_putstr,
     tty_putmixed,
     tty_display_file, tty_start_menu, tty_add_menu, tty_end_menu,
-    tty_select_menu, tty_message_menu, tty_update_inventory, tty_mark_synch,
+    tty_select_menu, tty_message_menu, tty_mark_synch,
     tty_wait_synch,
 #ifdef CLIPPING
     tty_cliparound,
@@ -163,6 +166,8 @@ struct window_procs tty_procs = {
     genl_status_update,
 #endif
     genl_can_suspend_yes,
+    tty_update_inventory,
+    tty_update_invent_slot,
 };
 
 winid BASE_WINDOW;
@@ -246,6 +251,31 @@ static void status_sanity_check(void);
 #endif
 #ifdef ENHANCED_SYMBOLS
 void g_pututf8(uint8 *utf8str);
+#endif
+
+#ifdef TTY_PERM_INVENT
+void tty_perm_invent_toggled(boolean negated);
+static struct tty_perminvent_cell zerottycell = { 0, 0, 0, { 0 }, 0 };
+static glyph_info zerogi = { 0 };
+#ifdef CORE_INVENT
+static struct to_core zero_tocore = { 0 };
+#endif
+enum { border_left, border_middle, border_right, border_elements };
+static int bordercol[border_elements] = { 0, 0, 0 }; /* left, middle, right */
+static int ttyinvmode = InvNormal; /* enum is in wintype.h */
+static boolean done_tty_perm_invent_init = FALSE;
+#ifndef NOINVSYM /* invent.c */
+#define NOINVSYM '#'
+#endif
+/* not static, core_update_invent_slot() needs to see it from invent.c */
+boolean in_tty_perm_invent_toggled = FALSE;
+static int ttyinv_create_window(int, struct WinDesc *);
+
+static void tty_invent_box_glyph_init(struct WinDesc *cw);
+static boolean calling_from_update_inventory = FALSE;
+static boolean assesstty(enum inv_modes, short *, short *,
+        long *, long *, long *, long *, long *);
+static void ttyinv_populate_slot(struct WinDesc *, int, int, const char *, int32_t);
 #endif
 
 /*
@@ -526,6 +556,18 @@ tty_preference_update(const char *pref)
 #else
     genl_preference_update(pref);
 #endif
+#ifdef TTY_PERM_INVENT
+    /* the boundary box around persistent inventory is drawn with wall
+       symbols, so if player changes to a different symbol set (other
+       than temporary switch to the rogue one), redraw perm_invent; not
+       only might individual symbols change (punctuation vs line drawing),
+       the way to render them might change too (Handling: DEC/UTF8/&c) */
+    if ((!strcmp(pref, "symset") || !strcmp(pref, "perm_invent"))
+        && iflags.window_inited) {
+       if (g.perm_invent_win != WIN_ERR)
+           tty_invent_box_glyph_init(wins[g.perm_invent_win]);
+    }
+#endif
     return;
 }
 
@@ -545,6 +587,7 @@ tty_player_selection(void)
     winid win;
     anything any;
     menu_item *selected = 0;
+    int clr = 0;
 
     /* Used to avoid "Is this ok?" if player has already specified all
      * four facets of role.
@@ -639,7 +682,7 @@ tty_player_selection(void)
                     role_menu_extra(ROLE_RANDOM, win, TRUE);
                     any = cg.zeroany; /* separator, not a choice */
                     add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                             ATR_NONE, "", MENU_ITEMFLAGS_NONE);
+                             ATR_NONE, clr, "", MENU_ITEMFLAGS_NONE);
                     role_menu_extra(RS_RACE, win, FALSE);
                     role_menu_extra(RS_GENDER, win, FALSE);
                     role_menu_extra(RS_ALGNMNT, win, FALSE);
@@ -737,7 +780,7 @@ tty_player_selection(void)
                         role_menu_extra(ROLE_RANDOM, win, TRUE);
                         any.a_int = 0; /* separator, not a choice */
                         add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                                 ATR_NONE, "", MENU_ITEMFLAGS_NONE);
+                                 ATR_NONE, clr, "", MENU_ITEMFLAGS_NONE);
                         role_menu_extra(RS_ROLE, win, FALSE);
                         role_menu_extra(RS_GENDER, win, FALSE);
                         role_menu_extra(RS_ALGNMNT, win, FALSE);
@@ -829,7 +872,7 @@ tty_player_selection(void)
                         role_menu_extra(ROLE_RANDOM, win, TRUE);
                         any.a_int = 0; /* separator, not a choice */
                         add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                                 ATR_NONE, "", MENU_ITEMFLAGS_NONE);
+                                 ATR_NONE, clr, "", MENU_ITEMFLAGS_NONE);
                         role_menu_extra(RS_ROLE, win, FALSE);
                         role_menu_extra(RS_RACE, win, FALSE);
                         role_menu_extra(RS_ALGNMNT, win, FALSE);
@@ -917,7 +960,7 @@ tty_player_selection(void)
                         role_menu_extra(ROLE_RANDOM, win, TRUE);
                         any.a_int = 0; /* separator, not a choice */
                         add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                                 ATR_NONE, "", MENU_ITEMFLAGS_NONE);
+                                 ATR_NONE, clr, "", MENU_ITEMFLAGS_NONE);
                         role_menu_extra(RS_ROLE, win, FALSE);
                         role_menu_extra(RS_RACE, win, FALSE);
                         role_menu_extra(RS_GENDER, win, FALSE);
@@ -1003,27 +1046,27 @@ tty_player_selection(void)
                  aligns[ALGN].adj, plbuf, races[RACE].adj,
                  (GEND == 1 && roles[ROLE].name.f) ? roles[ROLE].name.f
                                                    : roles[ROLE].name.m);
-        add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE, pbuf,
+        add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr, pbuf,
                  MENU_ITEMFLAGS_NONE);
         /* blank separator */
         any.a_int = 0;
         add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                 ATR_NONE, "", MENU_ITEMFLAGS_NONE);
+                 ATR_NONE, clr, "", MENU_ITEMFLAGS_NONE);
         /* [ynaq] menu choices */
         any.a_int = 1;
         add_menu(win, &nul_glyphinfo, &any, 'y', 0,
-                 ATR_NONE, "Yes; start game", MENU_ITEMFLAGS_SELECTED);
+                 ATR_NONE, clr, "Yes; start game", MENU_ITEMFLAGS_SELECTED);
         any.a_int = 2;
         add_menu(win, &nul_glyphinfo, &any, 'n', 0,
-                 ATR_NONE, "No; choose role again", MENU_ITEMFLAGS_NONE);
+                 ATR_NONE, clr, "No; choose role again", MENU_ITEMFLAGS_NONE);
         if (iflags.renameallowed) {
             any.a_int = 3;
             add_menu(win, &nul_glyphinfo, &any, 'a', 0, ATR_NONE,
-                     "Not yet; choose another name", MENU_ITEMFLAGS_NONE);
+                     clr, "Not yet; choose another name", MENU_ITEMFLAGS_NONE);
         }
         any.a_int = -1;
         add_menu(win, &nul_glyphinfo, &any, 'q', 0,
-                 ATR_NONE, "Quit", MENU_ITEMFLAGS_NONE);
+                 ATR_NONE, clr, "Quit", MENU_ITEMFLAGS_NONE);
         Sprintf(pbuf, "Is this ok? [yn%sq]", iflags.renameallowed ? "a" : "");
         end_menu(win, pbuf);
         n = select_menu(win, PICK_ONE, &selected);
@@ -1089,7 +1132,7 @@ reset_role_filtering(void)
 {
     winid win;
     anything any;
-    int i, n;
+    int i, n, clr = 0;
     char filterprompt[QBUFSZ];
     menu_item *selected = 0;
 
@@ -1098,23 +1141,26 @@ reset_role_filtering(void)
     any = cg.zeroany;
 
     /* no extra blank line preceding this entry; end_menu supplies one */
-    add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
+    add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr,
              "Unacceptable roles", MENU_ITEMFLAGS_NONE);
     setup_rolemenu(win, FALSE, ROLE_NONE, ROLE_NONE, ROLE_NONE);
 
-    add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE, "", MENU_ITEMFLAGS_NONE);
     add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
-             "Unacceptable races", MENU_ITEMFLAGS_NONE);
+             clr, "", MENU_ITEMFLAGS_NONE);
+    add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
+             clr, "Unacceptable races", MENU_ITEMFLAGS_NONE);
     setup_racemenu(win, FALSE, ROLE_NONE, ROLE_NONE, ROLE_NONE);
 
-    add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE, "", MENU_ITEMFLAGS_NONE);
     add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
-             "Unacceptable genders", MENU_ITEMFLAGS_NONE);
+             clr, "", MENU_ITEMFLAGS_NONE);
+    add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
+             clr, "Unacceptable genders", MENU_ITEMFLAGS_NONE);
     setup_gendmenu(win, FALSE, ROLE_NONE, ROLE_NONE, ROLE_NONE);
 
-    add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE, "", MENU_ITEMFLAGS_NONE);
     add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
-             "Unacceptable alignments", MENU_ITEMFLAGS_NONE);
+             clr, "", MENU_ITEMFLAGS_NONE);
+    add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
+             clr, "Unacceptable alignments", MENU_ITEMFLAGS_NONE);
     setup_algnmenu(win, FALSE, ROLE_NONE, ROLE_NONE, ROLE_NONE);
 
     Sprintf(filterprompt, "Pick all that apply%s",
@@ -1152,6 +1198,7 @@ setup_rolemenu(
     int i;
     boolean role_ok;
     char thisch, lastch = '\0', rolenamebuf[50];
+    int clr = 0;
 
     any = cg.zeroany; /* zero out all bits */
     for (i = 0; roles[i].name.m; i++) {
@@ -1184,7 +1231,7 @@ setup_rolemenu(
         /* !filtering implies reset_role_filtering() where we want to
            mark this role as preseleted if current filter excludes it */
         add_menu(win, &nul_glyphinfo, &any, thisch, 0,
-                 ATR_NONE, an(rolenamebuf),
+                 ATR_NONE, clr, an(rolenamebuf),
                  (!filtering && !role_ok)
                     ? MENU_ITEMFLAGS_SELECTED : MENU_ITEMFLAGS_NONE);
         lastch = thisch;
@@ -1198,6 +1245,7 @@ setup_racemenu(winid win, boolean filtering, int role, int gend, int algn)
     boolean race_ok;
     int i;
     char this_ch;
+    int clr = 0;
 
     any = cg.zeroany;
     for (i = 0; races[i].noun; i++) {
@@ -1219,7 +1267,7 @@ setup_racemenu(winid win, boolean filtering, int role, int gend, int algn)
         add_menu(win, &nul_glyphinfo, &any,
                  filtering ? this_ch : highc(this_ch),
                  filtering ? highc(this_ch) : 0,
-                 ATR_NONE, races[i].noun,
+                 ATR_NONE, clr, races[i].noun,
                  (!filtering && !race_ok)
                     ? MENU_ITEMFLAGS_SELECTED : MENU_ITEMFLAGS_NONE);
     }
@@ -1232,6 +1280,7 @@ setup_gendmenu(winid win, boolean filtering, int role, int race, int algn)
     boolean gend_ok;
     int i;
     char this_ch;
+    int clr = 0;
 
     any = cg.zeroany;
     for (i = 0; i < ROLE_GENDERS; i++) {
@@ -1251,7 +1300,7 @@ setup_gendmenu(winid win, boolean filtering, int role, int race, int algn)
         add_menu(win, &nul_glyphinfo, &any,
                  filtering ? this_ch : highc(this_ch),
                  filtering ? highc(this_ch) : 0,
-                 ATR_NONE, genders[i].adj,
+                 ATR_NONE, clr, genders[i].adj,
                  (!filtering && !gend_ok)
                     ? MENU_ITEMFLAGS_SELECTED : MENU_ITEMFLAGS_NONE);
     }
@@ -1264,6 +1313,7 @@ setup_algnmenu(winid win, boolean filtering, int role, int race, int gend)
     boolean algn_ok;
     int i;
     char this_ch;
+    int clr = 0;
 
     any = cg.zeroany;
     for (i = 0; i < ROLE_ALIGNS; i++) {
@@ -1283,7 +1333,7 @@ setup_algnmenu(winid win, boolean filtering, int role, int race, int gend)
         add_menu(win, &nul_glyphinfo, &any,
                  filtering ? this_ch : highc(this_ch),
                  filtering ? highc(this_ch) : 0,
-                 ATR_NONE, aligns[i].adj,
+                 ATR_NONE, clr, aligns[i].adj,
                  (!filtering && !algn_ok)
                     ? MENU_ITEMFLAGS_SELECTED : MENU_ITEMFLAGS_NONE);
     }
@@ -1567,6 +1617,10 @@ tty_create_nhwindow(int type)
         newwin->cols = ttyDisplay->cols;
         newwin->maxrow = newwin->maxcol = 0;
         break;
+#ifdef TTY_PERM_INVENT
+    case NHW_PERMINVENT:
+        return ttyinv_create_window(newid, newwin);
+#endif
     default:
         panic("Tried to create window type %d\n", (int) type);
         /*NOTREACHED*/
@@ -1597,6 +1651,100 @@ tty_create_nhwindow(int type)
     return newid;
 }
 
+#ifdef TTY_PERM_INVENT
+
+static int
+ttyinv_create_window(int newid, struct WinDesc *newwin)
+{
+    int i, r, c;
+    long minrow;    /* long to match maxrow declaration */
+    unsigned n;
+
+    /* Is there enough real estate to do this beyond the status line?
+     * Rows:
+     * Top border line (1)
+     * 26 inventory rows (26)
+     * [should be 27 to have room for '$' and '#']
+     * Bottom border line (1)
+     * 1 + 26 + 1 = 28
+     *
+     * Cols:
+     * Left border (1)
+     * Left inventory items (38)
+     * Middle separation (1)
+     * Right inventory items (38)
+     * Right border (1)
+     * 1 + 38 + 1 + 38 + 1 = 79
+     *
+     * The topline + map rows + status lines require:
+     * 1 + 21 + 2 (or 3) = 24 (or 25 depending on status line count).
+     * So we can only present a full inventory on tty if there are
+     * 28 + 24 (or 25) available (52 or 53 rows on the terminal).
+     * Correspondingly ttyDisplay->rows has to be at least 52 (or 53).
+     * [The top and bottom borderlines aren't necessary.  Suppressing
+     * them would reduce the number of rows needed by 2.]
+     *
+     */
+
+    /* preliminary init in case tty_desctroy_nhwindow() gets called */
+    newwin->data = (char **) 0;
+    newwin->datlen = (short *) 0;
+    newwin->cells = (struct tty_perminvent_cell **) 0;
+
+    if (!assesstty(ttyinvmode,
+                  &newwin->offx, &newwin->offy, &newwin->rows, &newwin->cols,
+                  &newwin->maxcol, &minrow, &newwin->maxrow)) {
+        tty_destroy_nhwindow(newid); /* sets g.perm_invent_win to WIN_ERR */
+        pline("%s.", "tty perm_invent could not be enabled");
+        pline(
+   "tty perm_invent needs a terminal that is at least %dx%d, yours is %dx%d.",
+              (int) (minrow + 1 + ROWNO + 3), tty_pi_mincol,
+              ttyDisplay->rows, ttyDisplay->cols);
+        tty_wait_synch();
+        set_option_mod_status("perm_invent", set_gameview);
+        iflags.perm_invent = FALSE;
+        return WIN_ERR;
+    }
+
+    /*
+     * Terminal/window/screen is big enough.
+     */
+    newwin->maxrow = minrow;
+    newwin->maxcol = newwin->cols;
+    /* establish the borders */
+    bordercol[border_left] = 0;
+    bordercol[border_middle] = (newwin->maxcol + 1) / 2;
+    bordercol[border_right] = newwin->maxcol - 1;
+    /* for in-use mode, use full lines */
+    if ((ttyinvmode & InvInUse) != 0)
+        bordercol[border_middle] = bordercol[border_right];
+
+    n = (unsigned) (newwin->maxrow * sizeof (struct tty_perminvent_cell *));
+    newwin->cells = (struct tty_perminvent_cell **) alloc(n);
+
+    n = (unsigned) (newwin->maxcol * sizeof (struct tty_perminvent_cell));
+    for (i = 0; i < newwin->maxrow; i++)
+        newwin->cells[i] = (struct tty_perminvent_cell *) alloc(n);
+
+    n = (unsigned) sizeof (glyph_info);
+    for (r = 0; r < newwin->maxrow; r++)
+        for (c = 0; c < newwin->maxcol; c++) {
+            newwin->cells[r][c] = zerottycell;
+            if (r == 0 || r == newwin->maxrow - 1
+                || c == bordercol[border_left]
+                || c == bordercol[border_middle]
+                || c == bordercol[border_right]) {
+                newwin->cells[r][c].content.gi = (glyph_info *) alloc(n);
+                *newwin->cells[r][c].content.gi = zerogi;
+                newwin->cells[r][c].glyph = 1;
+            }
+        }
+    if (!done_tty_perm_invent_init)
+        tty_invent_box_glyph_init(newwin);
+    return newid;
+}
+#endif  /* TTY_PERM_INVENT */
+
 static void
 erase_menu_or_text(winid window, struct WinDesc *cw, boolean clear)
 {
@@ -1611,7 +1759,7 @@ erase_menu_or_text(winid window, struct WinDesc *cw, boolean clear)
             flush_screen(1);
         }
     } else {
-        docorner((int) cw->offx, cw->maxrow + 1);
+        docorner((int) cw->offx, cw->maxrow + 1, 0);
     }
 }
 
@@ -1621,7 +1769,8 @@ free_window_info(struct WinDesc *cw, boolean free_data)
     int i;
 
     if (cw->data) {
-        if (cw == wins[WIN_MESSAGE] && cw->rows > cw->maxrow)
+        if (WIN_MESSAGE != WIN_ERR && cw == wins[WIN_MESSAGE]
+            && cw->rows > cw->maxrow)
             cw->maxrow = cw->rows; /* topl data */
         for (i = 0; i < cw->maxrow; i++)
             if (cw->data[i]) {
@@ -1682,7 +1831,7 @@ tty_clear_nhwindow(winid window)
             home();
             cl_end();
             if (cw->cury)
-                docorner(1, cw->cury + 1);
+                docorner(1, cw->cury + 1, 0);
             ttyDisplay->toplin = TOPLINE_EMPTY;
         }
         break;
@@ -1945,7 +2094,7 @@ process_menu_window(winid window, struct WinDesc *cw)
 {
     tty_menu_item *page_start, *page_end, *curr;
     long count;
-    int n, attr_n, curr_page, page_lines, resp_len;
+    int n, attr_n, curr_page, page_lines, resp_len, previous_page_lines;
     boolean finished, counting, reset_count;
     char *cp, *rp, resp[QBUFSZ], gacc[QBUFSZ], *msave, *morestr, really_morc;
 #define MENU_EXPLICIT_CHOICE 0x7f /* pseudo menu manipulation char */
@@ -1958,6 +2107,7 @@ process_menu_window(winid window, struct WinDesc *cw)
     count = 0L;
     reset_count = TRUE;
     finished = FALSE;
+    previous_page_lines = 0;
 
     /* collect group accelerators; for PICK_NONE, they're ignored;
        for PICK_ONE, only those which match exactly one entry will be
@@ -2097,8 +2247,26 @@ process_menu_window(winid window, struct WinDesc *cw)
                     tty_curs(window, 1, n);
                     cl_end();
                 }
-            }
+                /*
+                 * If this corner menu was big, there are likely large
+                 * portions of the map, status window, and tty perm_invent
+                 * window (is there is one), that are all missing a lot of
+                 * information. Let's repair the blacked-out rows now
+                 * because it looks better.
+                 */
+                if (previous_page_lines != 0
+                        && page_lines < previous_page_lines) {
+                    /*
+                     * +3 to leave a couple of blank rows
+                     * under the menu to make it contrast well.
+                     */
+                    int row_startoffset = page_lines + 3;
 
+                    if (row_startoffset > cw->maxrow - 1)
+                        row_startoffset = cw->maxrow - 1;
+                    docorner((int) cw->offx, cw->maxrow + 1, row_startoffset);
+                }
+            }
             /* set extra chars.. */
             Strcat(resp, default_menu_cmds);
             Strcat(resp, " ");                  /* next page or end */
@@ -2186,6 +2354,7 @@ process_menu_window(winid window, struct WinDesc *cw)
         case ' ':
         case MENU_NEXT_PAGE:
             if (cw->npages > 0 && curr_page != cw->npages - 1) {
+                previous_page_lines = page_lines;
                 curr_page++;
                 page_start = 0;
             } else if (morc == ' ') {
@@ -2571,17 +2740,44 @@ tty_destroy_nhwindow(winid window)
         iflags.window_inited = 0;
     if (cw->type == NHW_MAP)
         clear_screen();
+#ifdef TTY_PERM_INVENT
+    if (cw->type == NHW_PERMINVENT) {
+        int r, c;
 
+        if (cw->cells) {
+            for (r = 0; r < cw->maxrow; r++) {
+                if (cw->cells[r]) {
+                    for (c = 0; c < cw->maxcol; c++) {
+                        /* glyph is a flag indicating whether content union
+                           contains a glyph_info structure or just a char */
+                        if (cw->cells[r][c].glyph)
+                            free((genericptr_t) cw->cells[r][c].content.gi);
+                        cw->cells[r][c] = zerottycell;
+                        cw->cells[r][c].glyph = 0;
+                    }
+                    free((genericptr_t) cw->cells[r]);
+                    cw->cells[r] = (struct tty_perminvent_cell *) 0;
+                }
+            }
+            free((genericptr_t) cw->cells);
+            cw->cells = (struct tty_perminvent_cell **) 0;
+            cw->rows = cw->cols = 0;
+        }
+        cw->maxrow = cw->maxcol = 0;
+        g.perm_invent_win = WIN_ERR;
+        done_tty_perm_invent_init = FALSE;
+    }
+#endif
     free_window_info(cw, TRUE);
     free((genericptr_t) cw);
     wins[window] = 0; /* available for re-use */
 }
 
 void
-tty_curs(winid window,
-         register int x, register int y) /* not xchar: perhaps xchar is
-                                            unsigned and curx-x would be
-                                            unsigned as well */
+tty_curs(
+    winid window,
+    register int x, register int y) /* not xchar: perhaps xchar is unsigned
+                                     * then curx-x would be unsigned too */
 {
     struct WinDesc *cw = 0;
     int cx = ttyDisplay->curx;
@@ -2693,6 +2889,9 @@ tty_putsym(winid window, int x, int y, char ch)
 #ifndef STATUS_HILITES
     case NHW_STATUS:
 #endif
+#ifdef TTY_PERM_INVENT
+    case NHW_PERMINVENT:
+#endif
     case NHW_MAP:
     case NHW_BASE:
         tty_curs(window, x, y);
@@ -2761,7 +2960,11 @@ tty_putstr(winid window, int attr, const char *str)
     if (str == (const char *) 0
         || ((cw->flags & WIN_CANCELLED) && (cw->type != NHW_MESSAGE)))
         return;
-    if (cw->type != NHW_MESSAGE)
+    if (cw->type != NHW_MESSAGE
+#ifdef TTY_PERM_INVENT
+        && window != g.perm_invent_win
+#endif
+       )
         str = compress_str(str);
 
     ttyDisplay->lastwin = window;
@@ -3030,15 +3233,17 @@ tty_start_menu(winid window, unsigned long mbehavior)
  * later.
  */
 void
-tty_add_menu(winid window,  /* window to use, must be of type NHW_MENU */
-             const glyph_info *glyphinfo UNUSED, /* glyph info with glyph to
-                                                    display with item */
-             const anything *identifier, /* what to return if selected */
-             char ch,             /* keyboard accelerator (0 = pick our own) */
-             char gch,            /* group accelerator (0 = no group) */
-             int attr,            /* attribute for string (like tty_putstr()) */
-             const char *str,     /* menu string */
-             unsigned int itemflags) /* itemflags such as MENU_ITEMFLAGS_SELECTED */
+tty_add_menu(
+    winid window,  /* window to use, must be of type NHW_MENU */
+    const glyph_info *glyphinfo UNUSED, /* glyph info with glyph to
+                                         * display with item */
+    const anything *identifier, /* what to return if selected */
+    char ch,                /* selector letter (0 = pick our own) */
+    char gch,               /* group accelerator (0 = no group) */
+    int attr,               /* attribute for string (like tty_putstr()) */
+    int clr UNUSED,         /* color for string */
+    const char *str,        /* menu string */
+    unsigned int itemflags) /* itemflags such as MENU_ITEMFLAGS_SELECTED */
 {
     boolean preselected = ((itemflags & MENU_ITEMFLAGS_SELECTED) != 0);
     register struct WinDesc *cw = 0;
@@ -3115,6 +3320,7 @@ tty_end_menu(winid window,       /* menu to use */
     short len;
     int lmax, n;
     char menu_ch;
+    int clr = 0;
 
     if (window == WIN_ERR || (cw = wins[window]) == (struct WinDesc *) 0
         || cw->type != NHW_MENU)
@@ -3129,9 +3335,9 @@ tty_end_menu(winid window,       /* menu to use */
 
         any = cg.zeroany; /* not selectable */
         tty_add_menu(window, &nul_glyphinfo, &any, 0, 0,
-                     ATR_NONE, "", MENU_ITEMFLAGS_NONE);
+                     ATR_NONE, clr, "", MENU_ITEMFLAGS_NONE);
         tty_add_menu(window, &nul_glyphinfo, &any, 0, 0,
-                     ATR_NONE, prompt, MENU_ITEMFLAGS_NONE);
+                     ATR_NONE, clr, prompt, MENU_ITEMFLAGS_NONE);
     }
 
     /* 52: 'a'..'z' and 'A'..'Z'; avoids selector duplication within a page */
@@ -3256,8 +3462,6 @@ tty_select_menu(winid window, int how, menu_item **menu_list)
     return n;
 }
 
-RESTORE_WARNING_FORMAT_NONLITERAL
-
 /* special hack for treating top line --More-- as a one item menu */
 char
 tty_message_menu(char let, int how, const char *mesg)
@@ -3294,9 +3498,436 @@ tty_message_menu(char let, int how, const char *mesg)
 void
 tty_update_inventory(int arg UNUSED)
 {
-    /* tty doesn't support persistent inventory window */
+#ifdef TTY_PERM_INVENT
+#ifndef CORE_INVENT
+    static char Empty[1] = { '\0' };
+    struct WinDesc *cw;
+    struct tty_perminvent_cell *cell;
+    struct obj *obj;
+    char invbuf[BUFSZ], *text, nxtlet;
+    int row, col, side, slot, maxslot;
+    winid window = g.perm_invent_win;
+    boolean force_redraw = g.program_state.in_docrt ? TRUE : FALSE,
+            show_gold = (ttyinvmode & InvShowGold) != 0,
+            inuse_only = (ttyinvmode & InvInUse) != 0,
+            sparse = (ttyinvmode & InvSparse) != 0;
+
+    if (g.perm_invent_win == WIN_ERR
+        && !done_tty_perm_invent_init && iflags.perm_invent) {
+        g.perm_invent_win = create_nhwindow(NHW_PERMINVENT);
+        if (g.perm_invent_win == WIN_ERR) {
+            tty_perm_invent_toggled(TRUE); /* TRUE means negated */
+            return;
+        }
+        display_nhwindow(g.perm_invent_win, FALSE);
+        window = g.perm_invent_win;
+    }
+    /* we just return if the window creation failed, probably due to
+       not meeting size requirements */
+    if (window == WIN_ERR)
+        return;
+
+    if (!iflags.perm_invent) {
+        if (done_tty_perm_invent_init) {
+            /* Odd - but this could be end-of-game disclosure
+             * which just sets boolean iflag.perm_invent to
+             * FALSE without actually doing anything else.
+             */
+            tty_perm_invent_toggled(TRUE); /* TRUE means negated */
+            (void) doredraw();
+        }
+        return;
+    }
+    if ((cw = wins[window]) == (struct WinDesc *) 0)
+        panic(winpanicstr, window);
+
+    if (!done_tty_perm_invent_init) {
+        tty_invent_box_glyph_init(cw);
+    }
+
+    text = Empty; /* lint suppression */
+    maxslot = ((int) cw->maxrow - 2) * (!inuse_only ? 2 : 1);
+    obj = g.invent;
+    for (slot = 0; slot < maxslot; ++slot) {
+        nxtlet = '?'; /* always gets set to something else if actually used */
+        if (!sparse) {
+            while (obj && ((obj->invlet == GOLD_SYM && !show_gold)
+                           || (!obj->owornmask && inuse_only)))
+                obj = obj->nobj;
+        } else {
+            if (!show_gold)
+                nxtlet = (slot < 26) ? ('a' + slot) : ('A' + slot - 26);
+            else
+                nxtlet = (slot == 0) ? GOLD_SYM
+                         : (slot < 27) ? ('a' + slot - 1)
+                           : (slot < 53) ? ('A' + slot - 27)
+                             : NOINVSYM;
+            for (obj = g.invent; obj; obj = obj->nobj)
+                if (obj->invlet == nxtlet)
+                    break;
+        }
+
+        if (obj) {
+            /* TODO: check for MENUCOLORS match */
+            text = doname(obj); /* 'text' will switch to invbuf[] below */
+            /* strip away "a"/"an"/"the" prefix to show a bit more of the
+               interesting part of the object's description;
+               this is inline version of pi_article_skip() from cursinvt.c;
+               should move that to hacklib.c and use it here */
+            if (text[0] == 'a') {
+                if (text[1] == ' ')
+                    text += 2;
+                else if (text[1] == 'n' && text[2] == ' ')
+                    text += 3;
+            } else if (text[0] == 't') {
+                if (text[1] == 'h' && text[2] == 'e' && text[3] == ' ')
+                    text += 4;
+            }
+            Snprintf(invbuf, sizeof invbuf, "%c - %s", obj->invlet, text);
+            text = invbuf;
+            obj = obj->nobj; /* set up for next iteration */
+        } else if (sparse) {
+            Sprintf(invbuf, "%c", nxtlet); /* empty slot */
+            text = invbuf;
+        } else {
+            if (slot == 0) {
+                Sprintf(invbuf, "%-4s[%s]", "",
+                        !g.invent ? "empty"
+                        : inuse_only ? "no items are in use"
+                          : "only gold");
+                text = invbuf;
+            } else {
+                text = Empty; /* "" => fill slot with spaces */
+            }
+        }
+
+        row = (slot % (!show_gold ? 26 : 27)) + 1; /* +1: top border */
+        /* side: left side panel or right side panel, not a window column */
+        side = slot < (!show_gold ? 26 : 27) ? 0 : 1;
+
+        ttyinv_populate_slot(cw, row, side, text, 0);
+    }
+
+    calling_from_update_inventory = TRUE;
+    /* now render to the display */
+    for (row = 0; row < cw->maxrow; ++row)
+        for (col = 0; col < cw->maxcol; ++col) {
+            cell = &cw->cells[row][col];
+            if (cell->refresh || force_redraw) {
+                if (cell->glyph) {
+                    tty_print_glyph(window, col + 1, row,
+                                    cell->content.gi, &nul_glyphinfo);
+                    end_glyphout();
+                } else {
+                    if (col != cw->curx || row != cw->cury)
+                        tty_curs(window, col + 1, row);
+                    (void) putchar(cell->content.ttychar);
+                    ttyDisplay->curx++;
+                    cw->curx++;
+                }
+                cell->refresh = 0;
+            }
+        }
+    calling_from_update_inventory = FALSE;
+#endif  /* CORE_INVENT */
+#endif  /* TTY_PERM_INVENT */
     return;
 }
+
+perminvent_info *
+tty_update_invent_slot(
+    winid window,  /* window to use, must be of type NHW_MENU */
+    int slot,
+    perminvent_info *pi)
+{
+#if !defined(TTY_PERM_INVENT) || !defined(CORE_INVENT)
+    return (perminvent_info *) 0;
+    nhUse(window);
+    nhUse(slot);
+    nhUse(pi);
+#else
+    boolean force_redraw, tty_ok, show_gold, inuse_only;
+    int row, col, side, maxslot;
+    /* winid window = g.perm_invent_win; */
+    struct WinDesc *cw;
+    struct tty_perminvent_cell *cell;
+    /* these types are set match the wintty.h field declarations */
+    long minrow;    /* long to match maxrow declaration in wintty.h */
+    short offx, offy;
+    long rows, cols, maxrow, maxcol;
+
+    if (!pi)
+        return (perminvent_info *) 0;
+    if (!done_tty_perm_invent_init
+        && pi->fromcore.core_request != request_settings) {
+        pi->tocore.tocore_flags |= no_init_done;
+        return pi;
+    }
+    ttyinvmode = pi->fromcore.invmode;
+    show_gold = (ttyinvmode & InvShowGold) != 0;
+    inuse_only = (ttyinvmode & InvInUse) != 0;
+    /* sparse isn't needed port-side */
+
+    switch(pi->fromcore.core_request) {
+    case request_settings:
+        pi->tocore = zero_tocore;
+        tty_ok = assesstty(ttyinvmode,
+                           &offx, &offy, &rows, &cols,
+                           &maxcol, &minrow, &maxrow);
+        pi->tocore.needrows = (int) (minrow + 1 + ROWNO + 3);
+        pi->tocore.needcols = (int) tty_pi_mincol;
+        pi->tocore.haverows = (int) ttyDisplay->rows;
+        pi->tocore.havecols = (int) ttyDisplay->cols;
+        if (!tty_ok) {
+            pi->tocore.tocore_flags |= prohibited;  /* prohibited */
+            return pi;
+        }
+        maxslot = (maxrow - 2) * (!inuse_only ? 2 : 1);
+        pi->tocore.maxslot = maxslot;
+        return pi;
+        break;
+    case update_slot:
+        if ((cw = wins[window]) == (struct WinDesc *) 0)
+            panic(winpanicstr, window);
+        slot -= 1;  /* 0 is used for commands */
+        row = (slot % (!show_gold ? 26 : 27)) + 1; /* +1: top border */
+        /* side: left side panel or right side panel, not a window column */
+        side = slot < (!show_gold ? 26 : 27) ? 0 : 1;
+        ttyinv_populate_slot(cw, row, side,
+                             pi->fromcore.text, pi->fromcore.clr);
+        break;
+    case render:
+        if ((cw = wins[window]) == (struct WinDesc *) 0)
+            panic(winpanicstr, window);
+        /* render to the display */
+        force_redraw = pi->fromcore.force_redraw;
+        calling_from_update_inventory = TRUE;
+        for (row = 0; row < cw->maxrow; ++row)
+            for (col = 0; col < cw->maxcol; ++col) {
+                cell = &cw->cells[row][col];
+                if (cell->refresh || force_redraw) {
+                    if (cell->glyph) {
+                        tty_print_glyph(window, col + 1, row,
+                                    cell->content.gi, &nul_glyphinfo);
+                        end_glyphout();
+                    } else {
+                        if (col != cw->curx || row != cw->cury)
+                        tty_curs(window, col + 1, row);
+                        (void) putchar(cell->content.ttychar);
+                        ttyDisplay->curx++;
+                        cw->curx++;
+                    }
+                    cell->refresh = 0;
+                }
+            }
+        calling_from_update_inventory = FALSE;
+        break;
+    default:
+        impossible("invalid request to tty_update_invent_slot %u",
+                   pi->fromcore.core_request);
+    }
+    return pi;
+#endif
+}
+
+RESTORE_WARNING_FORMAT_NONLITERAL
+
+#ifdef TTY_PERM_INVENT
+/*
+ * returns TRUE if things are ok
+ */
+static boolean
+assesstty(
+    enum inv_modes invmode,
+    short *offx, short *offy, long *rows, long *cols,
+    long *maxcol, long *minrow, long *maxrow)
+{
+    boolean show_gold, inuse_only;
+
+    show_gold = (invmode & InvShowGold) != 0;
+    inuse_only = (invmode & InvInUse) != 0;
+
+    *offx = 0;
+    /* topline + map rows + status lines */
+    *offy = 1 + ROWNO + 3; /* 3: + 2 + (iflags.wc2_statuslines > 2) */
+    *rows = (ttyDisplay->rows - (*offy));
+    *cols = ttyDisplay->cols;
+    *minrow = tty_pi_minrow;
+    if (show_gold)
+        *minrow += 1;
+    /* "normal" max for items in use would be 3 weapon + 7 armor + 4
+       accessories == 14, but being punished and picking up the ball will
+       add 1, and some quest artifacts have an an #invoke property that's
+       tracked via obj->owornmask so could add more; if hero ends up with
+       more than 15 in-use items, some will be left out;
+       Qt's "paper doll" adds first lit lamp/candle and first active
+       leash; those aren't tracked via owornmask so we don't notice them */
+    if (inuse_only)
+        *minrow = 1 + 15 + 1; /* top border + 15 lines + bottom border */
+    *maxrow = *minrow;
+    *maxcol = *cols;
+    return !(*rows < *minrow || *cols < tty_pi_mincol);
+}
+
+/* put the formatted object description for one item into a particular row
+   and left/right panel, truncating if long or padding with spaces if short */
+static void
+ttyinv_populate_slot(
+    struct WinDesc *cw,
+    int row,  /* 'row' within the window, not within screen */
+    int side, /* 'side'==0 is left panel or ==1 is right panel */
+    const char *text, int32_t color)
+{
+    struct tty_perminvent_cell *cell;
+    char c;
+    int ccnt, col, endcol;
+
+    col = bordercol[side] + 1;
+    endcol = bordercol[side + 1] - 1;
+    cell = &cw->cells[row][col];
+    if (cell->color != color)
+        cell->refresh = 1;
+    cell->color = color;
+    for (ccnt = col; ccnt <= endcol; ++ccnt, ++cell) {
+        /* [don't expect this to happen] if there was a glyph here, release
+           memory allocated for it; gi pointer and ttychar character overlay
+           each other in a union, so clear gi before assigning ttychar */
+        if (cell->glyph) {
+            free((genericptr_t) cell->content.gi), cell->content.gi = 0;
+            cell->glyph = 0; /* cell->content.gi is gone */
+        }
+
+        if ((c = *text) != '\0') {
+            if (cell->content.ttychar != c)
+                cell->refresh = 1;
+            cell->content.ttychar = c;
+            ++text;
+        } else {
+            if (cell->content.ttychar != ' ')
+                cell->refresh = 1;
+            cell->content.ttychar = ' ';
+        }
+        cell->text = 1; /* cell->content.ttychar is current */
+    }
+}
+
+DISABLE_WARNING_FORMAT_NONLITERAL
+
+void
+tty_refresh_inventory(int start, int stop, int y)
+{
+    int row = y, col, col_limit = stop;
+    struct WinDesc *cw = 0;
+    winid window = g.perm_invent_win;
+    struct tty_perminvent_cell *cell;
+
+    if (window == WIN_ERR || !iflags.perm_invent || y < 0)
+        return;
+
+    if ((cw = wins[window]) == (struct WinDesc *) 0)
+        panic(winpanicstr, window);
+
+    if (col_limit > cw->maxcol)
+        col_limit = cw->maxcol;
+
+    if (row >= cw->maxrow)
+        return; /* out of our range. Huge menus can do this */
+
+    /* we've been asked to redisplay a portion of the screen, one row */
+    for (col = start - 1; col < col_limit; ++col) {
+        cell = &cw->cells[row][col];
+        if (cell->glyph) {
+            tty_print_glyph(window, col + 1, row, cell->content.gi,
+                            &nul_glyphinfo);
+            end_glyphout();
+        } else {
+            if (col != cw->curx || row != cw->cury)
+                tty_curs(window, col + 1, row);
+            (void) putchar(cell->content.ttychar);
+            ttyDisplay->curx++;
+            cw->curx++;
+        }
+        cell->refresh = 0;
+    }
+}
+
+RESTORE_WARNING_FORMAT_NONLITERAL
+
+static void
+tty_invent_box_glyph_init(struct WinDesc *cw)
+{
+    int row, col;
+    uchar sym;
+    struct tty_perminvent_cell *cell;
+
+    for (row = 0; row < cw->maxrow; ++row)
+        for (col = 0; col < cw->maxcol; ++col) {
+            cell = &cw->cells[row][col];
+            /* cell->glyph is a flag for whether the content union contains
+               a glyph_info structure rather than just a char */
+            if (!cell->glyph)
+                continue;
+            /* sym will always get another value; if for some reason it
+               doesn't, this default is valid for cmap_walls_to_glyph() */
+               sym = S_crwall;
+            /* note: for top and bottom, check [border_right] before
+               [border_middle] because they could be the same and if so
+               we want corner rather than tee */
+            if (row == 0) {
+                if (col == bordercol[border_left])
+                    sym = S_tlcorn;
+                else if (col == bordercol[border_right])
+                    sym = S_trcorn;
+                else if (col == bordercol[border_middle])
+                    sym = S_tdwall;
+                else /*if ((col > bordercol[border_left]
+                            && col < bordercol[border_middle])
+                           || (col > bordercol[border_middle]
+                               && col < bordercol[border_right]))*/
+                    sym = S_hwall;
+            } else if (row == (cw->maxrow - 1)) {
+                if (col == bordercol[border_left])
+                    sym = S_blcorn;
+                else if (col == bordercol[border_right])
+                    sym = S_brcorn;
+                else if (col == bordercol[border_middle])
+                    sym = S_tuwall;
+                else /*if ((col > bordercol[border_left]
+                            && col < bordercol[border_middle])
+                           || (col > bordercol[border_middle]
+                               && col < bordercol[border_right]))*/
+                    sym = S_hwall;
+            } else {
+                if (col == bordercol[border_left]
+                    || col == bordercol[border_middle]
+                    || col == bordercol[border_right])
+                    sym = S_vwall;
+            }
+
+            /* to get here, cell->glyph is 1 and cell->content union has gi */
+            {
+                int oldsymidx = cell->content.gi->gm.sym.symidx;
+#ifdef ENHANCED_SYMBOLS
+                struct unicode_representation *
+                    oldgmu = cell->content.gi->gm.u;
+#endif
+                int glyph = cmap_D0walls_to_glyph(sym);
+
+                map_glyphinfo(0, 0, glyph, 0, cell->content.gi);
+                if (
+#ifdef ENHANCED_SYMBOLS
+                    cell->content.gi->gm.u != oldgmu ||
+#endif
+                    cell->content.gi->gm.sym.symidx != oldsymidx)
+                    cell->refresh = 1;
+                cell->glyph = 1; /* (redundant) */
+                cell->text = 0;
+            }
+        }
+    done_tty_perm_invent_init = TRUE;
+}
+
+#endif  /* TTY_PERM_INVENT */
 
 void
 tty_mark_synch(void)
@@ -3332,10 +3963,17 @@ tty_wait_synch(void)
 }
 
 void
-docorner(register int xmin, register int ymax)
+docorner(register int xmin, register int ymax, int ystart_between_menu_pages)
 {
     register int y;
     register struct WinDesc *cw = wins[WIN_MAP];
+    int ystart = 0;
+#ifdef TTY_PERM_INVENT
+    struct WinDesc *icw = 0;
+
+    if (g.perm_invent_win != WIN_ERR)
+        icw = wins[g.perm_invent_win];
+#endif
 
     HUPSKIP();
 #if 0   /* this optimization is not valuable enough to justify
@@ -3354,9 +3992,19 @@ docorner(register int xmin, register int ymax)
     if (ymax > LI)
         ymax = LI; /* can happen if window gets smaller */
 #endif
-    for (y = 0; y < ymax; y++) {
+    if (ystart_between_menu_pages)
+        ystart = ystart_between_menu_pages;
+
+    for (y = ystart; y < ymax; y++) {
         tty_curs(BASE_WINDOW, xmin, y); /* move cursor */
-        cl_end();                       /* clear to end of line */
+        if (!ystart_between_menu_pages)
+            cl_end();                   /* clear to end of line */
+#ifdef TTY_PERM_INVENT
+        /* the whole thing is beyond the board */
+        if (icw)
+            tty_refresh_inventory(xmin - (int) icw->offx, icw->maxcol,
+                                  y - (int) icw->offy);
+#endif
 #ifdef CLIPPING
         if (y < (int) cw->offy || y + clipy > ROWNO)
             continue; /* only refresh board */
@@ -3373,10 +4021,12 @@ docorner(register int xmin, register int ymax)
             continue; /* only refresh board  */
         row_refresh(xmin - (int) cw->offx, COLNO - 1, y - (int) cw->offy);
 #endif
+
     }
 
     end_glyphout();
-    if (ymax >= (int) wins[WIN_STATUS]->offy) {
+    if (ymax >= (int) wins[WIN_STATUS]->offy
+        && !ystart_between_menu_pages) {
         /* we have wrecked the bottom line */
         g.context.botlx = 1;
         bot();
@@ -3504,13 +4154,11 @@ tty_cliparound(int x, int y)
  */
 
 void
-tty_print_glyph(winid window, xchar x, xchar y,
-#if defined(TTY_TILES_ESCCODES) || defined(MSDOS)
-                const glyph_info *glyphinfo,
-#else
-                const glyph_info *glyphinfo UNUSED,
-#endif
-                const glyph_info *bkglyphinfo UNUSED)
+tty_print_glyph(
+    winid window,
+    xchar x, xchar y,
+    const glyph_info *glyphinfo,
+    const glyph_info *bkglyphinfo UNUSED)
 {
     boolean inverse_on = FALSE, colordone = FALSE, glyphdone = FALSE;
     int ch, color;
@@ -3555,6 +4203,9 @@ tty_print_glyph(winid window, xchar x, xchar y,
         /* we don't link with termcap.o if NO_TERMS is defined */
         if ((tty_procs.wincap2 & WC2_U_24BITCOLOR) && SYMHANDLING(H_UTF8)
             && iflags.colorcount >= 256
+#ifdef TTY_PERM_INVENT
+            && !calling_from_update_inventory
+#endif
             && glyphinfo->gm.u && glyphinfo->gm.u->ucolor) {
             term_start_24bitcolor(glyphinfo->gm.u);
             color24bit_on = TRUE;

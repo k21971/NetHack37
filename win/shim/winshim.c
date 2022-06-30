@@ -130,9 +130,9 @@ VDECLCB(shim_putstr,(winid w, int attr, const char *str), "viis", A2P w, A2P att
 VDECLCB(shim_display_file,(const char *name, boolean complain), "vsi", P2V name, A2P complain)
 VDECLCB(shim_start_menu,(winid window, unsigned long mbehavior), "vii", A2P window, A2P mbehavior)
 VDECLCB(shim_add_menu,
-    (winid window, const glyph_info *glyphinfo, const ANY_P *identifier, char ch, char gch, int attr, const char *str, unsigned int itemflags),
+    (winid window, const glyph_info *glyphinfo, const ANY_P *identifier, char ch, char gch, int attr, int clr, const char *str, unsigned int itemflags),
     "vippiiisi",
-    A2P window, P2V glyphinfo, P2V identifier, A2P ch, A2P gch, A2P attr, P2V str, A2P itemflags)
+    A2P window, P2V glyphinfo, P2V identifier, A2P ch, A2P gch, A2P attr, A2P clr, P2V str, A2P itemflags)
 VDECLCB(shim_end_menu,(winid window, const char *prompt), "vis", A2P window, P2V prompt)
 /* XXX: shim_select_menu menu_list is an output */
 DECLCB(int, shim_select_menu,(winid window, int how, MENU_ITEM_P **menu_list), "iiio", A2P window, A2P how, P2V menu_list)
@@ -183,13 +183,26 @@ void shim_update_inventory(int a1 UNUSED) {
         display_inventory(NULL, FALSE);
     }
 }
+perminvent_info *
+shim_update_invent_slot(
+    winid window UNUSED,  /* window to use, must be of type NHW_MENU */
+    int inventory_slot UNUSED,          /* slot id: 0 - info return to core */
+                                        /*          1 - gold slot */
+                                        /*          2 - 29 obj slots */
+    perminvent_info *pi UNUSED) {
+    return (perminvent_info *) 0;
+}
 #else /* !__EMSCRIPTEN__ */
-VDECLCB(shim_update_inventory,(int a1 UNUSED), "v")
+VDECLCB(shim_update_inventory,(int a1 UNUSED)
+DECLB(perminvent_info *, shim_update_invent_slot,
+    (winid window, int inventory_slot, perminvent_info *pi),
+    "viip",
+    A2P window UNUSED, A2P inventory_slot UNUSED, P2V pi UNUSED)
 #endif
 
 /* Interface definition used in windows.c */
 struct window_procs shim_procs = {
-    "shim",
+    WPID(shim),
     (0
      | WC_ASCII_MAP
      | WC_COLOR | WC_HILITE_PET | WC_INVERSE | WC_EIGHT_BIT_IN),
@@ -212,7 +225,7 @@ struct window_procs shim_procs = {
     shim_create_nhwindow, shim_clear_nhwindow, shim_display_nhwindow,
     shim_destroy_nhwindow, shim_curs, shim_putstr, genl_putmixed,
     shim_display_file, shim_start_menu, shim_add_menu, shim_end_menu,
-    shim_select_menu, shim_message_menu, shim_update_inventory, shim_mark_synch,
+    shim_select_menu, shim_message_menu, shim_mark_synch,
     shim_wait_synch,
 #ifdef CLIPPING
     shim_cliparound,
@@ -243,6 +256,8 @@ struct window_procs shim_procs = {
     genl_status_update,
 #endif
     genl_can_suspend_yes,
+    shim_update_inventory,
+    shim_update_invent_slot,
 };
 
 #ifdef __EMSCRIPTEN__

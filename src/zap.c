@@ -489,13 +489,7 @@ release_hold(void)
 
     if (!mtmp) {
         impossible("release_hold when not held?");
-    } else if (sticks(g.youmonst.data)) {
-        /* order matters if 'holding' status condition is enabled;
-           set_ustuck() will set flag for botl update, You() pline will
-           trigger a status update with "UHold" removed */
-        set_ustuck((struct monst *) 0);
-        You("release %s.", mon_nam(mtmp));
-    } else if (u.uswallow) {
+    } else if (u.uswallow) { /* possible for sticky hero to be swallowed */
         if (is_animal(mtmp->data)) {
             if (!Blind)
                 pline("%s opens its mouth!", Monnam(mtmp));
@@ -504,6 +498,12 @@ release_hold(void)
         }
         /* gives "you get regurgitated" or "you get expelled from <mon>" */
         expels(mtmp, mtmp->data, TRUE);
+    } else if (sticks(g.youmonst.data)) {
+        /* order matters if 'holding' status condition is enabled;
+           set_ustuck() will set flag for botl update, You() pline will
+           trigger a status update with "UHold" removed */
+        set_ustuck((struct monst *) 0);
+        You("release %s.", mon_nam(mtmp));
     } else { /* held but not swallowed */
         char relbuf[BUFSZ];
 
@@ -5156,10 +5156,8 @@ destroy_one_item(struct obj *obj, int osym, int dmgtyp)
     long i, cnt, quan;
     int dmg, xresist, skip, dindx;
     const char *mult;
-    boolean physical_damage;
     boolean chargeit = FALSE;
 
-    physical_damage = FALSE;
     xresist = skip = 0;
     /* lint suppression */
     dmg = dindx = 0;
@@ -5295,8 +5293,6 @@ destroy_one_item(struct obj *obj, int osym, int dmgtyp)
 
                 if (dmgtyp == AD_FIRE && osym == FOOD_CLASS)
                     how = "exploding glob of slime";
-                if (physical_damage)
-                    dmg = Maybe_Half_Phys(dmg);
                 losehp(dmg, one ? how : (const char *) makeplural(how),
                        one ? KILLED_BY_AN : KILLED_BY);
                 exercise(A_STR, FALSE);

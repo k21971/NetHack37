@@ -586,6 +586,7 @@ getpos_menu(coord *ccp, int gloc)
     int i, pick_cnt;
     menu_item *picks = (menu_item *) 0;
     char tmpbuf[BUFSZ];
+    int clr = 0;
 
     gather_locs(&garr, &gcount, gloc);
 
@@ -618,7 +619,7 @@ getpos_menu(coord *ccp, int gloc)
             Snprintf(fullbuf, sizeof fullbuf, "%s%s%s", firstmatch,
                     (*tmpbuf ? " " : ""), tmpbuf);
             add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-                     ATR_NONE, fullbuf, MENU_ITEMFLAGS_NONE);
+                     ATR_NONE, clr, fullbuf, MENU_ITEMFLAGS_NONE);
         }
     }
 
@@ -1252,7 +1253,7 @@ do_oname(struct obj *obj)
 {
     char *bufp, buf[BUFSZ], bufcpy[BUFSZ], qbuf[QBUFSZ];
     const char *aname;
-    short objtyp;
+    short objtyp = STRANGE_OBJECT;
 
     /* Do this now because there's no point in even asking for a name */
     if (obj->otyp == SPE_NOVEL) {
@@ -1285,15 +1286,21 @@ do_oname(struct obj *obj)
      * Orcrist, clearly being literate (no pun intended...).
      */
 
+    if (obj->oartifact) {
+        /* this used to give "The artifact seems to resist the attempt."
+           but resisting is definite, no "seems to" about it */
+        pline("%s resists the attempt.",
+              /* any artifact should always pass the has_oname() test
+                 but be careful just in case */
+              has_oname(obj) ? ONAME(obj) : "The artifact");
+        return;
+    }
+
     /* relax restrictions over proper capitalization for artifacts */
     if ((aname = artifact_name(buf, &objtyp, TRUE)) != 0
-        && objtyp == obj->otyp)
+        && (restrict_name(obj, aname) || exist_artifact(obj->otyp, aname))) {
+        /* substitute canonical spelling before slippage */
         Strcpy(buf, aname);
-
-    if (obj->oartifact) {
-        pline_The("artifact seems to resist the attempt.");
-        return;
-    } else if (restrict_name(obj, buf) || exist_artifact(obj->otyp, buf)) {
         /* this used to change one letter, substituting a value
            of 'a' through 'y' (due to an off by one error, 'z'
            would never be selected) and then force that to
@@ -1307,7 +1314,7 @@ do_oname(struct obj *obj)
            because buf[] matches a valid artifact name) */
         Strcpy(bufcpy, buf);
         /* for "the Foo of Bar", only scuff "Foo of Bar" part */
-        bufp = !strncmpi(bufcpy, "the ", 4) ? (buf + 4) : buf;
+        bufp = !strncmpi(buf, "the ", 4) ? (buf + 4) : buf;
         do {
             wipeout_text(bufp, rn2_on_display_rng(2), (unsigned) 0);
         } while (!strcmp(buf, bufcpy));
@@ -1317,8 +1324,15 @@ do_oname(struct obj *obj)
         /* violate illiteracy conduct since hero attempted to write
            a valid artifact name */
         u.uconduct.literate++;
+    } else if (obj->otyp == objtyp) {
+        /* artifact_name() found a match and restrict_name() didn't reject
+           it; since 'obj' is the right type, naming will change it into an
+           artifact so use canonical capitalization (Sting or Orcrist) */
+        Strcpy(buf, aname);
     }
+
     obj = oname(obj, buf, ONAME_VIA_NAMING | ONAME_KNOW_ARTI);
+    nhUse(obj);
 }
 
 struct obj *
@@ -1448,6 +1462,7 @@ docallcmd(void)
     char ch = 0;
     /* if player wants a,b,c instead of i,o when looting, do that here too */
     boolean abc = flags.lootabc;
+    int clr = 0;
 
     if ((cmdq = cmdq_pop()) != 0) {
         cq = *cmdq;
@@ -1463,30 +1478,30 @@ docallcmd(void)
     any = cg.zeroany;
     any.a_char = 'm'; /* group accelerator 'C' */
     add_menu(win, &nul_glyphinfo, &any, abc ? 0 : any.a_char, 'C',
-             ATR_NONE, "a monster", MENU_ITEMFLAGS_NONE);
+             ATR_NONE, clr, "a monster", MENU_ITEMFLAGS_NONE);
     if (g.invent) {
         /* we use y and n as accelerators so that we can accept user's
            response keyed to old "name an individual object?" prompt */
         any.a_char = 'i'; /* group accelerator 'y' */
         add_menu(win, &nul_glyphinfo, &any, abc ? 0 : any.a_char, 'y',
-                 ATR_NONE, "a particular object in inventory",
+                 ATR_NONE, clr, "a particular object in inventory",
                  MENU_ITEMFLAGS_NONE);
         any.a_char = 'o'; /* group accelerator 'n' */
         add_menu(win, &nul_glyphinfo, &any, abc ? 0 : any.a_char, 'n',
-                 ATR_NONE, "the type of an object in inventory",
+                 ATR_NONE, clr, "the type of an object in inventory",
                  MENU_ITEMFLAGS_NONE);
     }
     any.a_char = 'f'; /* group accelerator ',' (or ':' instead?) */
     add_menu(win, &nul_glyphinfo, &any, abc ? 0 : any.a_char, ',',
-             ATR_NONE, "the type of an object upon the floor",
+             ATR_NONE, clr, "the type of an object upon the floor",
              MENU_ITEMFLAGS_NONE);
     any.a_char = 'd'; /* group accelerator '\' */
     add_menu(win, &nul_glyphinfo, &any, abc ? 0 : any.a_char, '\\',
-             ATR_NONE, "the type of an object on discoveries list",
+             ATR_NONE, clr, "the type of an object on discoveries list",
              MENU_ITEMFLAGS_NONE);
     any.a_char = 'a'; /* group accelerator 'l' */
     add_menu(win, &nul_glyphinfo, &any, abc ? 0 : any.a_char, 'l',
-             ATR_NONE, "record an annotation for the current level",
+             ATR_NONE, clr, "record an annotation for the current level",
              MENU_ITEMFLAGS_NONE);
     end_menu(win, "What do you want to name?");
     if (select_menu(win, PICK_ONE, &pick_list) > 0) {
@@ -2176,7 +2191,7 @@ minimal_monnam(struct monst *mon, boolean ckloc)
         Sprintf(outbuf, "[Invalid mon->data %s >= %s]",
                 fmt_ptr((genericptr_t) mon->data),
                 fmt_ptr((genericptr_t) &mons[NUMMONS]));
-    } else if (ckloc && ptr == &mons[PM_LONG_WORM]
+    } else if (ckloc && ptr == &mons[PM_LONG_WORM] && mon->mx
                && g.level.monsters[mon->mx][mon->my] != mon) {
         Sprintf(outbuf, "%s <%d,%d>",
                 pmname(&mons[PM_LONG_WORM_TAIL], Mgender(mon)),

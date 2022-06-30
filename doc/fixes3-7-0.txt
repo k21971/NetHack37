@@ -826,7 +826,8 @@ if a lit potion of oil on the floor was launched by an explosion and it hit
 	tried to extinguish it as a light source
 place_object() validated coordinates after using them to index level.objects
 killed rope golem may drop leashes and bullwhips
-using magic portals and level teleporters stuns hero for a few turns
+using magic portals stuns hero for a few turns
+using level teleporters confuses hero without teleport control for a few turns
 clear obj->bypass for buried objects [a giant on ice triggers a fire trap,
 	inventory is subjected to burning and surviving objects have their
 	bypass bit set, giant is killed by fire trap and drops a boulder and
@@ -925,6 +926,27 @@ be less specific when cause of death is "handling a <ring or wand>" that
 adjust the row placement of copyright and early startup messages so that
 	aren't partially overwritten by prompts that follow
 ball and chain could be accessed after having been freed if bones were saved
+early post-3.4.3 tried to fix the "naming artifacts trick" which could be used
+	to distinguish the type of some undiscovered items, but using a name
+	that only matched an artifact after capitalization was exploitable
+the u.ustuck hierarchy is:  swallowed by ustuck, hero poly'd into sticky form
+	is holding ustuck even if ustuck is sticky, ustuck is holding hero;
+	but some code assumed that the first two cases were reversed and
+	could make formerly sticky pold'd hero clear ustuck, leaving hero
+	swallowed by nothing (u.uswallow==1 with u.ustuck==NULL); that could
+	cause a crash if u.ustuck got dereferenced
+when a vampire gains levels and grows into a vampire lord, change its cham
+	field (shapechanger base type) from vampire to vampire lord so that if
+	it revives in base form it won't revert to plain vampire
+a migrating long worm that couldn't arrive could be placed at <0,0> while
+	setting up another migration attempt to the level, triggering
+        impossible "trying to place long worm tail at <0,0> mstate:8 on level"
+	(message is confused; it should say "long worm" without tail)
+dropping things with 'D' wouldn't merge them with compatible items already at
+	that floor spot because use of obj->bypass made them seem incompatible
+a hero on the quest home level who runs or travels past the quest leader and
+	gets tossed out of the quest for some reason would keep running on the
+	far side of the quest portal
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository

@@ -1441,7 +1441,7 @@ cl_end(void)
 void
 raw_clear_screen(void)
 {
-    if (WINDOWPORT("tty")) {
+    if (WINDOWPORT(tty)) {
         cell_t * back = console.back_buffer;
         cell_t * front = console.front_buffer;
         COORD pos;
@@ -2364,13 +2364,18 @@ void nethack_enter_consoletty(void)
                      console.orig_csbi.srWindow.Left + 1;
     console.Width = max(console.Width, COLNO);
 #else
-    console.width = COLNO;
+//    console.width = COLNO;
+    console.width = console.orig_csbi.srWindow.Right -
+                     console.orig_csbi.srWindow.Left + 1;
+    if (console.width < COLNO)
+        console.width = COLNO;
 #endif
 
     console.height = console.orig_csbi.srWindow.Bottom -
                      console.orig_csbi.srWindow.Top + 1;
-    console.height = max(console.height, ROWNO + 3);
-
+//    console.height = max(console.height, ROWNO + 3);
+    if (console.height < (ROWNO + 2 + 1))
+        console.height = (ROWNO + 2 + 1);
     console.buffer_size = console.width * console.height;
 
 
@@ -2780,7 +2785,7 @@ set_keyhandling_via_option(void)
 {
     winid tmpwin;
     anything any;
-    int i;
+    int i, clr = 0;
     menu_item *console_key_handling_pick = (menu_item *) 0;
 
     tmpwin = create_nhwindow(NHW_MENU);
@@ -2789,7 +2794,7 @@ set_keyhandling_via_option(void)
     for (i = default_keyhandling; i < SIZE(legal_key_handling); i++) {
         any.a_int = i + 1;
         add_menu(tmpwin, &nul_glyphinfo, &any, 'a' + i,
-                 0, ATR_NONE,
+                 0, ATR_NONE, clr,
                  legal_key_handling[i], MENU_ITEMFLAGS_NONE);
     }
     end_menu(tmpwin, "Select windows console key handling:");

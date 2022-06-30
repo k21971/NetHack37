@@ -1,4 +1,4 @@
-/* NetHack 3.7	wintty.h	$NHDT-Date: 1596498572 2020/08/03 23:49:32 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.44 $ */
+/* NetHack 3.7	wintty.h	$NHDT-Date: 1656014599 2022/06/23 20:03:19 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.55 $ */
 /* Copyright (c) David Cohrs, 1991,1992				  */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -9,6 +9,26 @@
 
 #ifndef WINDOW_STRUCTS
 #define WINDOW_STRUCTS
+
+#ifdef TTY_PERM_INVENT
+
+enum { tty_pi_minrow = 28, tty_pi_mincol = 79 };
+/* for static init of zerottycell, put pointer first */
+union ttycellcontent {
+    glyph_info *gi;
+    char ttychar;
+};
+struct tty_perminvent_cell {
+    Bitfield(refresh, 1);
+    Bitfield(text, 1);
+    Bitfield(glyph, 1);
+    union ttycellcontent content;
+    int32_t color;      /* adjusted color 0 = ignore
+                         * 1-16             = NetHack color + 1
+                         * 17..16,777,233   = 24-bit color  + 17
+                         */
+};
+#endif
 
 /* menu structure */
 typedef struct tty_mi {
@@ -45,6 +65,9 @@ struct WinDesc {
     long nitems;           /* total number of items (MENU) */
     short how;             /* menu mode - pick 1 or N (MENU) */
     char menu_ch;          /* menu char (MENU) */
+#ifdef TTY_PERM_INVENT
+    struct tty_perminvent_cell **cells;
+#endif
 };
 
 /* window flags */
@@ -103,7 +126,7 @@ struct tty_status_fields {
 #ifdef NHW_BASE
 #undef NHW_BASE
 #endif
-#define NHW_BASE 6
+#define NHW_BASE (NHW_LAST_TYPE + 1)
 
 extern struct window_procs tty_procs;
 
@@ -184,7 +207,7 @@ E void putsyms(const char *);
 #ifdef CLIPPING
 E void setclipped(void);
 #endif
-E void docorner(int, int);
+E void docorner(int, int, int);
 E void end_glyphout(void);
 E void g_putch(int);
 #ifdef ENHANCED_SYMBOLS
@@ -214,11 +237,10 @@ E void tty_putmixed(winid window, int attr, const char *str);
 E void tty_display_file(const char *, boolean);
 E void tty_start_menu(winid, unsigned long);
 E void tty_add_menu(winid, const glyph_info *, const ANY_P *, char, char,
-                    int, const char *, unsigned int);
+                    int, int, const char *, unsigned int);
 E void tty_end_menu(winid, const char *);
 E int tty_select_menu(winid, int, MENU_ITEM_P **);
 E char tty_message_menu(char, int, const char *);
-E void tty_update_inventory(int);
 E void tty_mark_synch(void);
 E void tty_wait_synch(void);
 #ifdef CLIPPING
@@ -260,6 +282,12 @@ E void genl_outrip(winid, int, time_t);
 
 E char *tty_getmsghistory(boolean);
 E void tty_putmsghistory(const char *, boolean);
+E void tty_update_inventory(int);
+E perminvent_info *tty_update_invent_slot(winid, int, perminvent_info *);
+
+#ifdef TTY_PERM_INVENT
+E void tty_refresh_inventory(int start, int stop, int y);
+#endif
 
 #ifdef NO_TERMS
 #ifdef MAC

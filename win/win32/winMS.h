@@ -158,10 +158,9 @@ void mswin_start_menu(winid wid, unsigned long mbehavior);
 void mswin_add_menu(winid wid, const glyph_info *glyphinfo,
                     const ANY_P *identifier,
                     char accelerator, char group_accel, int attr,
-                    const char *str, unsigned int itemflags);
+                    int clr, const char *str, unsigned int itemflags);
 void mswin_end_menu(winid wid, const char *prompt);
 int mswin_select_menu(winid wid, int how, MENU_ITEM_P **selected);
-void mswin_update_inventory(int);
 void mswin_mark_synch(void);
 void mswin_wait_synch(void);
 void mswin_cliparound(int x, int y);
@@ -193,6 +192,8 @@ void mswin_status_finish(void);
 void mswin_status_enablefield(int fieldidx, const char *nm, const char *fmt,
                               boolean enable);
 void mswin_status_update(int idx, genericptr_t ptr, int chg, int percent, int color, unsigned long *colormasks);
+void mswin_update_inventory(int);
+perminvent_info *mswin_update_invent_slot(winid, int, perminvent_info *);
 
 /* helper function */
 HWND mswin_hwnd_from_winid(winid wid);

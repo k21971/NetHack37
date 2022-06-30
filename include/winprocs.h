@@ -7,11 +7,20 @@
 
 #include "botl.h"
 
+enum wp_ids { wp_tty = 1, wp_X11, wp_Qt, wp_mswin, wp_curses, 
+              wp_chainin, wp_chainout, wp_safestartup, wp_shim,
+	      wp_hup, wp_guistubs, wp_ttystubs,
+#ifdef OUTDATED_STUFF
+	      , wp_mac, wp_Gem, wp_Gnome, wp_amii, wp_amiv
+#endif
+};
+
 /* NB: this MUST match chain_procs below */
 struct window_procs {
     const char *name;     /* Names should start with [a-z].  Names must
                            * not start with '-'.  Names starting with
                            * '+' are reserved for processors. */
+    enum wp_ids wp_id;
     unsigned long wincap; /* window port capability options supported */
     unsigned long wincap2; /* additional window port capability options */
     boolean has_color[CLR_MAX];
@@ -32,12 +41,11 @@ struct window_procs {
     void (*win_display_file)(const char *, boolean);
     void (*win_start_menu)(winid, unsigned long);
     void (*win_add_menu)(winid, const glyph_info *, const ANY_P *,
-                         char, char, int,
+                         char, char, int, int,
                          const char *, unsigned int);
     void (*win_end_menu)(winid, const char *);
     int (*win_select_menu)(winid, int, MENU_ITEM_P **);
     char (*win_message_menu)(char, int, const char *);
-    void (*win_update_inventory)(int);
     void (*win_mark_synch)(void);
     void (*win_wait_synch)(void);
 #ifdef CLIPPING
@@ -83,6 +91,8 @@ struct window_procs {
     void (*win_status_update)(int, genericptr_t, int, int, int,
                               unsigned long *);
     boolean (*win_can_suspend)(void);
+    void (*win_update_inventory)(int);
+    perminvent_info *(*win_update_invent_slot)(winid, int, perminvent_info *);
 };
 
 extern
@@ -164,6 +174,13 @@ extern
  */
 #define status_enablefield (*windowprocs.win_status_enablefield)
 #define status_update (*windowprocs.win_status_update)
+#define update_invent_slot (*windowprocs.win_update_invent_slot)
+
+/*
+ * 
+ */
+#define WPID(name) #name, wp_##name
+#define WPIDMINUS(name) "-" #name, wp_##name 
 
 /*
  * WINCAP
@@ -276,8 +293,13 @@ struct wc_Opt {
 
 /* Macro for the currently active Window Port whose function
    pointers have been loaded */
+#if 0
+/* 3.7 The string comparison version isn't used anymore */
 #define WINDOWPORT(wn) \
-    (windowprocs.name && !strncmpi((wn), windowprocs.name, strlen((wn))))
+    (windowprocs.name && !strncmpi((#wn), windowprocs.name, strlen((#wn))))
+#endif
+
+#define WINDOWPORT(wn) (windowprocs.wp_id == wp_##wn)
 
 /* role selection by player_selection(); this ought to be in the core... */
 #define RS_NAME    0
@@ -318,6 +340,7 @@ struct chain_procs {
     const char *name;     /* Names should start with [a-z].  Names must
                            * not start with '-'.  Names starting with
                            * '+' are reserved for processors. */
+    enum wp_ids wp_id;
     unsigned long wincap; /* window port capability options supported */
     unsigned long wincap2; /* additional window port capability options */
     boolean has_color[CLR_MAX];
@@ -339,7 +362,7 @@ struct chain_procs {
     void (*win_start_menu)(CARGS, winid, unsigned long);
     void (*win_add_menu)(CARGS, winid, const glyph_info *,
                          const ANY_P *, char, char, int,
-                         const char *, unsigned int);
+                         int, const char *, unsigned int);
     void (*win_end_menu)(CARGS, winid, const char *);
     int (*win_select_menu)(CARGS, winid, int, MENU_ITEM_P **);
     char (*win_message_menu)(CARGS, char, int, const char *);
@@ -416,12 +439,11 @@ extern void safe_putmixed(winid, int, const char *);
 extern void safe_display_file(const char *, boolean);
 extern void safe_start_menu(winid, unsigned long);
 extern void safe_add_menu(winid, const glyph_info *, const ANY_P *,
-                          char, char, int, const char *,
+                          char, char, int, int, const char *,
                           unsigned int);
 extern void safe_end_menu(winid, const char *);
 extern int safe_select_menu(winid, int, MENU_ITEM_P **);
 extern char safe_message_menu(char, int, const char *);
-extern void safe_update_inventory(int);
 extern void safe_mark_synch(void);
 extern void safe_wait_synch(void);
 #ifdef CLIPPING
@@ -468,6 +490,8 @@ extern void stdio_raw_print(const char *);
 extern void stdio_nonl_raw_print(const char *);
 extern void stdio_raw_print_bold(const char *);
 extern void stdio_wait_synch(void);
+extern void safe_update_inventory(int);
+extern perminvent_info *safe_update_invent_slot(winid, int, perminvent_info *);
 extern int stdio_nhgetch(void);
 #endif /* SAFEPROCS */
 #endif /* WINPROCS_H */

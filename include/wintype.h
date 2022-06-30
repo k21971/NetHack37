@@ -116,6 +116,8 @@ typedef struct gi {
 #define NHW_DUMPTXT 6
 #define NHW_DUMPHTML 7
 #endif
+#define NHW_PERMINVENT 8
+#define NHW_LAST_TYPE NHW_PERMINVENT
 
 /* attribute types for putstr; the same as the ANSI value, for convenience */
 #define ATR_NONE       0
@@ -174,6 +176,52 @@ typedef struct gi {
  */
 
 #define MENU_BEHAVE_STANDARD      0x0000000U
+
+/* inventory modes */
+enum inv_modes { InvNormal = 0, InvShowGold = 1, InvSparse = 2, InvInUse = 4 };
+
+enum to_core_flags {
+    active           = 0x001,
+    prohibited       = 0x002,
+    no_init_done     = 0x004
+};
+
+enum from_core_requests {
+    request_settings = 1,
+    update_slot      = 2,
+    render           = 3
+};
+
+struct to_core {
+    long tocore_flags;
+    boolean active;
+    boolean use_update_inventory;    /* disable the newer slot interface */
+    int maxslot;
+    int needrows, needcols;
+    int haverows, havecols;
+};
+
+struct from_core {
+    enum from_core_requests core_request;
+    enum inv_modes invmode;
+    boolean force_redraw;
+    int slot;           /* which inventory slot + 1; 0 indicates request */
+    int invlet;
+    char text[BUFSZ];
+    int32_t clr;        /* adjusted color 0 = ignore
+                         * 1-16             = NetHack color + 1
+                         * 17..16,777,233   = 24-bit color  + 17
+                         */
+};
+
+struct perminvent_info_t {
+    struct to_core tocore;
+    struct from_core fromcore;
+};
+
+typedef struct perminvent_info_t perminvent_info;
+
+#define CORE_INVENT
 
 /* clang-format on */
 
