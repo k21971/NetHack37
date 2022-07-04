@@ -30,7 +30,7 @@ static int mfind0(struct monst *, boolean);
 static int reveal_terrain_getglyph(coordxy, coordxy, int, unsigned, int, int);
 
 #ifdef DUMPHTML
-extern void html_print_glyph(winid, xchar, xchar, const glyph_info *,
+extern void html_print_glyph(winid, coordxy, coordxy, const glyph_info *,
                              const glyph_info *);
 #endif
 /* dummytrap: used when detecting traps finds a door or chest trap; the

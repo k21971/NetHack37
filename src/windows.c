@@ -1497,7 +1497,7 @@ unsigned special;
 void
 html_print_glyph(win, x, y, glyphinfo, bkglyphinfo)
 winid win UNUSED;
-xchar x, y;
+coordxy x, y;
 const glyph_info *glyphinfo;
 const glyph_info *bkglyphinfo UNUSED;
 {
