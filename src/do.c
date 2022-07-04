@@ -18,7 +18,7 @@ static int menu_drop(int);
 static NHFILE *currentlevel_rewrite(void);
 static void final_level(void);
 
-/* static boolean badspot(xchar,xchar); */
+/* static boolean badspot(coordxy,coordxy); */
 
 /* the #drop command: drop one inventory item */
 int
@@ -43,18 +43,23 @@ dodrop(void)
  * it's gone for good...  If the destination is not a pool, returns FALSE.
  */
 boolean
-boulder_hits_pool(struct obj *otmp, int rx, int ry, boolean pushing)
+boulder_hits_pool(
+    struct obj *otmp,
+    coordxy rx, coordxy ry,
+    boolean pushing)
 {
     if (!otmp || otmp->otyp != BOULDER) {
         impossible("Not a boulder?");
-    } else if (!Is_waterlevel(&u.uz) && is_pool_or_lava(rx, ry)) {
+    } else if (is_pool_or_lava(rx, ry)) {
         boolean lava = is_lava(rx, ry), fills_up;
         const char *what = waterbody_name(rx, ry);
         schar ltyp = levl[rx][ry].typ;
         int chance = rn2(10); /* water: 90%; lava: 10% */
         struct monst *mtmp;
 
-        fills_up = lava ? chance == 0 : chance != 0;
+        fills_up = Is_waterlevel(&u.uz) ? FALSE
+                   : (ltyp == WATER) ? (chance < 5) /* wall of water */
+                     : lava ? (chance == 0) : (chance != 0);
 
         if (fills_up) {
             struct trap *ttmp = t_at(rx, ry);
@@ -62,9 +67,9 @@ boulder_hits_pool(struct obj *otmp, int rx, int ry, boolean pushing)
             if (ltyp == DRAWBRIDGE_UP) {
                 levl[rx][ry].drawbridgemask &= ~DB_UNDER; /* clear lava */
                 levl[rx][ry].drawbridgemask |= DB_FLOOR;
-            } else
+            } else {
                 levl[rx][ry].typ = ROOM, levl[rx][ry].flags = 0;
-
+            }
             /* 3.7: normally DEADMONSTER() is used when traversing the fmon
                list--dead monsters usually aren't still at specific map
                locations; however, if ice melts causing a giant to drown,
@@ -100,8 +105,9 @@ boulder_hits_pool(struct obj *otmp, int rx, int ry, boolean pushing)
                     There("is a large splash as %s %s the %s.",
                           the(xname(otmp)), fills_up ? "fills" : "falls into",
                           what);
-                } else if (!Deaf)
+                } else if (!Deaf) {
                     You_hear("a%s splash.", lava ? " sizzling" : "");
+                }
                 wake_nearto(rx, ry, 40);
             }
 
@@ -112,6 +118,7 @@ boulder_hits_pool(struct obj *otmp, int rx, int ry, boolean pushing)
                 You("find yourself on dry land again!");
             } else if (lava && next2u(rx, ry)) {
                 int dmg;
+
                 You("are hit by molten %s%c",
                     hliquid("lava"), Fire_resistance ? '.' : '!');
                 burn_away_slime();
@@ -138,7 +145,7 @@ boulder_hits_pool(struct obj *otmp, int rx, int ry, boolean pushing)
  * away.
  */
 boolean
-flooreffects(struct obj *obj, int x, int y, const char *verb)
+flooreffects(struct obj *obj, coordxy x, coordxy y, const char *verb)
 {
     struct trap *t;
     struct monst *mtmp;
@@ -385,7 +392,7 @@ polymorph_sink(void)
 static boolean
 teleport_sink(void)
 {
-    int cx, cy;
+    coordxy cx, cy;
     int cnt = 0;
     struct trap *trp;
     struct engr *eng;
@@ -1237,7 +1244,7 @@ save_currentstate(void)
 
 /*
 static boolean
-badspot(register xchar x, register xchar y)
+badspot(register coordxy x, register coordxy y)
 {
     return (boolean) ((levl[x][y].typ != ROOM
                        && levl[x][y].typ != AIR
@@ -1295,7 +1302,7 @@ goto_level(
 {
     int l_idx, save_mode;
     NHFILE *nhfp;
-    xchar new_ledger;
+    xint16 new_ledger;
     boolean cant_go_back, great_effort,
             up = (depth(newlevel) < depth(&u.uz)),
             newdungeon = (u.uz.dnum != newlevel->dnum),
@@ -1894,7 +1901,7 @@ revive_corpse(struct obj *corpse)
 {
     struct monst *mtmp, *mcarry;
     boolean is_uwep, chewed;
-    xchar where;
+    xint16 where;
     char cname[BUFSZ];
     struct obj *container = (struct obj *) 0;
     int container_where = 0;
@@ -2009,7 +2016,7 @@ revive_mon(anything *arg, long timeout UNUSED)
     struct obj *body = arg->a_obj;
     struct permonst *mptr = &mons[body->corpsenm];
     struct monst *mtmp;
-    xchar x, y;
+    coordxy x, y;
 
     /* corpse will revive somewhere else if there is a monster in the way;
        Riders get a chance to try to bump the obstacle out of their way */

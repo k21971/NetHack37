@@ -6,14 +6,14 @@
 #include "hack.h"
 
 static boolean rm_waslit(void);
-static void mkcavepos(xchar, xchar, int, boolean, boolean);
+static void mkcavepos(coordxy, coordxy, int, boolean, boolean);
 static void mkcavearea(boolean);
 static int dig(void);
 static void dig_up_grave(coord *);
 static boolean watchman_canseeu(struct monst *);
 static int adj_pit_checks(coord *, char *);
 static void pit_flow(struct trap *, schar);
-static boolean furniture_handled(int, int, boolean);
+static boolean furniture_handled(coordxy, coordxy, boolean);
 
 /* Indices returned by dig_typ() */
 enum dig_types {
@@ -28,7 +28,7 @@ enum dig_types {
 static boolean
 rm_waslit(void)
 {
-    register xchar x, y;
+    register coordxy x, y;
 
     if (levl[u.ux][u.uy].typ == ROOM && levl[u.ux][u.uy].waslit)
         return TRUE;
@@ -44,7 +44,7 @@ rm_waslit(void)
  * immediately after the effect is complete.
  */
 static void
-mkcavepos(xchar x, xchar y, int dist, boolean waslit, boolean rockit)
+mkcavepos(coordxy x, coordxy y, int dist, boolean waslit, boolean rockit)
 {
     register struct rm *lev;
 
@@ -87,9 +87,9 @@ static void
 mkcavearea(boolean rockit)
 {
     int dist;
-    xchar xmin = u.ux, xmax = u.ux;
-    xchar ymin = u.uy, ymax = u.uy;
-    register xchar i;
+    coordxy xmin = u.ux, xmax = u.ux;
+    coordxy ymin = u.uy, ymax = u.uy;
+    register coordxy i;
     register boolean waslit = rm_waslit();
 
     if (rockit)
@@ -135,7 +135,7 @@ mkcavearea(boolean rockit)
 
 /* When digging into location <x,y>, what are you actually digging into? */
 int
-dig_typ(struct obj *otmp, xchar x, xchar y)
+dig_typ(struct obj *otmp, coordxy x, coordxy y)
 {
     boolean ispick;
 
@@ -173,7 +173,7 @@ is_digging(void)
 #define BY_OBJECT ((struct monst *) 0)
 
 boolean
-dig_check(struct monst *madeby, boolean verbose, int x, int y)
+dig_check(struct monst *madeby, boolean verbose, coordxy x, coordxy y)
 {
     struct trap *ttmp = t_at(x, y);
     const char *verb =
@@ -231,7 +231,7 @@ static int
 dig(void)
 {
     struct rm *lev;
-    xchar dpx = g.context.digging.pos.x, dpy = g.context.digging.pos.y;
+    coordxy dpx = g.context.digging.pos.x, dpy = g.context.digging.pos.y;
     boolean ispick = uwep && is_pick(uwep);
     const char *verb = (!uwep || is_pick(uwep)) ? "dig into" : "chop through";
 
@@ -483,7 +483,7 @@ dig(void)
 }
 
 static boolean
-furniture_handled(int x, int y, boolean madeby_u)
+furniture_handled(coordxy x, coordxy y, boolean madeby_u)
 {
     struct rm *lev = &levl[x][y];
 
@@ -495,7 +495,7 @@ furniture_handled(int x, int y, boolean madeby_u)
         breaksink(x, y);
     } else if (lev->typ == DRAWBRIDGE_DOWN
                || (is_drawbridge_wall(x, y) >= 0)) {
-        int bx = x, by = y;
+        coordxy bx = x, by = y;
 
         /* if under the portcullis, the bridge is adjacent */
         (void) find_drawbridge(&bx, &by);
@@ -518,12 +518,12 @@ holetime(void)
 
 /* Return typ of liquid to fill a hole with, or ROOM, if no liquid nearby */
 schar
-fillholetyp(int x, int y,
+fillholetyp(coordxy x, coordxy y,
             boolean fill_if_any) /* force filling if it exists at all */
 {
-    register int x1, y1;
-    int lo_x = max(1, x - 1), hi_x = min(x + 1, COLNO - 1),
-        lo_y = max(0, y - 1), hi_y = min(y + 1, ROWNO - 1);
+    coordxy x1, y1;
+    coordxy lo_x = max(1, x - 1), hi_x = min(x + 1, COLNO - 1),
+            lo_y = max(0, y - 1), hi_y = min(y + 1, ROWNO - 1);
     int pool_cnt = 0, moat_cnt = 0, lava_cnt = 0;
 
     for (x1 = lo_x; x1 <= hi_x; x1++)
@@ -552,7 +552,7 @@ fillholetyp(int x, int y,
 }
 
 void
-digactualhole(int x, int y, struct monst *madeby, int ttyp)
+digactualhole(coordxy x, coordxy y, struct monst *madeby, int ttyp)
 {
     struct obj *oldobjs, *newobjs;
     register struct trap *ttmp;
@@ -734,7 +734,7 @@ DISABLE_WARNING_FORMAT_NONLITERAL
  * in apply.c.
  */
 void
-liquid_flow(xchar x, xchar y, schar typ, struct trap *ttmp,
+liquid_flow(coordxy x, coordxy y, schar typ, struct trap *ttmp,
             const char *fillmsg)
 {
     struct obj *objchain;
@@ -773,7 +773,7 @@ dighole(boolean pit_only, boolean by_magic, coord *cc)
     struct rm *lev;
     struct obj *boulder_here;
     schar typ, old_typ;
-    xchar dig_x, dig_y;
+    coordxy dig_x, dig_y;
     boolean nohole, retval = FALSE;
 
     if (!cc) {
@@ -810,7 +810,7 @@ dighole(boolean pit_only, boolean by_magic, coord *cc)
         if (pit_only) {
             pline_The("drawbridge seems too hard to dig through.");
         } else {
-            int x = dig_x, y = dig_y;
+            coordxy x = dig_x, y = dig_y;
             /* if under the portcullis, the bridge is adjacent */
             (void) find_drawbridge(&x, &y);
             destroy_drawbridge(x, y);
@@ -901,7 +901,7 @@ static void
 dig_up_grave(coord *cc)
 {
     struct obj *otmp;
-    xchar dig_x, dig_y;
+    coordxy dig_x, dig_y;
 
     if (!cc) {
         dig_x = u.ux;
@@ -1029,7 +1029,7 @@ use_pick_axe(struct obj *obj)
 int
 use_pick_axe2(struct obj *obj)
 {
-    register int rx, ry;
+    coordxy rx, ry;
     register struct rm *lev;
     struct trap *trap, *trap_with_u;
     int dig_target;
@@ -1220,7 +1220,7 @@ watchman_canseeu(struct monst *mtmp)
  * zap == TRUE if wand/spell of digging, FALSE otherwise (chewing)
  */
 void
-watch_dig(struct monst *mtmp, xchar x, xchar y, boolean zap)
+watch_dig(struct monst *mtmp, coordxy x, coordxy y, boolean zap)
 {
     struct rm *lev = &levl[x][y];
 
@@ -1394,7 +1394,8 @@ zap_dig(void)
     struct monst *mtmp;
     struct obj *otmp;
     struct trap *trap_with_u = (struct trap *) 0;
-    int zx, zy, diridx = 8, digdepth, flow_x = -1, flow_y = -1;
+    coordxy zx, zy, flow_x = -1, flow_y = -1;
+    int diridx = 8, digdepth;
     boolean shopdoor, shopwall, maze_dig, pitdig = FALSE, pitflow = FALSE;
 
     /*
@@ -1702,7 +1703,7 @@ pit_flow(struct trap *trap, schar filltyp)
                         : (char *) 0);
         for (idx = 0; idx < N_DIRS; ++idx) {
             if (t.conjoined & (1 << idx)) {
-                int x, y;
+                coordxy x, y;
                 struct trap *t2;
 
                 x = t.tx + xdir[idx];
@@ -1985,7 +1986,7 @@ rot_organic(anything *arg, long timeout UNUSED)
 void
 rot_corpse(anything *arg, long timeout)
 {
-    xchar x = 0, y = 0;
+    coordxy x = 0, y = 0;
     struct obj *obj = arg->a_obj;
     boolean on_floor = obj->where == OBJ_FLOOR,
             in_invent = obj->where == OBJ_INVENT;

@@ -63,13 +63,13 @@ public:
 
 	static void qt_cliparound(int x, int y);
 	static void qt_cliparound_window(winid wid, int x, int y);
-        static void qt_print_glyph(winid wid, xchar x, xchar y,
+        static void qt_print_glyph(winid wid, coordxy x, coordxy y,
                                    const glyph_info *glyphingo, 
 				   const glyph_info *bkglyphinfo);
 	static void qt_raw_print(const char *str);
 	static void qt_raw_print_bold(const char *str);
 	static int qt_nhgetch();
-	static int qt_nh_poskey(int *x, int *y, int *mod);
+	static int qt_nh_poskey(coordxy *x, coordxy *y, int *mod);
 	static void qt_nhbell();
 	static int qt_doprev_message();
         static char qt_more();
@@ -89,7 +89,7 @@ public:
 	static void qt_outrip(winid wid, int how, time_t when);
 	static int qt_kbhit();
 	static void qt_update_inventory(int);
-        static perminvent_info *qt_update_invent_slot(winid, int, perminvent_info *);
+        static win_request_info *qt_ctrl_nhwindow(winid, int, win_request_info *);
 
 	static QWidget *mainWidget() { return main; }
 

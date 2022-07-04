@@ -120,7 +120,7 @@ struct window_procs mswin_procs = {
     mswin_status_update,
     genl_can_suspend_yes,
     mswin_update_inventory,
-    mswin_update_invent_slot,
+    mswin_ctrl_nhwindow,
 };
 
 /*
@@ -1245,15 +1245,13 @@ mswin_update_inventory(int arg)
         display_inventory(NULL, FALSE);
 }
 
-perminvent_info *
-mswin_update_invent_slot(
-    winid window,  /* window to use, must be of type NHW_MENU */
-    int inventory_slot,                 /* slot id: 0 - info return to core */
-                                        /*          1 - gold slot */
-                                        /*          2 - 29 obj slots */
-    perminvent_info *pi)
+win_request_info *
+mswin_ctrl_nhwindow(
+    winid window,
+    int request,
+    win_request_info *wri)
 {
-    return (perminvent_info *) 0;
+    return (win_request_info *) 0;
 }
 
 /*
@@ -1315,7 +1313,7 @@ print_glyph(window, x, y, glyphinfo, bkglyphinfo)
                    
 */
 void
-mswin_print_glyph(winid wid, xchar x, xchar y,
+mswin_print_glyph(winid wid, coordxy x, coordxy y,
                   const glyph_info *glyphinfo, const glyph_info *bkglyphinfo)
 {
     logDebug("mswin_print_glyph(%d, %d, %d, %d, %d, %lu)\n",
@@ -1440,7 +1438,7 @@ mswin_nhgetch(void)
 }
 
 /*
-int nh_poskey(int *x, int *y, int *mod)
+int nh_poskey(coordxy *x, coordxy *y, int *mod)
                 -- Returns a single character input from the user or a
                    a positioning event (perhaps from a mouse).  If the
                    return value is non-zero, a character was typed, else,
@@ -1455,7 +1453,7 @@ int nh_poskey(int *x, int *y, int *mod)
                    routine always returns a non-zero character.
 */
 int
-mswin_nh_poskey(int *x, int *y, int *mod)
+mswin_nh_poskey(coordxy *x, coordxy *y, int *mod)
 {
     PMSNHEvent event;
     int key;
@@ -1468,8 +1466,8 @@ mswin_nh_poskey(int *x, int *y, int *mod)
     if (event->type == NHEVENT_MOUSE) {
         if (iflags.wc_mouse_support) {
             *mod = event->ei.ms.mod;
-            *x = event->ei.ms.x;
-            *y = event->ei.ms.y;
+            *x = (coordxy) event->ei.ms.x;
+            *y = (coordxy) event->ei.ms.y;
         }
         key = 0;
     } else {

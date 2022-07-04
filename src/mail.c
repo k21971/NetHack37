@@ -200,7 +200,7 @@ md_start(coord *startp)
                     startp->y = row;
                     startp->x = g.viz_rmin[row];
 
-                } else if (enexto(&testcc, (xchar) g.viz_rmin[row], row,
+                } else if (enexto(&testcc, (coordxy) g.viz_rmin[row], row,
                                   (struct permonst *) 0)
                            && !cansee(testcc.x, testcc.y)
                            && couldsee(testcc.x, testcc.y)) {
@@ -215,7 +215,7 @@ md_start(coord *startp)
                     startp->y = row;
                     startp->x = g.viz_rmax[row];
 
-                } else if (enexto(&testcc, (xchar) g.viz_rmax[row], row,
+                } else if (enexto(&testcc, (coordxy) g.viz_rmax[row], row,
                                   (struct permonst *) 0)
                            && !cansee(testcc.x, testcc.y)
                            && couldsee(testcc.x, testcc.y)) {
@@ -247,7 +247,7 @@ static boolean
 md_stop(coord *stopp,  /* stopping position (we fill it in) */
         coord *startp) /* starting position (read only) */
 {
-    int x, y, distance, min_distance = -1;
+    coordxy x, y, distance, min_distance = -1;
 
     for (x = u.ux - 1; x <= u.ux + 1; x++)
         for (y = u.uy - 1; y <= u.uy + 1; y++) {

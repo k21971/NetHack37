@@ -37,12 +37,12 @@ void chainin_cliparound(int, int);
 #ifdef POSITIONBAR
 void chainin_update_positionbar(char *);
 #endif
-void chainin_print_glyph(winid, xchar, xchar,
+void chainin_print_glyph(winid, coordxy, coordxy,
                             const glyph_info *, const glyph_info *);
 void chainin_raw_print(const char *);
 void chainin_raw_print_bold(const char *);
 int chainin_nhgetch(void);
-int chainin_nh_poskey(int *, int *, int *);
+int chainin_nh_poskey(coordxy *, coordxy *, int *);
 void chainin_nhbell(void);
 int chainin_doprev_message(void);
 char chainin_yn_function(const char *, const char *, char);
@@ -75,7 +75,7 @@ void chainin_status_update(int, genericptr_t, int, int, int,
 
 boolean chainin_can_suspend(void);
 void chainin_update_inventory(int);
-perminvent_info *chainin_update_invent_slot(winid, int, perminvent_info *);
+win_request_info *chainin_ctrl_nhwindow(winid, int, win_request_info *);
 
 void *chainin_procs_chain(int cmd, int n, void *me, void *nextprocs, void *nextdata);
 void chainin_procs_init(int dir);
@@ -345,8 +345,8 @@ chainin_update_positionbar(char *posbar)
 void
 chainin_print_glyph(
     winid window,
-    xchar x,
-    xchar y,
+    coordxy x,
+    coordxy y,
     const glyph_info *glyphinfo,
     const glyph_info *bkglyphinfo)
 {
@@ -377,8 +377,8 @@ chainin_nhgetch(void)
 
 int
 chainin_nh_poskey(
-    int *x,
-    int *y,
+    coordxy *x,
+    coordxy *y,
     int *mod)
 {
     int rv;
@@ -578,18 +578,16 @@ chainin_can_suspend(void)
     return rv;
 }
 
-perminvent_info *
-chainin_update_invent_slot(
-    winid window,  /* window to use, must be of type NHW_MENU */
-    int inventory_slot,                 /* slot id: 0 - info return to core */
-                                        /*          1 - gold slot */
-                                        /*          2 - 29 obj slots */
-    perminvent_info *pi)
+win_request_info *
+chainin_ctrl_nhwindow(
+    winid window,
+    int request,
+    win_request_info *wri)
 {
     boolean rv;
 
-    rv = (*cibase->nprocs->win_update_invent_slot)(cibase->ndata, window,
-                                                   inventory_slot, pi);
+    rv = (*cibase->nprocs->win_ctrl_nhwindow)(cibase->ndata, window,
+                                                   request, wri);
     return rv;
 }
 
@@ -639,5 +637,5 @@ struct window_procs chainin_procs = {
     chainin_status_update,
     chainin_can_suspend,
     chainin_update_inventory,
-    chainin_update_invent_slot,
+    chainin_ctrl_nhwindow,
 };

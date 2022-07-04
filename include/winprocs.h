@@ -54,12 +54,12 @@ struct window_procs {
 #ifdef POSITIONBAR
     void (*win_update_positionbar)(char *);
 #endif
-    void (*win_print_glyph)(winid, xchar, xchar,
+    void (*win_print_glyph)(winid, coordxy, coordxy,
                             const glyph_info *, const glyph_info *);
     void (*win_raw_print)(const char *);
     void (*win_raw_print_bold)(const char *);
     int (*win_nhgetch)(void);
-    int (*win_nh_poskey)(int *, int *, int *);
+    int (*win_nh_poskey)(coordxy *, coordxy *, int *);
     void (*win_nhbell)(void);
     int (*win_doprev_message)(void);
     char (*win_yn_function)(const char *, const char *, char);
@@ -92,7 +92,7 @@ struct window_procs {
                               unsigned long *);
     boolean (*win_can_suspend)(void);
     void (*win_update_inventory)(int);
-    perminvent_info *(*win_update_invent_slot)(winid, int, perminvent_info *);
+    win_request_info *(*win_ctrl_nhwindow)(winid, int, win_request_info *);
 };
 
 extern
@@ -174,7 +174,7 @@ extern
  */
 #define status_enablefield (*windowprocs.win_status_enablefield)
 #define status_update (*windowprocs.win_status_update)
-#define update_invent_slot (*windowprocs.win_update_invent_slot)
+#define ctrl_nhwindow (*windowprocs.win_ctrl_nhwindow)
 
 /*
  * 
@@ -375,13 +375,13 @@ struct chain_procs {
 #ifdef POSITIONBAR
     void (*win_update_positionbar)(CARGS, char *);
 #endif
-    void (*win_print_glyph)(CARGS, winid, xchar, xchar,
+    void (*win_print_glyph)(CARGS, winid, coordxy, coordxy,
                             const glyph_info *,
                             const glyph_info *);
     void (*win_raw_print)(CARGS, const char *);
     void (*win_raw_print_bold)(CARGS, const char *);
     int (*win_nhgetch)(CARGS);
-    int (*win_nh_poskey)(CARGS, int *, int *, int *);
+    int (*win_nh_poskey)(CARGS, coordxy *, coordxy *, int *);
     void (*win_nhbell)(CARGS);
     int (*win_doprev_message)(CARGS);
     char (*win_yn_function)
@@ -452,12 +452,12 @@ extern void safe_cliparound(int, int);
 #ifdef POSITIONBAR
 extern void safe_update_positionbar(char *);
 #endif
-extern void safe_print_glyph(winid, xchar, xchar,
+extern void safe_print_glyph(winid, coordxy, coordxy,
                              const glyph_info *, const glyph_info *);
 extern void safe_raw_print(const char *);
 extern void safe_raw_print_bold(const char *);
 extern int safe_nhgetch(void);
-extern int safe_nh_poskey(int *, int *, int *);
+extern int safe_nh_poskey(coordxy *, coordxy *, int *);
 extern void safe_nhbell(void);
 extern int safe_doprev_message(void);
 extern char safe_yn_function(const char *, const char *, char);
@@ -491,7 +491,7 @@ extern void stdio_nonl_raw_print(const char *);
 extern void stdio_raw_print_bold(const char *);
 extern void stdio_wait_synch(void);
 extern void safe_update_inventory(int);
-extern perminvent_info *safe_update_invent_slot(winid, int, perminvent_info *);
+extern win_request_info *safe_ctrl_nhwindow(winid, int, win_request_info *);
 extern int stdio_nhgetch(void);
 #endif /* SAFEPROCS */
 #endif /* WINPROCS_H */

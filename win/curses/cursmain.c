@@ -117,7 +117,7 @@ struct window_procs curses_procs = {
     curses_status_update,
     genl_can_suspend_yes,
     curses_update_inventory,
-    curses_update_invent_slot,
+    curses_ctrl_nhwindow,
 };
 
 /*
@@ -695,15 +695,13 @@ curses_update_inventory(int arg)
     }
 }
 
-perminvent_info *
-curses_update_invent_slot(
-    winid window UNUSED,  /* window to use, must be of type NHW_MENU */
-    int inventory_slot UNUSED,          /* slot id: 0 - info return to core */
-                                        /*          1 - gold slot */
-                                        /*          2 - 29 obj slots */
-    perminvent_info *pi UNUSED)
+win_request_info *
+curses_ctrl_nhwindow(
+    winid window UNUSED,
+    int request UNUSED,
+    win_request_info *wri UNUSED)
 {
-    return (perminvent_info *) 0;
+    return (win_request_info *) 0;
 }
 
 /*
@@ -771,7 +769,7 @@ print_glyph(window, x, y, glyphinfo, bkglyphinfo)
 */
 
 void
-curses_print_glyph(winid wid, xchar x, xchar y,
+curses_print_glyph(winid wid, coordxy x, coordxy y,
                    const glyph_info *glyphinfo, const glyph_info *bkglyphinfo UNUSED)
 {
     int glyph;
@@ -881,7 +879,7 @@ curses_nhgetch(void)
 }
 
 /*
-int nh_poskey(int *x, int *y, int *mod)
+int nh_poskey(coordxy *x, coordxy *y, int *mod)
                 -- Returns a single character input from the user or a
                    a positioning event (perhaps from a mouse).  If the
                    return value is non-zero, a character was typed, else,
@@ -896,7 +894,7 @@ int nh_poskey(int *x, int *y, int *mod)
                    routine always returns a non-zero character.
 */
 int
-curses_nh_poskey(int *x, int *y, int *mod)
+curses_nh_poskey(coordxy *x, coordxy *y, int *mod)
 {
     int key = curses_nhgetch();
 

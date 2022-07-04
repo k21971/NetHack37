@@ -27,7 +27,7 @@ static unsigned long abil_to_spfx(long *);
 static uchar abil_to_adtyp(long *);
 static int glow_strength(int);
 static boolean untouchable(struct obj *, boolean);
-static int count_surround_traps(int, int);
+static int count_surround_traps(coordxy, coordxy);
 
 /* The amount added to the victim's total hit points to insure that the
    victim will be killed even after damage bonus/penalty adjustments.
@@ -57,7 +57,7 @@ struct arti_info {
 static struct arti_info artiexist[1 + NROFARTIFACTS];
 /* discovery list; for N discovered artifacts, the first N entries are ART_xx
    values in discovery order, the remaining (NROFARTIFACTS-N) slots are 0 */
-static xchar artidisco[NROFARTIFACTS];
+static xint16 artidisco[NROFARTIFACTS];
 /* note: artiexist[] and artidisco[] don't need to be in struct g; they
  * get explicitly initialized at game start so don't need to be part of
  * bulk re-init if game restart ever gets implemented.  They are saved
@@ -1001,7 +1001,7 @@ spec_dbon(struct obj *otmp, struct monst *mon, int tmp)
 
 /* add identified artifact to discoveries list */
 void
-discover_artifact(xchar m)
+discover_artifact(xint16 m)
 {
     int i;
 
@@ -1019,7 +1019,7 @@ discover_artifact(xchar m)
 
 /* used to decide whether an artifact has been fully identified */
 boolean
-undiscovered_artifact(xchar m)
+undiscovered_artifact(xint16 m)
 {
     int i;
 
@@ -2347,12 +2347,13 @@ retouch_equipment(int dropflag) /* 0==don't drop, 1==drop all, 2==drop weapon */
 }
 
 static int
-count_surround_traps(int x, int y)
+count_surround_traps(coordxy x, coordxy y)
 {
     struct rm *levp;
     struct obj *otmp;
     struct trap *ttmp;
-    int dx, dy, glyph, ret = 0;
+    coordxy dx, dy;
+    int glyph, ret = 0;
 
     for (dx = x - 1; dx < x + 2; ++dx)
         for (dy = y - 1; dy < y + 2; ++dy) {

@@ -12,7 +12,7 @@
 
 #ifdef TTY_PERM_INVENT
 
-enum { tty_pi_minrow = 28, tty_pi_mincol = 79 };
+enum { tty_perminv_minrow = 28, tty_perminv_mincol = 79 };
 /* for static init of zerottycell, put pointer first */
 union ttycellcontent {
     glyph_info *gi;
@@ -46,7 +46,7 @@ typedef struct tty_mi {
 /* descriptor for tty-based windows */
 struct WinDesc {
     int flags;           /* window flags */
-    xchar type;          /* type of window */
+    xint16 type;          /* type of window */
     boolean active;      /* true if window is active */
     short offx, offy;    /* offset from topleft of display */
     long rows, cols;     /* dimensions */
@@ -249,12 +249,12 @@ E void tty_cliparound(int, int);
 #ifdef POSITIONBAR
 E void tty_update_positionbar(char *);
 #endif
-E void tty_print_glyph(winid, xchar, xchar, const glyph_info *,
+E void tty_print_glyph(winid, coordxy, coordxy, const glyph_info *,
                        const glyph_info *);
 E void tty_raw_print(const char *);
 E void tty_raw_print_bold(const char *);
 E int tty_nhgetch(void);
-E int tty_nh_poskey(int *, int *, int *);
+E int tty_nh_poskey(coordxy *, coordxy *, int *);
 E void tty_nhbell(void);
 E int tty_doprev_message(void);
 E char tty_yn_function(const char *, const char *, char);
@@ -283,7 +283,7 @@ E void genl_outrip(winid, int, time_t);
 E char *tty_getmsghistory(boolean);
 E void tty_putmsghistory(const char *, boolean);
 E void tty_update_inventory(int);
-E perminvent_info *tty_update_invent_slot(winid, int, perminvent_info *);
+E win_request_info *tty_ctrl_nhwindow(winid, int, win_request_info *);
 
 #ifdef TTY_PERM_INVENT
 E void tty_refresh_inventory(int start, int stop, int y);

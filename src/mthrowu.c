@@ -9,7 +9,7 @@ static int monmulti(struct monst *, struct obj *, struct obj *);
 static void monshoot(struct monst *, struct obj *, struct obj *);
 static boolean ucatchgem(struct obj *, struct monst *);
 static const char* breathwep_name(int);
-static int drop_throw(struct obj *, boolean, int, int);
+static int drop_throw(struct obj *, boolean, coordxy, coordxy);
 static int m_lined_up(struct monst *, struct monst *);
 
 #define URETREATING(x, y) \
@@ -156,8 +156,8 @@ static int
 drop_throw(
     register struct obj *obj,
     boolean ohit,
-    int x,
-    int y)
+    coordxy x,
+    coordxy y)
 {
     int retvalu = 1;
     int create;
@@ -544,8 +544,8 @@ ucatchgem(
 void
 m_throw(
     struct monst *mon,      /* launching monster */
-    int x, int y,           /* launch point */
-    int dx, int dy,         /* direction */
+    coordxy x, coordxy y,           /* launch point */
+    coordxy dx, coordxy dy,         /* direction */
     int range,              /* maximum distance */
     struct obj *obj)        /* missile (or stack providing it) */
 {
@@ -777,7 +777,7 @@ int
 thrwmm(struct monst* mtmp, struct monst* mtarg)
 {
     struct obj *otmp, *mwep;
-    register xchar x, y;
+    register coordxy x, y;
     boolean ispole;
 
     /* Polearms won't be applied by monsters against other monsters */
@@ -833,8 +833,8 @@ spitmm(struct monst* mtmp, struct attack* mattk, struct monst* mtarg)
     }
     if (m_lined_up(mtarg, mtmp)) {
         boolean utarg = (mtarg == &g.youmonst);
-        xchar tx = utarg ? mtmp->mux : mtarg->mx;
-        xchar ty = utarg ? mtmp->muy : mtarg->my;
+        coordxy tx = utarg ? mtmp->mux : mtarg->mx;
+        coordxy ty = utarg ? mtmp->muy : mtarg->my;
 
         switch (mattk->adtyp) {
         case AD_BLND:
@@ -972,7 +972,7 @@ void
 thrwmu(struct monst* mtmp)
 {
     struct obj *otmp, *mwep;
-    xchar x, y;
+    coordxy x, y;
     const char *onm;
 
     /* Rearranged beginning so monsters can use polearms not in a line */
@@ -1072,11 +1072,11 @@ breamu(struct monst* mtmp, struct attack* mattk)
    Returns TRUE if fnc returned TRUE. */
 boolean
 linedup_callback(
-    xchar ax,
-    xchar ay,
-    xchar bx,
-    xchar by,
-    boolean (*fnc)(int, int))
+    coordxy ax,
+    coordxy ay,
+    coordxy bx,
+    coordxy by,
+    boolean (*fnc)(coordxy, coordxy))
 {
     int dx, dy;
 
@@ -1110,10 +1110,10 @@ linedup_callback(
 
 boolean
 linedup(
-    register xchar ax,
-    register xchar ay,
-    register xchar bx,
-    register xchar by,
+    register coordxy ax,
+    register coordxy ay,
+    register coordxy bx,
+    register coordxy by,
     int boulderhandling) /* 0=block, 1=ignore, 2=conditionally block */
 {
     int dx, dy, boulderspots;
@@ -1159,8 +1159,8 @@ static int
 m_lined_up(struct monst* mtarg, struct monst* mtmp)
 {
     boolean utarget = (mtarg == &g.youmonst);
-    xchar tx = utarget ? mtmp->mux : mtarg->mx;
-    xchar ty = utarget ? mtmp->muy : mtarg->my;
+    coordxy tx = utarget ? mtmp->mux : mtarg->mx;
+    coordxy ty = utarget ? mtmp->muy : mtarg->my;
     boolean ignore_boulders = utarget && (throws_rocks(mtmp->data)
                                           || m_carrying(mtmp, WAN_STRIKING));
 
@@ -1198,8 +1198,8 @@ m_carrying(struct monst* mtmp, int type)
 void
 hit_bars(
     struct obj **objp,    /* *objp will be set to NULL if object breaks */
-    int objx, int objy,   /* hero's spot (when wielded) or missile's spot */
-    int barsx, int barsy, /* adjacent spot where bars are located */
+    coordxy objx, coordxy objy,   /* hero's spot (when wielded) or missile's spot */
+    coordxy barsx, coordxy barsy, /* adjacent spot where bars are located */
     unsigned breakflags)  /* breakage control */
 {
     struct obj *otmp = *objp;
@@ -1237,8 +1237,8 @@ hit_bars(
 boolean
 hits_bars(
     struct obj **obj_p,   /* *obj_p will be set to NULL if object breaks */
-    int x, int y,
-    int barsx, int barsy,
+    coordxy x, coordxy y,
+    coordxy barsx, coordxy barsy,
     int always_hit,       /* caller can force a hit for items which would
                            * fit through */
     int whodidit)         /* 1==hero, 0=other, -1==just check whether it

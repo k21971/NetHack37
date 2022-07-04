@@ -92,12 +92,12 @@ extern int curses_select_menu(winid wid, int how, MENU_ITEM_P **selected);
 extern void curses_mark_synch(void);
 extern void curses_wait_synch(void);
 extern void curses_cliparound(int x, int y);
-extern void curses_print_glyph(winid wid, xchar x, xchar y,
+extern void curses_print_glyph(winid wid, coordxy x, coordxy y,
                                 const glyph_info *, const glyph_info *);
 extern void curses_raw_print(const char *str);
 extern void curses_raw_print_bold(const char *str);
 extern int curses_nhgetch(void);
-extern int curses_nh_poskey(int *x, int *y, int *mod);
+extern int curses_nh_poskey(coordxy *x, coordxy *y, int *mod);
 extern void curses_nhbell(void);
 extern int curses_doprev_message(void);
 extern char curses_yn_function(const char *question, const char *choices,
@@ -113,7 +113,7 @@ extern void genl_outrip(winid tmpwin, int how, time_t when);
 extern void curses_preference_update(const char *pref);
 extern void curs_reset_windows(boolean, boolean);
 extern void curses_update_inventory(int);
-extern perminvent_info *curses_update_invent_slot(winid, int, perminvent_info *);
+extern win_request_info *curses_ctrl_nhwindow(winid, int, win_request_info *);
 
 /* curswins.c */
 
@@ -174,7 +174,7 @@ extern int curses_convert_attr(int attr);
 extern int curses_read_attrs(const char *attrs);
 extern char *curses_fmt_attrs(char *);
 extern int curses_convert_keys(int key);
-extern int curses_get_mouse(int *mousex, int *mousey, int *mod);
+extern int curses_get_mouse(coordxy *mousex, coordxy *mousey, int *mod);
 extern void curses_mouse_support(int);
 
 /* cursdial.c */

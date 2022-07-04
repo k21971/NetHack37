@@ -4378,7 +4378,8 @@ optfn_boolean(int optidx, int req, boolean negated, char *opts, char *op)
         }
         if (iflags.debug_fuzzer && !g.opt_initial) {
             /* don't randomly toggle this/these */
-            if (optidx == opt_silent)
+            if ((optidx == opt_silent)
+                || (optidx == opt_perm_invent))
                 return optn_ok;
         }
         /* Before the change */
@@ -4414,7 +4415,7 @@ optfn_boolean(int optidx, int req, boolean negated, char *opts, char *op)
                    -> sync_perminvent()
                           -> tty_create_nhwindow(NHW_PERMINVENT)
                    gives feedback for failure (terminal too small) */
-                if (g.perm_invent_win == WIN_ERR)
+                if (WIN_INVEN == WIN_ERR)
                     return optn_silenterr;
             }
 #endif
@@ -6853,7 +6854,7 @@ query_attr(const char *prompt)
 
 static const struct {
     const char *name;
-    xchar msgtyp;
+    xint8 msgtyp;
     const char *descr;
 } msgtype_names[] = {
     { "show", MSGTYP_NORMAL, "Show message normally" },
@@ -6917,7 +6918,8 @@ msgtype_add(int typ, char *pattern)
     /* test_regex_pattern() has already validated this regexp but parsing
        it again could conceivably run out of memory */
     if (!regex_compile(pattern, tmp->regex)) {
-        const char *re_error_desc = regex_error_desc(tmp->regex);
+        char errbuf[BUFSZ];
+        char *re_error_desc = regex_error_desc(tmp->regex, errbuf);
 
         /* free first in case reason for failure was insufficient memory */
         regex_free(tmp->regex);
@@ -7049,7 +7051,7 @@ test_regex_pattern(const char *str, const char *errmsg)
 {
     static const char def_errmsg[] = "NHregex error";
     struct nhregex *match;
-    const char *re_error_desc;
+    char *re_error_desc, errbuf[BUFSZ];
     boolean retval;
 
     if (!str)
@@ -7067,7 +7069,7 @@ test_regex_pattern(const char *str, const char *errmsg)
     /* get potential error message before freeing regexp and free regexp
        before issuing message in case the error is "ran out of memory"
        since message delivery might need to allocate some memory */
-    re_error_desc = !retval ? regex_error_desc(match) : 0;
+    re_error_desc = !retval ? regex_error_desc(match, errbuf) : 0;
     /* discard regexp; caller will re-parse it after validating other stuff */
     regex_free(match);
     /* if returning failure, tell player */
@@ -7090,7 +7092,8 @@ add_menu_coloring_parsed(const char *str, int c, int a)
     /* test_regex_pattern() has already validated this regexp but parsing
        it again could conceivably run out of memory */
     if (!regex_compile(str, tmp->match)) {
-        const char *re_error_desc = regex_error_desc(tmp->match);
+        char errbuf[BUFSZ];
+        char *re_error_desc = regex_error_desc(tmp->match, errbuf);
 
         /* free first in case reason for regcomp failure was out-of-memory */
         regex_free(tmp->match);
@@ -8243,7 +8246,8 @@ add_autopickup_exception(const char *mapping)
     ape = (struct autopickup_exception *) alloc(sizeof *ape);
     ape->regex = regex_init();
     if (!regex_compile(text, ape->regex)) {
-        const char *re_error_desc = regex_error_desc(ape->regex);
+        char errbuf[BUFSZ];
+        char *re_error_desc = regex_error_desc(ape->regex, errbuf);
 
         /* free first in case reason for failure was insufficient memory */
         regex_free(ape->regex);
@@ -8962,6 +8966,10 @@ enhance_menu_text(
         if (thisopt->setwhere == set_gameview)
             Snprintf(eos(buf), availsz, " *terminal size is too small");
     }
+#else
+    nhUse(availsz);
+    nhUse(bool_p);
+    nhUse(thisopt);
 #endif
     return;
 }

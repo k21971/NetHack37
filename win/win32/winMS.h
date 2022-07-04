@@ -164,13 +164,13 @@ int mswin_select_menu(winid wid, int how, MENU_ITEM_P **selected);
 void mswin_mark_synch(void);
 void mswin_wait_synch(void);
 void mswin_cliparound(int x, int y);
-void mswin_print_glyph(winid wid, xchar x, xchar y,
+void mswin_print_glyph(winid wid, coordxy x, coordxy y,
                        const glyph_info *glyph, const glyph_info *bkglyph);
 void mswin_raw_print(const char *str);
 void mswin_raw_print_bold(const char *str);
 void mswin_raw_print_flush();
 int mswin_nhgetch(void);
-int mswin_nh_poskey(int *x, int *y, int *mod);
+int mswin_nh_poskey(coordxy *x, coordxy *y, int *mod);
 void mswin_nhbell(void);
 int mswin_doprev_message(void);
 char mswin_yn_function(const char *question, const char *choices, char def);
@@ -193,7 +193,7 @@ void mswin_status_enablefield(int fieldidx, const char *nm, const char *fmt,
                               boolean enable);
 void mswin_status_update(int idx, genericptr_t ptr, int chg, int percent, int color, unsigned long *colormasks);
 void mswin_update_inventory(int);
-perminvent_info *mswin_update_invent_slot(winid, int, perminvent_info *);
+win_request_info *mswin_ctrl_nhwindow(winid, int, win_request_info *);
 
 /* helper function */
 HWND mswin_hwnd_from_winid(winid wid);

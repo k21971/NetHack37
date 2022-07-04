@@ -13,12 +13,12 @@
 #define MAGIC_COOKIE 1000
 
 static void probe_objchain(struct obj *);
-static boolean zombie_can_dig(xchar x, xchar y);
+static boolean zombie_can_dig(coordxy x, coordxy y);
 static void polyuse(struct obj *, int, int);
 static void create_polymon(struct obj *, int);
 static int stone_to_flesh_obj(struct obj *);
 static boolean zap_updown(struct obj *);
-static void zhitu(int, int, const char *, xchar, xchar);
+static void zhitu(int, int, const char *, coordxy, coordxy);
 static void revive_egg(struct obj *);
 static boolean zap_steed(struct obj *);
 static void skiprange(int, int *, int *);
@@ -560,7 +560,7 @@ probe_monster(struct monst *mtmp)
 boolean
 get_obj_location(
     struct obj *obj,
-    xchar *xp, xchar *yp,
+    coordxy *xp, coordxy *yp,
     int locflags)
 {
     switch (obj->where) {
@@ -598,7 +598,7 @@ get_obj_location(
 boolean
 get_mon_location(
     struct monst *mon,
-    xchar *xp, xchar *yp,
+    coordxy *xp, coordxy *yp,
     int locflags) /* non-zero means get location even if monster is buried */
 {
     if (mon == &g.youmonst || (u.usteed && mon == u.usteed)) {
@@ -767,7 +767,7 @@ get_container_location(
 
 /* can zombie dig the location at x,y */
 static boolean
-zombie_can_dig(xchar x, xchar y)
+zombie_can_dig(coordxy x, coordxy y)
 {
     if (isok(x, y)) {
         schar typ = levl[x][y].typ;
@@ -794,7 +794,7 @@ revive(struct obj *corpse, boolean by_hero)
     struct permonst *mptr;
     struct obj *container;
     coord xy;
-    xchar x, y;
+    coordxy x, y;
     boolean one_of;
     mmflags_nht mmflags = NO_MINVENT | MM_NOWAIT | MM_NOMSG;
     int montype, cgend, container_nesting = 0;
@@ -1584,7 +1584,7 @@ struct obj *
 poly_obj(struct obj *obj, int id)
 {
     struct obj *otmp;
-    xchar ox = 0, oy = 0;
+    coordxy ox = 0, oy = 0;
     long old_wornmask, new_wornmask = 0L;
     boolean can_merge = (id == STRANGE_OBJECT);
     int obj_location = obj->where;
@@ -1856,7 +1856,7 @@ stone_to_flesh_obj(struct obj *obj)
     struct permonst *ptr;
     struct monst *mon, *shkp;
     struct obj *item;
-    xchar oox, ooy;
+    coordxy oox, ooy;
     boolean smell = FALSE, golem_xform = FALSE;
 
     if (objects[obj->otyp].oc_material != MINERAL
@@ -2171,7 +2171,7 @@ bhito(struct obj *obj, struct obj *otmp)
                 revive_egg(obj);
             } else if (obj->otyp == CORPSE) {
                 struct monst *mtmp;
-                xchar ox, oy;
+                coordxy ox, oy;
                 unsigned save_norevive;
                 boolean by_u = !g.context.mon_moving;
                 int corpsenm = corpse_revive_type(obj);
@@ -2264,7 +2264,7 @@ int
 bhitpile(
     struct obj *obj, /* wand or fake spellbook for type of zap */
     int (*fhito)(OBJ_P, OBJ_P), /* callback for each object being hit */
-    int tx, int ty,  /* target location */
+    coordxy tx, coordxy ty,  /* target location */
     schar zz)        /* direction for up/down zaps */
 {
     int hitanything = 0;
@@ -2977,7 +2977,8 @@ static boolean
 zap_updown(struct obj *obj) /* wand or spell */
 {
     boolean striking = FALSE, disclose = FALSE;
-    int x, y, xx, yy, ptmp;
+    coordxy x, y, xx, yy;
+    int ptmp;
     struct obj *otmp;
     struct engr *e;
     struct trap *ttmp;
@@ -3131,7 +3132,7 @@ zap_updown(struct obj *obj) /* wand or spell */
             case WAN_POLYMORPH:
             case SPE_POLYMORPH:
                 del_engr(e);
-                make_engr_at(x, y, random_engraving(buf), g.moves, (xchar) 0);
+                make_engr_at(x, y, random_engraving(buf), g.moves, (coordxy) 0);
                 break;
             case WAN_CANCELLATION:
             case SPE_CANCELLATION:
@@ -3374,7 +3375,7 @@ maybe_explode_trap(struct trap *ttmp, struct obj *otmp)
     if (!ttmp || !otmp)
         return;
     if (otmp->otyp == WAN_CANCELLATION || otmp->otyp == SPE_CANCELLATION) {
-        xchar x = ttmp->tx, y = ttmp->ty;
+        coordxy x = ttmp->tx, y = ttmp->ty;
 
         if (undestroyable_trap(ttmp->ttyp)) {
             shieldeff(x, y);
@@ -3415,7 +3416,7 @@ maybe_explode_trap(struct trap *ttmp, struct obj *otmp)
  *  one is revealed for a weapon, but if not a weapon is left up to fhitm().
  */
 struct monst *
-bhit(int ddx, int ddy, int range,  /* direction and range */
+bhit(coordxy ddx, coordxy ddy, int range,  /* direction and range */
      enum bhit_call_types weapon,  /* defined in hack.h */
      int (*fhitm)(MONST_P, OBJ_P), /* fns called when mon/obj hit */
      int (*fhito)(OBJ_P, OBJ_P),
@@ -3456,7 +3457,7 @@ bhit(int ddx, int ddy, int range,  /* direction and range */
         tmp_at(DISP_FLASH, obj_to_glyph(obj, rn2_on_display_rng));
 
     while (range-- > 0) {
-        int x, y;
+        coordxy x, y;
 
         g.bhitpos.x += ddx;
         g.bhitpos.y += ddy;
@@ -3747,7 +3748,7 @@ bhit(int ddx, int ddy, int range,  /* direction and range */
  * is too obviously silly.
  */
 struct monst *
-boomhit(struct obj *obj, int dx, int dy)
+boomhit(struct obj *obj, coordxy dx, coordxy dy)
 {
     register int i, ct;
     int boom; /* showsym[] index  */
@@ -3770,7 +3771,7 @@ boomhit(struct obj *obj, int dx, int dy)
     g.bhitpos.x = u.ux;
     g.bhitpos.y = u.uy;
     boom = counterclockwise ? S_boomleft : S_boomright;
-    i = xytod(dx, dy);
+    i = (int) xytod(dx, dy);
     tmp_at(DISP_FLASH, cmap_to_glyph(boom));
     for (ct = 0; ct < 10; ct++) {
         i = DIR_CLAMP(i);
@@ -3989,7 +3990,7 @@ zhitm(
 }
 
 static void
-zhitu(int type, int nd, const char *fltxt, xchar sx, xchar sy)
+zhitu(int type, int nd, const char *fltxt, coordxy sx, coordxy sy)
 {
     int dam = 0, abstyp = abs(type);
 
@@ -4141,7 +4142,7 @@ zhitu(int type, int nd, const char *fltxt, xchar sx, xchar sy)
  * at position x,y; return the number of objects burned
  */
 int
-burn_floor_objects(int x, int y,
+burn_floor_objects(coordxy x, coordxy y,
                    boolean give_feedback, /* caller needs to decide about
                                              visibility checks */
                    boolean u_caused)
@@ -4254,7 +4255,7 @@ disintegrate_mon(struct monst *mon,
 }
 
 void
-buzz(int type, int nd, xchar sx, xchar sy, int dx, int dy)
+buzz(int type, int nd, coordxy sx, coordxy sy, int dx, int dy)
 {
     dobuzz(type, nd, sx, sy, dx, dy, TRUE);
 }
@@ -4272,12 +4273,12 @@ void
 dobuzz(
     int type,
     int nd,
-    xchar sx, xchar sy,
+    coordxy sx, coordxy sy,
     int dx, int dy,
     boolean say) /* announce out of sight hit/miss events if true */
 {
     int range, abstype = abs(type) % 10;
-    register xchar lsx, lsy;
+    register coordxy lsx, lsy;
     struct monst *mon;
     coord save_bhitpos;
     boolean shopdamage = FALSE;
@@ -4546,7 +4547,7 @@ dobuzz(
 }
 
 void
-melt_ice(xchar x, xchar y, const char *msg)
+melt_ice(coordxy x, coordxy y, const char *msg)
 {
     struct rm *lev = &levl[x][y];
     struct obj *otmp;
@@ -4594,7 +4595,7 @@ melt_ice(xchar x, xchar y, const char *msg)
  * permanent instead.
  */
 void
-start_melt_ice_timeout(xchar x, xchar y,
+start_melt_ice_timeout(coordxy x, coordxy y,
                        long min_time) /* <x,y>'s old melt timeout (deleted by
                                          time we get here) */
 {
@@ -4627,14 +4628,14 @@ start_melt_ice_timeout(xchar x, xchar y,
 void
 melt_ice_away(anything *arg, long timeout UNUSED)
 {
-    xchar x, y;
+    coordxy x, y;
     long where = arg->a_long;
     boolean save_mon_moving = g.context.mon_moving; /* will be False */
 
     /* melt_ice -> minliquid -> mondead|xkilled shouldn't credit/blame hero */
     g.context.mon_moving = TRUE; /* hero isn't causing this ice to melt */
-    y = (xchar) (where & 0xFFFF);
-    x = (xchar) ((where >> 16) & 0xFFFF);
+    y = (coordxy) (where & 0xFFFF);
+    x = (coordxy) ((where >> 16) & 0xFFFF);
     /* melt_ice does newsym when appropriate */
     melt_ice(x, y, "Some ice melts away.");
     g.context.mon_moving = save_mon_moving;
@@ -4647,7 +4648,7 @@ melt_ice_away(anything *arg, long timeout UNUSED)
  */
 int
 zap_over_floor(
-    xchar x, xchar y,         /* location */
+    coordxy x, coordxy y,         /* location */
     int type,                 /* damage type plus {wand|spell|breath} info */
     boolean *shopdamage,      /* extra output if shop door is destroyed */
     short exploding_wand_typ) /* supplied when breaking a wand; or POT_OIL
@@ -4977,7 +4978,7 @@ zap_over_floor(
 void
 fracture_rock(struct obj *obj) /* no texts here! */
 {
-    xchar x, y;
+    coordxy x, y;
     boolean by_you = !g.context.mon_moving;
 
     if (by_you && get_obj_location(obj, &x, &y, 0) && costly_spot(x, y)) {

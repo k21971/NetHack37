@@ -64,12 +64,12 @@ void trace_cliparound(void *,int, int);
 #ifdef POSITIONBAR
 void trace_update_positionbar(void *,char *);
 #endif
-void trace_print_glyph(void *,winid, xchar, xchar,
+void trace_print_glyph(void *,winid, coordxy, coordxy,
 		                            const glyph_info *, const glyph_info *);
 void trace_raw_print(void *,const char *);
 void trace_raw_print_bold(void *,const char *);
 int trace_nhgetch(void *);
-int trace_nh_poskey(void *,int *, int *, int *);
+int trace_nh_poskey(void *,coordxy *, coordxy *, int *);
 void trace_nhbell(void *);
 int trace_doprev_message(void *);
 char trace_yn_function(void *,const char *, const char *, char);
@@ -645,8 +645,8 @@ void
 trace_print_glyph(
     void *vp,
     winid window,
-    xchar x,
-    xchar y,
+    coordxy x,
+    coordxy y,
     const glyph_info *glyphinfo,
     const glyph_info *bkglyphinfo)
 {
@@ -724,8 +724,8 @@ trace_nhgetch(void *vp)
 int
 trace_nh_poskey(
     void *vp,
-    int *x,
-    int *y,
+    coordxy *x,
+    coordxy *y,
     int *mod)
 {
     struct trace_data *tdp = vp;
@@ -742,7 +742,8 @@ trace_nh_poskey(
     } else {
         sprintf(buf, "(%d)", rv);
     }
-    fprintf(wc_tracelogf, "%s=> %s (%d, %d, %d)\n", INDENT, buf, *x, *y,
+    fprintf(wc_tracelogf, "%s=> %s (%d, %d, %d)\n", INDENT, buf,
+            (int) *x, (int) *y,
             *mod);
 
     return rv;

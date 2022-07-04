@@ -19,7 +19,7 @@ static void mon_leaving_level(struct monst *);
 static void m_detach(struct monst *, struct permonst *);
 static void set_mon_min_mhpmax(struct monst *, int);
 static void lifesaved_monster(struct monst *);
-static void migrate_mon(struct monst *, xchar, xchar);
+static void migrate_mon(struct monst *, coordxy, coordxy);
 static boolean ok_to_obliterate(struct monst *);
 static void deal_with_overcrowding(struct monst *);
 static void m_restartcham(struct monst *);
@@ -58,7 +58,7 @@ sanity_check_single_mon(
     const char *msg)
 {
     struct permonst *mptr = mtmp->data;
-    int mx = mtmp->mx, my = mtmp->my;
+    coordxy mx = mtmp->mx, my = mtmp->my;
 
     if (!mptr || mptr < &mons[LOW_PM] || mptr >= &mons[NUMMONS]) {
         /* most sanity checks issue warnings if they detect a problem,
@@ -200,7 +200,7 @@ sanity_check_single_mon(
 void
 mon_sanity_check(void)
 {
-    int x, y;
+    coordxy x, y;
     struct monst *mtmp, *m;
 
     for (mtmp = fmon; mtmp; mtmp = mtmp->nmon) {
@@ -497,7 +497,7 @@ make_corpse(struct monst *mtmp, unsigned int corpseflags)
     int num;
     struct obj *obj = (struct obj *) 0;
     struct obj *otmp = (struct obj *) 0;
-    int x = mtmp->mx, y = mtmp->my;
+    coordxy x = mtmp->mx, y = mtmp->my;
     int mndx = monsndx(mdat);
     unsigned corpstatflags = corpseflags;
     boolean burythem = ((corpstatflags & CORPSTAT_BURIED) != 0);
@@ -1376,7 +1376,7 @@ meatcorpse(struct monst* mtmp) /* for purple worms and other voracious monsters 
     struct obj *otmp;
     struct permonst *ptr, *original_ptr = mtmp->data, *corpsepm;
     boolean poly, grow, heal, eyes = FALSE, vis = canseemon(mtmp);
-    int x = mtmp->mx, y = mtmp->my;
+    coordxy x = mtmp->mx, y = mtmp->my;
 
     /* if a pet, eating is handled separately, in dog.c */
     if (mtmp->mtame)
@@ -1806,7 +1806,7 @@ mfndpos(
 {
     struct permonst *mdat = mon->data;
     register struct trap *ttmp;
-    xchar x, y, nx, ny;
+    coordxy x, y, nx, ny;
     int cnt = 0;
     uchar ntyp;
     uchar nowtyp;
@@ -2110,7 +2110,7 @@ mm_displacement(
 
 /* Is the square close enough for the monster to move or attack into? */
 boolean
-monnear(struct monst *mon, int x, int y)
+monnear(struct monst *mon, coordxy x, coordxy y)
 {
     int distance = dist2(mon->mx, mon->my, x, y);
 
@@ -2316,7 +2316,7 @@ dealloc_monst(struct monst *mon)
 static void
 mon_leaving_level(struct monst *mon)
 {
-    int mx = mon->mx, my = mon->my;
+    coordxy mx = mon->mx, my = mon->my;
     boolean onmap = (isok(mx, my) && g.level.monsters[mx][my] == mon);
 
     /* to prevent an infinite relobj-flooreffects-hmon-killed loop */
@@ -2356,7 +2356,7 @@ m_detach(
     struct monst *mtmp,
     struct permonst *mptr) /* reflects mtmp->data _prior_ to mtmp's death */
 {
-    xchar mx = mtmp->mx, my = mtmp->my;
+    coordxy mx = mtmp->mx, my = mtmp->my;
 
     if (mtmp->mleashed)
         m_unleash(mtmp, FALSE);
@@ -2517,7 +2517,7 @@ mondead(struct monst *mtmp)
                     spec_death = (g.disintegested /* disintegrated/digested */
                                   || noncorporeal(mtmp->data)
                                   || amorphous(mtmp->data));
-            int x = mtmp->mx, y = mtmp->my;
+            coordxy x = mtmp->mx, y = mtmp->my;
 
             /* construct a format string before transformation;
                will be capitalized when used, expects one %s arg */
@@ -2789,7 +2789,7 @@ void
 monstone(struct monst* mdef)
 {
     struct obj *otmp, *obj, *oldminvent;
-    xchar x = mdef->mx, y = mdef->my;
+    coordxy x = mdef->mx, y = mdef->my;
     boolean wasinside = FALSE;
 
     /* vampshifter reverts to vampire;
@@ -2976,7 +2976,8 @@ xkilled(
     struct monst *mtmp,
     int xkill_flags) /* 1: suppress message, 2: suppress corpse, 4: pacifist */
 {
-    int tmp, mndx, x = mtmp->mx, y = mtmp->my;
+    int tmp, mndx;
+    coordxy x = mtmp->mx, y = mtmp->my;
     struct permonst *mdat;
     struct obj *otmp;
     struct trap *t;
@@ -3227,7 +3228,7 @@ vamp_stone(struct monst *mtmp)
 {
     if (is_vampshifter(mtmp)) {
         int mndx = mtmp->cham;
-        int x = mtmp->mx, y = mtmp->my;
+        coordxy x = mtmp->mx, y = mtmp->my;
 
         /* this only happens if shapeshifted */
         if (mndx >= LOW_PM && mndx != monsndx(mtmp->data)
@@ -3292,14 +3293,14 @@ vamp_stone(struct monst *mtmp)
 void
 m_into_limbo(struct monst *mtmp)
 {
-    xchar target_lev = ledger_no(&u.uz), xyloc = MIGR_APPROX_XY;
+    xint16 target_lev = ledger_no(&u.uz), xyloc = MIGR_APPROX_XY;
 
     mtmp->mstate |= MON_LIMBO;
     migrate_mon(mtmp, target_lev, xyloc);
 }
 
 static void
-migrate_mon(struct monst *mtmp, xchar target_lev, xchar xyloc)
+migrate_mon(struct monst *mtmp, xint16 target_lev, xint16 xyloc)
 {
     if (!mtmp->mx) {
         /* this was a failed arrival attempt from a prior migration;
@@ -3390,7 +3391,7 @@ elemental_clog(struct monst *mon)
         /* last resort - migrate mon to the next plane */
         } else if (!Is_astralevel(&u.uz)) {
             d_level dest;
-            xchar target_lev;
+            coordxy target_lev;
 
             dest = u.uz;
             dest.dlevel--;
@@ -3470,13 +3471,13 @@ maybe_mnexto(struct monst* mtmp)
 int
 mnearto(
     register struct monst *mtmp,
-    xchar x,
-    xchar y,
+    coordxy x,
+    coordxy y,
     boolean move_other, /* make sure mtmp gets to x, y! so move m_at(x, y) */
     unsigned int rlocflags)
 {
     struct monst *othermon = (struct monst *) 0;
-    xchar newx, newy;
+    coordxy newx, newy;
     coord mm;
     int res = 1;
 
@@ -3764,7 +3765,7 @@ wake_nearby(void)
 
 /* Wake up monsters near some particular location. */
 void
-wake_nearto(int x, int y, int distance)
+wake_nearto(coordxy x, coordxy y, int distance)
 {
     struct monst *mtmp;
 
@@ -3882,8 +3883,8 @@ get_iter_mons(boolean (*func)(struct monst *))
    passing x,y to the function.
    if func returns TRUE, stop and return that monster. */
 struct monst *
-get_iter_mons_xy(boolean (*func)(struct monst *, xchar, xchar),
-                xchar x, xchar y)
+get_iter_mons_xy(boolean (*func)(struct monst *, coordxy, coordxy),
+                coordxy x, coordxy y)
 {
     struct monst *mtmp;
 
@@ -3968,7 +3969,7 @@ restrap(struct monst *mtmp)
 /* reveal a monster at x,y hiding under an object,
    if there are no objects there */
 void
-maybe_unhide_at(xchar x, xchar y)
+maybe_unhide_at(coordxy x, coordxy y)
 {
     struct monst *mtmp;
 
@@ -3986,7 +3987,7 @@ hideunder(struct monst *mtmp)
 {
     struct trap *t;
     boolean oldundetctd, undetected = FALSE, is_u = (mtmp == &g.youmonst);
-    xchar x = is_u ? u.ux : mtmp->mx, y = is_u ? u.uy : mtmp->my;
+    coordxy x = is_u ? u.ux : mtmp->mx, y = is_u ? u.uy : mtmp->my;
 
     if (mtmp == u.ustuck) {
         ; /* can't hide if holding you or held by you */
@@ -4029,7 +4030,7 @@ hide_monst(struct monst* mon)
 
     if ((is_hider(mon->data) || hider_under)
         && !(mon->mundetected || M_AP_TYPE(mon))) {
-        xchar x = mon->mx, y = mon->my;
+        coordxy x = mon->mx, y = mon->my;
         char save_viz = g.viz_array[y][x];
 
         /* override vision, forcing hero to be unable to see monster's spot */
@@ -4549,7 +4550,7 @@ newcham(
         *p = '\0';
 
     if (mtmp->wormno) { /* throw tail away */
-        xchar mx = mtmp->mx, my = mtmp->my;
+        coordxy mx = mtmp->mx, my = mtmp->my;
 
         wormgone(mtmp); /* discards tail segments, takes head off the map */
         /* put the head back; it will morph into mtmp's new form */

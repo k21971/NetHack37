@@ -101,7 +101,7 @@ struct window_procs safe_procs = {
     safe_status_update,
     safe_can_suspend,
     safe_update_inventory,
-    safe_update_invent_slot,
+    safe_ctrl_nhwindow,
 };
 
 struct window_procs *
@@ -298,8 +298,8 @@ safe_cliparound(int x, int y)
 void
 safe_print_glyph(
     winid window UNUSED,
-    xchar x UNUSED,
-    xchar y UNUSED,
+    coordxy x UNUSED,
+    coordxy y UNUSED,
     const glyph_info *glyphinfo UNUSED,
     const glyph_info *bkglyphinfo UNUSED)
 {
@@ -331,7 +331,7 @@ safe_nhgetch(void)
  */
 /*ARGSUSED*/
 int
-safe_nh_poskey(int *x, int *y, int *mod)
+safe_nh_poskey(coordxy *x, coordxy *y, int *mod)
 {
     return '\033';
 }
@@ -479,15 +479,13 @@ safe_update_inventory(int arg UNUSED)
     return;
 }
 
-perminvent_info *
-safe_update_invent_slot(
-    winid window,  /* window to use, must be of type NHW_MENU */
-    int inventory_slot,                 /* slot id: 0 - info return to core */
-                                        /*          1 - gold slot */
-                                        /*          2 - 29 obj slots */
-    perminvent_info *pi)
+win_request_info *
+safe_ctrl_nhwindow(
+    winid window,
+    int request,
+    win_request_info *wri)
 {
-    return (perminvent_info *) 0;
+    return (win_request_info *) 0;
 }
 
 /**************************************************************

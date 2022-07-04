@@ -45,9 +45,9 @@ static struct obj *tipcontainer_gettarget(struct obj *, boolean *);
 static int tipcontainer_checks(struct obj *, boolean);
 static char in_or_out_menu(const char *, struct obj *, boolean, boolean,
                            boolean, boolean);
-static boolean able_to_loot(int, int, boolean);
+static boolean able_to_loot(coordxy, coordxy, boolean);
 static boolean reverse_loot(void);
-static boolean mon_beside(int, int);
+static boolean mon_beside(coordxy, coordxy);
 static int do_loot_cont(struct obj **, int, int);
 static int doloot_core(void);
 static void tipcontainer(struct obj *);
@@ -1821,7 +1821,7 @@ encumber_msg(void)
 
 /* Is there a container at x,y. Optional: return count of containers at x,y */
 int
-container_at(int x, int y, boolean countem)
+container_at(coordxy x, coordxy y, boolean countem)
 {
     struct obj *cobj, *nobj;
     int container_count = 0;
@@ -1839,7 +1839,7 @@ container_at(int x, int y, boolean countem)
 
 static boolean
 able_to_loot(
-    int x, int y,
+    coordxy x, coordxy y,
     boolean looting) /* loot vs tip */
 {
     const char *verb = looting ? "loot" : "tip";
@@ -1869,9 +1869,10 @@ able_to_loot(
 }
 
 static boolean
-mon_beside(int x, int y)
+mon_beside(coordxy x, coordxy y)
 {
-    int i, j, nx, ny;
+    int i, j;
+    coordxy nx, ny;
 
     for (i = -1; i <= 1; i++)
         for (j = -1; j <= 1; j++) {
@@ -1910,7 +1911,7 @@ do_loot_cont(
 
         if (flags.autounlock) {
             struct obj *otmp, *unlocktool = 0;
-            xchar ox = cobj->ox, oy = cobj->oy;
+            coordxy ox = cobj->ox, oy = cobj->oy;
 
             u.dz = 0; /* might be non-zero from previous command since
                        * #loot isn't a move command; pick_lock() cares */
@@ -2622,7 +2623,7 @@ observe_quantum_cat(struct obj *box, boolean makecat, boolean givemsg)
     static NEARDATA const char sc[] = "Schroedinger's Cat";
     struct obj *deadcat;
     struct monst *livecat = 0;
-    xchar ox, oy;
+    coordxy ox, oy;
     boolean itsalive = !rn2(2);
 
     if (get_obj_location(box, &ox, &oy, 0))
@@ -3431,7 +3432,7 @@ enum tipping_check_values {
 static void
 tipcontainer(struct obj *box) /* or bag */
 {
-    xchar ox = u.ux, oy = u.uy; /* #tip only works at hero's location */
+    coordxy ox = u.ux, oy = u.uy; /* #tip only works at hero's location */
     boolean empty_it = TRUE, maybeshopgoods;
     struct obj *targetbox = (struct obj *) 0;
     boolean cancelled = FALSE;
@@ -3655,7 +3656,7 @@ tipcontainer_checks(struct obj *box, boolean allowempty)
         boolean bag = box->otyp == BAG_OF_TRICKS;
         int old_spe = box->spe, seen = 0;
         boolean maybeshopgoods = !carried(box) && costly_spot(box->ox, box->oy);
-        xchar ox = u.ux, oy = u.uy;
+        coordxy ox = u.ux, oy = u.uy;
 
         if (get_obj_location(box, &ox, &oy, 0))
             box->ox = ox, box->oy = oy;

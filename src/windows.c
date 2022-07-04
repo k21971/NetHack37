@@ -513,7 +513,7 @@ genl_putmsghistory(const char *msg, boolean is_restoring)
 
 static int hup_nhgetch(void);
 static char hup_yn_function(const char *, const char *, char);
-static int hup_nh_poskey(int *, int *, int *);
+static int hup_nh_poskey(coordxy *, coordxy *, int *);
 static void hup_getlin(const char *, char *);
 static void hup_init_nhwindows(int *, char **);
 static void hup_exit_nhwindows(const char *);
@@ -523,7 +523,7 @@ static void hup_add_menu(winid, const glyph_info *, const anything *, char,
                          char, int, int, const char *, unsigned int);
 static void hup_end_menu(winid, const char *);
 static void hup_putstr(winid, int, const char *);
-static void hup_print_glyph(winid, xchar, xchar, const glyph_info *,
+static void hup_print_glyph(winid, coordxy, coordxy, const glyph_info *,
                             const glyph_info *);
 static void hup_outrip(winid, int, time_t);
 static void hup_curs(winid, int, int);
@@ -548,7 +548,7 @@ static void hup_void_fdecl_int(int);
 static void hup_void_fdecl_winid(winid);
 static void hup_void_fdecl_winid_ulong(winid, unsigned long);
 static void hup_void_fdecl_constchar_p(const char *);
-static perminvent_info *hup_update_invent_slot(winid, int, perminvent_info *);
+static win_request_info *hup_ctrl_nhwindow(winid, int, win_request_info *);
 
 static struct window_procs hup_procs = {
     WPID(hup), 0L, 0L,
@@ -597,7 +597,7 @@ static struct window_procs hup_procs = {
     genl_status_enablefield, hup_status_update,
     genl_can_suspend_no,
     hup_void_fdecl_int,                                /* update_inventory */
-    hup_update_invent_slot,                            /* update_invent_slot */
+    hup_ctrl_nhwindow,
 };
 
 static void (*previnterface_exit_nhwindows)(const char *) = 0;
@@ -664,7 +664,7 @@ hup_yn_function(const char *prompt UNUSED,
 
 /*ARGSUSED*/
 static int
-hup_nh_poskey(int *x UNUSED, int *y UNUSED, int *mod UNUSED)
+hup_nh_poskey(coordxy *x UNUSED, coordxy *y UNUSED, int *mod UNUSED)
 {
     return '\033';
 }
@@ -730,7 +730,7 @@ hup_putstr(winid window UNUSED, int attr UNUSED, const char *text UNUSED)
 /*ARGSUSED*/
 static void
 hup_print_glyph(winid window UNUSED,
-                xchar x UNUSED, xchar y UNUSED,
+                coordxy x UNUSED, coordxy y UNUSED,
                 const glyph_info *glyphinfo UNUSED,
                 const glyph_info *bkglyphinfo UNUSED)
 {
@@ -853,15 +853,13 @@ hup_void_fdecl_constchar_p(const char *string UNUSED)
 }
 
 /*ARGUSED*/
-perminvent_info *
-hup_update_invent_slot(
+win_request_info *
+hup_ctrl_nhwindow(
     winid window UNUSED,  /* window to use, must be of type NHW_MENU */
-    int inventory_slot UNUSED,                 /* slot id: 0 - info return to core */
-                                        /*          1 - gold slot */
-                                        /*          2 - 29 obj slots */
-    perminvent_info *pi UNUSED)
+    int request UNUSED,
+    win_request_info *wri UNUSED)
 {
-    return (perminvent_info *) 0;
+    return (win_request_info *) 0;
 }
 
 #endif /* HANGUPHANDLING */

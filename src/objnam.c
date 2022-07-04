@@ -301,7 +301,7 @@ distant_name(
     char *(*func)(OBJ_P)) /* formatting routine (usually xname or doname) */
 {
     char *str;
-    xchar ox = 0, oy = 0;
+    coordxy ox = 0, oy = 0;
         /*
          * (r * r): square of the x or y distance;
          * (r * r) * 2: sum of squares of both x and y distances
@@ -3199,7 +3199,8 @@ wizterrainwish(struct _readobjnam_data *d)
 {
     struct rm *lev;
     boolean madeterrain = FALSE, badterrain = FALSE, didblock;
-    int trap, oldtyp, x = u.ux, y = u.uy;
+    int trap, oldtyp;
+    coordxy x = u.ux, y = u.uy;
     char *bp = d->bp, *p = d->p;
 
     for (trap = NO_TRAP + 1; trap < TRAPNUM; trap++) {

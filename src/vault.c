@@ -6,11 +6,11 @@
 #include "hack.h"
 
 static boolean clear_fcorr(struct monst *, boolean);
-static void blackout(int, int);
+static void blackout(coordxy, coordxy);
 static void restfakecorr(struct monst *);
 static void parkguard(struct monst *);
-static boolean in_fcorridor(struct monst *, int, int);
-static boolean find_guard_dest(struct monst *, xchar *, xchar *);
+static boolean in_fcorridor(struct monst *, coordxy, coordxy);
+static boolean find_guard_dest(struct monst *, coordxy *, coordxy *);
 static void move_gold(struct obj *, int);
 static void wallify_vault(struct monst *);
 static void gd_mv_monaway(struct monst *, int, int);
@@ -44,7 +44,7 @@ free_egd(struct monst *mtmp)
 static boolean
 clear_fcorr(struct monst *grd, boolean forceshow)
 {
-    register int fcx, fcy, fcbeg;
+    coordxy fcx, fcy, fcbeg;
     struct monst *mtmp;
     boolean sawcorridor = FALSE,
             silently = g.program_state.stopprint ? TRUE : FALSE;
@@ -117,7 +117,7 @@ clear_fcorr(struct monst *grd, boolean forceshow)
    the corridor, we don't want the light to reappear if/when a new tunnel
    goes through the same area */
 static void
-blackout(int x, int y)
+blackout(coordxy x, coordxy y)
 {
     struct rm *lev;
     int i, j;
@@ -185,7 +185,7 @@ grddead(struct monst *grd)
 }
 
 static boolean
-in_fcorridor(struct monst *grd, int x, int y)
+in_fcorridor(struct monst *grd, coordxy x, coordxy y)
 {
     register int fci;
     struct egd *egrd = EGD(grd);
@@ -255,9 +255,9 @@ uleftvault(struct monst *grd)
 }
 
 static boolean
-find_guard_dest(struct monst *guard, xchar *rx, xchar *ry)
+find_guard_dest(struct monst *guard, coordxy *rx, coordxy *ry)
 {
-    register int x, y, dd, lx, ly;
+    coordxy x, y, dd, lx, ly;
 
     for (dd = 2; (dd < ROWNO || dd < COLNO); dd++) {
         for (y = u.uy - dd; y <= u.uy + dd; y++) {
@@ -309,7 +309,7 @@ invault(void)
         /* if time ok and no guard now. */
         char buf[BUFSZ];
         int x, y, gx, gy, typ;
-        xchar rx, ry;
+        coordxy rx, ry;
         long umoney;
 
         /* first find the goal for the guard */
@@ -535,8 +535,8 @@ invault(void)
                dug into an empty doorway (which could subsequently have
                been plugged with an intact door by use of locking magic) */
             int vlt = EGD(guard)->vroom;
-            xchar lowx = g.rooms[vlt].lx, hix = g.rooms[vlt].hx;
-            xchar lowy = g.rooms[vlt].ly, hiy = g.rooms[vlt].hy;
+            coordxy lowx = g.rooms[vlt].lx, hix = g.rooms[vlt].hx;
+            coordxy lowy = g.rooms[vlt].ly, hiy = g.rooms[vlt].hy;
 
             if (x == lowx - 1 && y == lowy - 1)
                 typ = TLCORNER;
@@ -571,7 +571,7 @@ invault(void)
 static void
 move_gold(struct obj *gold, int vroom)
 {
-    xchar nx, ny;
+    coordxy nx, ny;
 
     remove_object(gold);
     newsym(gold->ox, gold->oy);
@@ -585,10 +585,11 @@ move_gold(struct obj *gold, int vroom)
 static void
 wallify_vault(struct monst *grd)
 {
-    int x, y, typ;
+    int typ;
+    coordxy x, y;
     int vlt = EGD(grd)->vroom;
     char tmp_viz;
-    xchar lox = g.rooms[vlt].lx - 1, hix = g.rooms[vlt].hx + 1,
+    coordxy lox = g.rooms[vlt].lx - 1, hix = g.rooms[vlt].hx + 1,
           loy = g.rooms[vlt].ly - 1, hiy = g.rooms[vlt].hy + 1;
     struct monst *mon;
     struct obj *gold, *rocks;
@@ -701,7 +702,7 @@ gd_pick_corridor_gold(struct monst *grd, int goldx, int goldy)
         gdelta = distu(guardx, guardy);
         if (gdelta > 2 && see_it) { /* skip if player won't see it */
             bestdelta = gdelta;
-            bestcc.x = (xchar) guardx, bestcc.y = (xchar) guardy;
+            bestcc.x = (coordxy) guardx, bestcc.y = (coordxy) guardy;
             tryct = 9;
             do {
                 /* pick an available spot nearest the hero and also try
@@ -804,8 +805,8 @@ gd_move_cleanup(
 int
 gd_move(struct monst *grd)
 {
-    int x, y, nx, ny, m, n;
-    int dx, dy, gx = 0, gy = 0, fci;
+    coordxy x, y, nx, ny, m, n;
+    coordxy dx, dy, gx = 0, gy = 0, fci;
     uchar typ;
     struct rm *crm;
     struct fakecorridor *fcp;
