@@ -948,6 +948,8 @@ a hero on the quest home level who runs or travels past the quest leader and
 	gets tossed out of the quest for some reason would keep running on the
 	far side of the quest portal
 allow rush/run over water if wearing discovered water walking boots
+flying pets wouldn't target underwater food but if they happened to fly over
+	such food they could and would eat it
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1193,7 +1195,8 @@ have com_pager() check for failed nhl_init(); probably can't actually happen
 	because the program would never get that far if lua init was failing
 rearranging first-kill and first-hit gamelog messages to get hit before kill
 	ordering resulted in "hit with a wielded weapon for first time" being
-	given twice if that hit was delivered via applied polearm
+	given twice if that hit was delivered via applied polearm or via a
+	joust hit
 rearranging the feedback for first-kill and first-hit introduced a bug by
 	not verifying that the wielded item used to hit was a weapon, giving
 	erroneous event feedback and potentially giving it over and over for
