@@ -533,8 +533,7 @@ dying from being level-drained below level 1 killed hero without saying so
 	and jumped straight to "do you want your possessions identified?"
 conflict will now consider your charisma and requires line of sight
 boost hit points of some golems
-make anti-magic fields drain more energy and prevent them from showing up
-	too early in the dungeon
+make anti-magic fields always drain max energy
 eating magical monsters such as wizards or shamans may give a mild buzz
 make exploding spheres create an actual explosion
 pets are more careful about attacking monsters at low health
@@ -950,6 +949,7 @@ a hero on the quest home level who runs or travels past the quest leader and
 allow rush/run over water if wearing discovered water walking boots
 flying pets wouldn't target underwater food but if they happened to fly over
 	such food they could and would eat it
+praying on an altar with pet corpse on it can revive the pet
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository

@@ -386,6 +386,8 @@ static const char *const excalmsgs[] = {
 void
 dipfountain(register struct obj *obj)
 {
+    int er = ER_NOTHING;
+
     if (Levitation) {
         floating_above("fountain");
         return;
@@ -433,7 +435,7 @@ dipfountain(register struct obj *obj)
             (void) angry_guards(FALSE);
         return;
     } else {
-        int er = water_damage(obj, NULL, TRUE);
+        er = water_damage(obj, NULL, TRUE);
 
         if (obj->otyp == POT_ACID
             && er != ER_DESTROYED) { /* Acid and water don't mix */
@@ -528,6 +530,10 @@ dipfountain(register struct obj *obj)
                   hliquid("water"));
         exercise(A_WIS, TRUE);
         newsym(u.ux, u.uy);
+        break;
+    default:
+        if (er == ER_NOTHING)
+            pline("Nothing seems to happen.");
         break;
     }
     update_inventory();
