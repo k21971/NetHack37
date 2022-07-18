@@ -1,4 +1,4 @@
-HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.952 $ $NHDT-Date: 1655503067 2022/06/17 21:57:47 $
+HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.975 $ $NHDT-Date: 1657868310 2022/07/15 06:58:30 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -952,6 +952,22 @@ flying pets wouldn't target underwater food but if they happened to fly over
 praying on an altar with pet corpse on it can revive the pet
 applying a cursed oil lamp can make your hands slippery
 valkyries start with a spear instead of a long sword
+grid bugs don't have hands
+if #wizmakemap was used to generate a replacement level while any shopkeeper,
+	temple priest, or vault guard from the level was off of it at the
+	time, the monster's eshk, epri, or egd data became invalid and would
+	cause trouble if the monster returned to its 'home' level
+similarly, if #wizfliplevel was used to transpose an active level while a
+	vauld guard was maintaining a temporary corridor or while a monster
+	with eshk, epri, or egd data was off level, that data became invalid
+blessed potion of polymorph will prompt user for monster to poly into
+out of array bounds access attempt occurred when deciding whether to bounce
+	if wand or spell zap reached edge of map
+if blind hero was challanged by a vault guard, it wasn't possible to see how
+	to start following that guard out of the vault
+make taming via magic harp be consistent with scroll of taming and charm
+	spell:  an angry shopkeeper becomes pacified (but never tamed)
+wielding a bec de corbin makes ravens generate peaceful
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1289,6 +1305,10 @@ save files created with SCORE_ON_BOTL disabled were erroneously being rejected
 avoid "It suddenly appears!" if a monster with the STRAT_APPEARMSG attribute
 	is seen to teleport away then not seen at its destination
 avoid boulder-on/in-water sanity_check warnings on the Plane of Water
+when one monster swallowed/engulfed another and killed it, impossible
+	"placing <mon> over itself ..." could be given by place_monster()
+if the game crashed or the process was killed, recovering a save file ended
+	up with incorrect stairway connections between levels
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1716,6 +1736,7 @@ if built with DEBUG enabled and running in wizard mode, starting play with
 	water on Plane of Water, and fumaroles on Plane of Fire be transparent
 add wizard mode #wizkill command to remove monster(s) from play
 some quest nemeses release a cloud of poisonous gas when they die
+taming magic acting on an already tame creature might make it become tamer
 
 
 Platform- and/or Interface-Specific New Features

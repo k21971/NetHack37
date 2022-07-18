@@ -92,7 +92,7 @@ sanity_check_single_mon(
 #endif
         if (DEADMONSTER(mtmp)) {
 #if 0
-            /* bad if not fmons list or if not vault guard */
+            /* bad if not fmon list or if not vault guard */
             if (strcmp(msg, "fmon") || !mtmp->isgd)
                 impossible("dead monster on %s; %s at <%d,%d>",
                            msg, mons[mndx].pmnames[NEUTRAL],
@@ -2128,7 +2128,7 @@ dmonsfree(void)
     char buf[QBUFSZ];
 
     buf[0] = '\0';
-    for (mtmp = &fmon; *mtmp;) {
+    for (mtmp = &fmon; *mtmp; ) {
         freetmp = *mtmp;
         if (DEADMONSTER(freetmp) && !freetmp->isgd) {
             *mtmp = freetmp->nmon;
@@ -2400,8 +2400,13 @@ m_detach(
     if (In_endgame(&u.uz))
         mtmp->mstate |= MON_ENDGAME_FREE;
 
-    mtmp->mstate |= MON_DETACH;
-    iflags.purge_monsters++;
+    if ((mtmp->mstate & MON_DETACH) != 0) {
+        impossible("m_detach: %s is already detached?",
+                   minimal_monnam(mtmp, FALSE));
+    } else {
+        mtmp->mstate |= MON_DETACH;
+        iflags.purge_monsters++;
+    }
 }
 
 /* give a life-saved monster a reasonable mhpmax value in case it has
@@ -3791,9 +3796,8 @@ wake_nearto(coordxy x, coordxy y, int distance)
             if (mtmp->mtame) {
                 if (!mtmp->isminion)
                     EDOG(mtmp)->whistletime = g.moves;
-                /* Clear mtrack. This is to fix up a pet who is
-                   stuck "fleeing" its master. */
-                memset(mtmp->mtrack, 0, sizeof mtmp->mtrack);
+                /* Fix up a pet who is stuck "fleeing" its master */
+                mon_track_clear(mtmp);
             }
         }
     }

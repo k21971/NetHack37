@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1655065134 2022/06/12 20:18:54 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1121 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1657918089 2022/07/15 20:48:09 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1132 $ */
 /* Copyright (c) Steve Creps, 1988.				  */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -282,7 +282,7 @@ extern void dtoxy(coord *, int);
 extern int movecmd(char, int);
 extern int dxdy_moveok(void);
 extern int getdir(const char *);
-extern void confdir(void);
+extern void confdir(boolean);
 extern const char *directionname(int);
 extern int isok(coordxy, coordxy);
 extern int get_adjacent_loc(const char *, const char *, coordxy, coordxy, coord *);
@@ -593,7 +593,7 @@ extern struct monst *make_familiar(struct obj *, coordxy, coordxy, boolean);
 extern struct monst *makedog(void);
 extern void update_mlstmv(void);
 extern void losedogs(void);
-extern void mon_arrive(struct monst *, boolean);
+extern void mon_arrive(struct monst *, int);
 extern void mon_catchup_elapsed_time(struct monst *, long);
 extern void keepdogs(boolean);
 extern void migrate_to_level(struct monst *, coordxy, coordxy, coord *);
@@ -953,6 +953,7 @@ extern boolean test_move(coordxy, coordxy, coordxy, coordxy, int);
 extern int wiz_debug_cmd_traveldisplay(void);
 #endif
 extern boolean u_rooted(void);
+extern boolean u_maybe_impaired(void);
 extern const char *u_locomotion(const char *);
 extern void domove(void);
 extern void runmode_delay_output(void);
@@ -1202,7 +1203,7 @@ extern int dosuspend(void);
 
 extern void new_light_source(coordxy, coordxy, int, int, union any *);
 extern void del_light_source(int, union any *);
-extern void do_light_sources(coordxy **);
+extern void do_light_sources(seenV **);
 extern void show_transient_light(struct obj *, coordxy, coordxy);
 extern void transient_light_cleanup(void);
 extern struct monst *find_mid(unsigned, unsigned);
@@ -1650,6 +1651,8 @@ extern boolean resist_conflict(struct monst *);
 
 extern boolean itsstuck(struct monst *);
 extern boolean mb_trapped(struct monst *, boolean);
+extern void mon_track_add(struct monst *, coordxy, coordxy);
+extern void mon_track_clear(struct monst *);
 extern boolean monhaskey(struct monst *, boolean);
 extern void mon_regen(struct monst *, boolean);
 extern int dochugw(struct monst *, boolean);
@@ -2794,6 +2797,7 @@ extern boolean lava_damage(struct obj *, coordxy, coordxy);
 extern void acid_damage(struct obj *);
 extern int water_damage(struct obj *, const char *, boolean);
 extern void water_damage_chain(struct obj *, boolean);
+extern boolean rnd_nextto_goodpos(coordxy *, coordxy *, struct monst *);
 extern boolean drown(void);
 extern void drain_en(int);
 extern int dountrap(void);

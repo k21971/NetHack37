@@ -871,7 +871,7 @@ clone_mon(struct monst *mon,
     /* ms->isminion handled below */
 
     /* clone shouldn't be reluctant to move on spots 'parent' just moved on */
-    (void) memset((genericptr_t) m2->mtrack, 0, sizeof m2->mtrack);
+    mon_track_clear(m2);
 
     place_monster(m2, m2->mx, m2->my);
     if (emits_light(m2->data))
@@ -1363,6 +1363,8 @@ makemon(
                      || uwep->oartifact == ART_DEMONBANE))
             mtmp->mpeaceful = mtmp->mtame = FALSE;
     }
+    if (mndx == PM_RAVEN && uwep && uwep->otyp == BEC_DE_CORBIN)
+        mtmp->mpeaceful = TRUE;
     if (mndx == PM_LONG_WORM && (mtmp->wormno = get_wormno()) != 0) {
         initworm(mtmp, allowtail ? rn2(5) : 0);
         if (count_wsegs(mtmp))

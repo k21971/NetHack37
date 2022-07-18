@@ -1,4 +1,4 @@
-/* NetHack 3.7	trap.c	$NHDT-Date: 1651909086 2022/05/07 07:38:06 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.479 $ */
+/* NetHack 3.7	trap.c	$NHDT-Date: 1658093068 2022/07/17 21:24:28 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.493 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1556,6 +1556,7 @@ trapeffect_pit(
         boolean plunged = (trflags & TOOKPLUNGE) != 0;
         boolean conj_pit = conjoined_pits(trap, t_at(u.ux0, u.uy0), TRUE);
         boolean adj_pit = adj_nonconjoined_pit(trap);
+        boolean already_known = trap->tseen ? TRUE : FALSE;
         int steed_article = ARTICLE_THE;
         int oldumort;
 
@@ -1569,7 +1570,7 @@ trapeffect_pit(
             return Trap_Effect_Finished;
         feeltrap(trap);
         if (!Sokoban && is_clinger(g.youmonst.data) && !plunged) {
-            if (trap->tseen) {
+            if (already_known) {
                 You_see("%s %spit below you.", a_your[trap->madeby_u],
                         ttype == SPIKED_PIT ? "spiked " : "");
             } else {
@@ -2162,7 +2163,7 @@ trapeffect_poly_trap(
             deltrap(trap);      /* delete trap before polymorph */
             newsym(u.ux, u.uy); /* get rid of trap symbol */
             You_feel("a change coming over you.");
-            polyself(0);
+            polyself(POLY_NOFLAGS);
         }
     } else {
         boolean in_sight = canseemon(mtmp) || (mtmp == u.usteed);
@@ -3775,7 +3776,8 @@ domagictrap(void)
                 }
             } else {
                 /* If we're invisible from another source */
-                You_feel("a little more %s now.", HInvis ? "obvious" : "hidden");
+                You_feel("a little more %s now.",
+                         HInvis ? "obvious" : "hidden");
             }
             HInvis = HInvis ? 0 : HInvis | FROMOUTSIDE;
             newsym(u.ux, u.uy);
@@ -4295,14 +4297,45 @@ emergency_disrobe(boolean *lostsome)
     return TRUE;
 }
 
+/* pick a random goodpos() next to x,y for monster mtmp.
+   mtmp could be &g.youmonst, uses then crawl_destination().
+   returns TRUE if any good position found, with the coord in x,y */
+boolean
+rnd_nextto_goodpos(coordxy *x, coordxy *y, struct monst *mtmp)
+{
+    int i, j;
+    boolean is_u = (mtmp == &g.youmonst);
+    coordxy nx, ny, k, dirs[N_DIRS];
+
+    for (i = 0; i < N_DIRS; ++i)
+        dirs[i] = i;
+    for (i = N_DIRS; i > 0; --i) {
+        j = rn2(i);
+        k = dirs[j];
+        dirs[j] = dirs[i - 1];
+        dirs[i - 1] = k;
+    }
+    for (i = 0; i < N_DIRS; ++i) {
+        nx = *x + xdir[dirs[i]];
+        ny = *y + ydir[dirs[i]];
+        /* crawl_destination and goodpos both include an isok() check */
+        if (is_u ? crawl_destination(nx, ny) : goodpos(nx, ny, mtmp, 0)) {
+            *x = nx;
+            *y = ny;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
 
 /*  return TRUE iff player relocated */
 boolean
 drown(void)
 {
     const char *pool_of_water;
-    boolean inpool_ok = FALSE, crawl_ok;
-    int i, x, y;
+    boolean inpool_ok = FALSE;
+    int i;
+    coordxy x, y;
     boolean is_solid = is_waterwall(u.ux, u.uy);
 
     feel_newsym(u.ux, u.uy); /* in case Blind, map the water here */
@@ -4379,8 +4412,6 @@ drown(void)
         if (!is_pool(u.ux, u.uy))
             return TRUE;
     }
-    crawl_ok = FALSE;
-    x = y = 0; /* lint suppression */
     /* if sleeping, wake up now so that we don't crawl out of water
        while still asleep; we can't do that the same way that waking
        due to combat is handled; note unmul() clears u.usleep */
@@ -4389,53 +4420,11 @@ drown(void)
     /* being doused will revive from fainting */
     if (is_fainted())
         reset_faint();
-    /* can't crawl if unable to move (crawl_ok flag stays false) */
-    if (g.multi < 0 || (Upolyd && !g.youmonst.data->mmove))
-        goto crawl;
-    /* look around for a place to crawl to */
-#if 0
-    for (i = 0; i < 100; i++) {
-        x = rn1(3, u.ux - 1);
-        y = rn1(3, u.uy - 1);
-        if (crawl_destination(x, y)) {
-            crawl_ok = TRUE;
-            goto crawl;
-        }
-    }
-    /* one more scan */
-    for (x = u.ux - 1; x <= u.ux + 1; x++)
-        for (y = u.uy - 1; y <= u.uy + 1; y++)
-            if (crawl_destination(x, y)) {
-                crawl_ok = TRUE;
-                goto crawl;
-            }
-#else
-    {
-        int j, k, dirs[N_DIRS];
 
-        /* instead of picking a random direction up to 100 times, try each
-           of the eight directions at most once after shuffling their order */
-        for (i = 0; i < N_DIRS; ++i)
-            dirs[i] = i;
-        for (i = N_DIRS; i > 0; --i) {
-            j = rn2(i);
-            k = dirs[j];
-            dirs[j] = dirs[i - 1];
-            dirs[i - 1] = k;
-        }
-        for (i = 0; i < N_DIRS; ++i) {
-            x = u.ux + xdir[dirs[i]];
-            y = u.uy + ydir[dirs[i]];
-            /* note: crawl_dest calls goodpos() which performs isok() check */
-            if (crawl_destination(x, y)) {
-                crawl_ok = TRUE;
-                break;
-            }
-        }
-    }
-#endif
- crawl:
-    if (crawl_ok) {
+    x = u.ux, y = u.uy;
+    /* have to be able to move in order to crawl */
+    if (g.multi >= 0 && g.youmonst.data->mmove
+        && rnd_nextto_goodpos(&x, &y, &g.youmonst)) {
         boolean lost = FALSE;
         /* time to do some strip-tease... */
         boolean succ = Is_waterlevel(&u.uz) ? TRUE : emergency_disrobe(&lost);

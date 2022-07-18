@@ -189,27 +189,27 @@ awaken_soldiers(struct monst* bugler  /* monster that played instrument */)
     }
 }
 
-/* Charm monsters in range.  Note that they may resist the spell.
- * If swallowed, range is reduced to 0.
- */
+/* Charm monsters in range.  Note that they may resist the spell. */
 static void
 charm_monsters(int distance)
 {
     struct monst *mtmp, *mtmp2;
 
-    if (u.uswallow) {
-        if (!resist(u.ustuck, TOOL_CLASS, 0, NOTELL))
-            (void) tamedog(u.ustuck, (struct obj *) 0);
-    } else {
-        for (mtmp = fmon; mtmp; mtmp = mtmp2) {
-            mtmp2 = mtmp->nmon;
-            if (DEADMONSTER(mtmp))
-                continue;
+    if (u.uswallow)
+        distance = 0; /* only u.ustuck will be affected (u.usteed is Null
+                       * since hero gets forcibly dismounted when engulfed) */
 
-            if (distu(mtmp->mx, mtmp->my) <= distance) {
-                if (!resist(mtmp, TOOL_CLASS, 0, NOTELL))
-                    (void) tamedog(mtmp, (struct obj *) 0);
-            }
+    for (mtmp = fmon; mtmp; mtmp = mtmp2) {
+        mtmp2 = mtmp->nmon;
+        if (DEADMONSTER(mtmp))
+            continue;
+
+        if (distu(mtmp->mx, mtmp->my) <= distance) {
+            /* a shopkeeper can't be tamed but tamedog() pacifies an angry
+               one; do that even if mtmp resists in order to behave the same
+               as a non-cursed scroll of taming or spell of charm monster */
+            if (!resist(mtmp, TOOL_CLASS, 0, NOTELL) || mtmp->isshk)
+                (void) tamedog(mtmp, (struct obj *) 0);
         }
     }
 }

@@ -81,6 +81,15 @@ enum dismount_types {
     DISMOUNT_BYCHOICE = 6
 };
 
+/* polyself flags */
+enum polyself_flags {
+    POLY_NOFLAGS    = 0x00,
+    POLY_CONTROLLED = 0x01,
+    POLY_MONSTER    = 0x02,
+    POLY_REVERT     = 0x04,
+    POLY_LOW_CTRL   = 0x08
+};
+
 /* sellobj_state() states */
 #define SELL_NORMAL (0)
 #define SELL_DELIBERATE (1)
@@ -243,6 +252,11 @@ enum saveformats {
     historical = 1,     /* entire struct, binary, as-is */
     lendian = 2,        /* each field, binary, little-endian */
     ascii = 3           /* each field, ascii text (just proof of concept) */
+};
+
+enum restore_stages {
+    REST_GSTATE = 1,    /* restoring current level and game state */
+    REST_LEVELS = 2,    /* restoring remainder of dungeon */
 };
 
 /* sortloot() return type; needed before extern.h */

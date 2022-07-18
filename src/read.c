@@ -1008,7 +1008,7 @@ forget(int howmuch)
 
 /* monster is hit by scroll of taming's effect */
 static int
-maybe_tame(struct monst* mtmp, struct obj* sobj)
+maybe_tame(struct monst *mtmp, struct obj *sobj)
 {
     int was_tame = mtmp->mtame;
     unsigned was_peaceful = mtmp->mpeaceful;
@@ -1018,9 +1018,9 @@ maybe_tame(struct monst* mtmp, struct obj* sobj)
         if (was_peaceful && !mtmp->mpeaceful)
             return -1;
     } else {
-        if (mtmp->isshk)
-            make_happy_shk(mtmp, FALSE);
-        else if (!resist(mtmp, sobj->oclass, 0, NOTELL))
+        /* for a shopkeeper, tamedog() will call make_happy_shk() but
+           not tame the target, so call it even if taming gets resisted */
+        if (!resist(mtmp, sobj->oclass, 0, NOTELL) || mtmp->isshk)
             (void) tamedog(mtmp, (struct obj *) 0);
         if ((!was_peaceful && mtmp->mpeaceful) || (!was_tame && mtmp->mtame))
             return 1;
@@ -2549,7 +2549,7 @@ do_class_genocide(void)
                     if (Upolyd && vampshifted(&g.youmonst)
                         /* current shifted form or base vampire form */
                         && (i == u.umonnum || i == g.youmonst.cham))
-                        polyself(3); /* vampshifter back to vampire */
+                        polyself(POLY_REVERT); /* vampshifter back to vampire */
                     if (Upolyd && i == u.umonnum) {
                         u.mh = -1;
                         if (Unchanging) {
@@ -2672,7 +2672,7 @@ do_genocide(int how)
             /* first revert if current shifted form or base vampire form */
             if (Upolyd && vampshifted(&g.youmonst)
                 && (mndx == u.umonnum || mndx == g.youmonst.cham))
-                polyself(3); /* vampshifter (bat, &c) back to vampire */
+                polyself(POLY_REVERT); /* vampshifter (bat, &c) back to vampire */
             /* Although "genus" is Latin for race, the hero benefits
              * from both race and role; thus genocide affects either.
              */
