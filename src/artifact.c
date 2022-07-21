@@ -1831,6 +1831,56 @@ arti_invoke(struct obj *obj)
             nhUse(otmp);
             break;
         }
+        case BANISH: {
+            int nvanished = 0, nstayed = 0;
+            struct monst *mtmp, *mtmp2;
+            d_level dest;
+
+            find_hell(&dest);
+
+            for (mtmp = fmon; mtmp; mtmp = mtmp2) {
+                int chance = 1;
+
+                mtmp2 = mtmp->nmon;
+                if (DEADMONSTER(mtmp) || !isok(mtmp->mx, mtmp->my))
+                    continue;
+                if (!is_demon(mtmp->data) && mtmp->data->mlet != S_IMP)
+                    continue;
+                if (!couldsee(mtmp->mx, mtmp->my))
+                    continue;
+                if (mtmp->data->msound == MS_NEMESIS)
+                    continue;
+
+                if (In_quest(&u.uz) && !g.quest_status.killed_nemesis)
+                    chance += 10;
+                if (is_dprince(mtmp->data))
+                    chance += 2;
+                if (is_dlord(mtmp->data))
+                    chance++;
+
+                mtmp->msleeping = mtmp->mtame = mtmp->mpeaceful = 0;
+                if (chance <= 1 || !rn2(chance)) {
+                    if (!Inhell) {
+                        nvanished++;
+                        /* banish to a random level in Gehennom */
+                        dest.dlevel = rn2(dunlevs_in_dungeon(&dest));
+                        migrate_mon(mtmp, ledger_no(&dest), MIGR_RANDOM);
+                    } else {
+                        u_teleport_mon(mtmp, FALSE);
+                    }
+                } else {
+                    nstayed++;
+                }
+            }
+
+            if (nvanished) {
+                pline("%she demon%s disappear%s in a cloud of brimstone!",
+                      nstayed ? (nvanished > nstayed ? "Most of t" : "Some of t") : "T",
+                      nvanished > 1 ? "s" : "",
+                      nvanished > 1 ? "" : "s");
+            }
+            break;
+        }
         }
     } else {
         long eprop = (u.uprops[oart->inv_prop].extrinsic ^= W_ARTI),

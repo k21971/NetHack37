@@ -1559,6 +1559,7 @@ extern void killed(struct monst *);
 extern void xkilled(struct monst *, int);
 extern void mon_to_stone(struct monst *);
 extern void m_into_limbo(struct monst *);
+extern void migrate_mon(struct monst *, coordxy, coordxy);
 extern void mnexto(struct monst *, unsigned);
 extern void maybe_mnexto(struct monst *);
 extern int mnearto(struct monst *, coordxy, coordxy, boolean, unsigned);
@@ -3394,6 +3395,7 @@ extern struct monst *bhit(coordxy, coordxy, int, enum bhit_call_types,
 extern struct monst *boomhit(struct obj *, coordxy, coordxy);
 extern int zhitm(struct monst *, int, int, struct obj **);
 extern int burn_floor_objects(coordxy, coordxy, boolean, boolean);
+extern void ubuzz(int, int);
 extern void buzz(int, int, coordxy, coordxy, int, int);
 extern void dobuzz(int, int, coordxy, coordxy, int, int, boolean);
 extern void melt_ice(coordxy, coordxy, const char *);
