@@ -1883,7 +1883,11 @@ mfndpos(
                         && (dmgtype(mdat, AD_RUST)
                             || dmgtype(mdat, AD_CORR)))))
                 continue;
-            if (IS_DOOR(ntyp) && !(amorphous(mdat) || can_fog(mon))
+            if (IS_DOOR(ntyp)
+                /* an amorphous creature can only move under/through a
+                   closed door if it doesn't currently have hero engulfed */
+                && !((amorphous(mdat) || can_fog(mon))
+                     && (mon != u.ustuck || !u.uswallow))
                 && (((levl[nx][ny].doormask & D_CLOSED) && !(flag & OPENDOOR))
                     || ((levl[nx][ny].doormask & D_LOCKED)
                         && !(flag & UNLOCKDOOR))) && !thrudoor)
