@@ -71,12 +71,12 @@ WINTTYLIB=-lncursesw -ltinfo
 WINSRC += tile.c
 WINOBJ += tile.o
 
-CHOWN=true
-CHGRP=true
+CHOWN=/usr/bin/chown
+CHGRP=/usr/bin/chgrp
 
 GAMEUID=games
 GAMEGRP=bin
 
 VARDIRPERM = 0755
 VARFILEPERM = 0600
-GAMEPERM = 0755
+GAMEPERM = 4755
