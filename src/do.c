@@ -1133,6 +1133,8 @@ dodown(void)
     }
     if (trap && Is_stronghold(&u.uz)) {
         goto_hell(FALSE, TRUE);
+    } else if (trap) {
+        goto_level(&(trap->dst), FALSE, FALSE, FALSE);
     } else {
         g.at_ladder = (boolean) (levl[u.ux][u.uy].typ == LADDER);
         next_level(!trap);
@@ -1299,7 +1301,7 @@ void
 goto_level(
     d_level *newlevel, /* destination */
     boolean at_stairs, /* True if arriving via stairs/ladder */
-    boolean falling,   /* when fallling to level, objects might tag along */
+    boolean falling,   /* when falling to level, objects might tag along */
     boolean portal)    /* True if arriving via magic portal */
 {
     int l_idx, save_mode;
