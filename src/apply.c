@@ -34,6 +34,8 @@ static void display_polearm_positions(int);
 static int use_cream_pie(struct obj *);
 static int jelly_ok(struct obj *);
 static int use_royal_jelly(struct obj *);
+static int grapple_range(void);
+static boolean can_grapple_location(coordxy, coordxy);
 static int use_grapple(struct obj *);
 static int do_break_wand(struct obj *);
 static int apply_ok(struct obj *);
@@ -1976,7 +1978,7 @@ jump(int magic) /* 0=Physical, otherwise skill level */
     if (getpos(&cc, TRUE, "the desired position") < 0)
         return ECMD_CANCEL; /* user pressed ESC */
     if (!is_valid_jump_pos(cc.x, cc.y, magic, TRUE)) {
-        return ECMD_OK;
+        return ECMD_FAIL;
     } else {
         coord uc;
         int range, temp;
@@ -3286,19 +3288,19 @@ use_pole(struct obj *obj, boolean autohit)
     glyph = glyph_at(cc.x, cc.y);
     if (distu(cc.x, cc.y) > max_range) {
         pline("Too far!");
-        return res;
+        return ECMD_FAIL;
     } else if (distu(cc.x, cc.y) < min_range) {
         if (autohit && u_at(cc.x, cc.y))
             pline("Don't know what to hit.");
         else
             pline("Too close!");
-        return res;
+        return ECMD_FAIL;
     } else if (!cansee(cc.x, cc.y) && !glyph_is_poleable(glyph)) {
         You(cant_see_spot);
-        return res;
+        return ECMD_FAIL;
     } else if (!couldsee(cc.x, cc.y)) { /* Eyes of the Overworld */
         You(cant_reach);
-        return res;
+        return ECMD_FAIL;
     }
 
     g.context.polearm.hitmon = (struct monst *) 0;
@@ -3471,9 +3473,30 @@ use_royal_jelly(struct obj *obj)
 }
 
 static int
+grapple_range(void)
+{
+    int typ = uwep_skill_type();
+    int max_range = 4;
+
+    if (typ == P_NONE || P_SKILL(typ) <= P_BASIC)
+        max_range = 4;
+    else if (P_SKILL(typ) == P_SKILLED)
+        max_range = 5;
+    else
+        max_range = 8;
+    return max_range;
+}
+
+static boolean
+can_grapple_location(coordxy x, coordxy y)
+{
+    return (isok(x, y) && cansee(x, y) && distu(x, y) <= grapple_range());
+}
+
+static int
 use_grapple(struct obj *obj)
 {
-    int res = ECMD_OK, typ, max_range = 4, tohit;
+    int res = ECMD_OK, typ, tohit;
     boolean save_confirm;
     coord cc;
     struct monst *mtmp;
@@ -3498,18 +3521,13 @@ use_grapple(struct obj *obj)
     pline(where_to_hit);
     cc.x = u.ux;
     cc.y = u.uy;
+    getpos_sethilite(NULL, can_grapple_location);
     if (getpos(&cc, TRUE, "the spot to hit") < 0)
         return (res|ECMD_CANCEL); /* ESC; uses turn iff grapnel became wielded */
 
     /* Calculate range; unlike use_pole(), there's no minimum for range */
     typ = uwep_skill_type();
-    if (typ == P_NONE || P_SKILL(typ) <= P_BASIC)
-        max_range = 4;
-    else if (P_SKILL(typ) == P_SKILLED)
-        max_range = 5;
-    else
-        max_range = 8;
-    if (distu(cc.x, cc.y) > max_range) {
+    if (distu(cc.x, cc.y) > grapple_range()) {
         pline("Too far!");
         return res;
     } else if (!cansee(cc.x, cc.y)) {
