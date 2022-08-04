@@ -64,7 +64,7 @@ enum opt {
 #define NHOPT_PARSE
 static struct allopt_t allopt_init[] = {
 #include "optlist.h"
-    {(const char *) 0, 0, 0, 0, set_in_sysconf, BoolOpt,
+    {(const char *) 0, OptS_Advanced, 0, 0, 0, set_in_sysconf, BoolOpt,
      No, No, No, No, 0, (boolean *) 0,
      (int (*)(int, int, boolean, char *, char *)) 0,
      (char *) 0, (const char *) 0, (const char *) 0, 0, 0, 0}
@@ -112,6 +112,11 @@ extern char ttycolors[CLR_MAX]; /* in sys/msdos/video.c */
 
 static char empty_optstr[] = { '\0' };
 boolean duplicate, using_alias;
+static boolean give_opt_msg = TRUE;
+
+static NEARDATA const char *OptS_type[OptS_Advanced+1] = {
+    "General", "Behavior", "Map", "Status", "Advanced"
+};
 
 static const char def_inv_order[MAXOCLASSES] = {
     COIN_CLASS, AMULET_CLASS, WEAPON_CLASS, ARMOR_CLASS, FOOD_CLASS,
@@ -1360,7 +1365,8 @@ optfn_fruit(int optidx UNUSED, int req, boolean negated,
                a new fruit; it can only be nonNull if no fruits have
                been created since the previous name was put in place */
             (void) fruitadd(g.pl_fruit, forig);
-            pline("Fruit is now \"%s\".", g.pl_fruit);
+            if (give_opt_msg)
+                pline("Fruit is now \"%s\".", g.pl_fruit);
         }
         /* If initial, then initoptions is allowed to do it instead
          * of here (initoptions always has to do it even if there's
@@ -4552,8 +4558,9 @@ optfn_boolean(int optidx, int req, boolean negated, char *opts, char *op)
         /* boolean value has been toggled but some option changes can
            still be pending at this point (mainly for opt_need_redraw);
            give the toggled message now regardless */
-        pline("'%s' option toggled %s.", allopt[optidx].name,
-              !negated ? "on" : "off");
+        if (give_opt_msg)
+            pline("'%s' option toggled %s.", allopt[optidx].name,
+                  !negated ? "on" : "off");
 
         return optn_ok;
     }
@@ -4745,7 +4752,7 @@ handler_autounlock(int optidx)
     }
     destroy_nhwindow(tmpwin);
     chngd = (flags.autounlock != oldflags);
-    if (chngd || Verbose(2, handler_autounlock)) {
+    if ((chngd || Verbose(2, handler_autounlock)) && give_opt_msg) {
         optfn_autounlock(optidx, get_val, FALSE, buf, (char *) NULL);
         pline("'%s' %s '%s'.", optname,
               chngd ? "changed to" : "is still", buf);
@@ -6085,7 +6092,7 @@ initoptions_init(void)
     flags.end_own = FALSE;
     flags.end_top = 3;
     flags.end_around = 2;
-    flags.paranoia_bits = PARANOID_PRAY; /* old prayconfirm=TRUE */
+    flags.paranoia_bits = PARANOID_PRAY|PARANOID_SWIM;
     flags.pile_limit = PILE_LIMIT_DFLT;  /* 5 */
     flags.runmode = RUN_LEAP;
     iflags.msg_history = 20;
@@ -6234,7 +6241,6 @@ initoptions_finish(void)
     if (g.cmdline_rcfile) {
         namesrc = "command line";
         nameval = g.cmdline_rcfile;
-        free((genericptr_t) g.cmdline_rcfile), g.cmdline_rcfile = 0;
         xtraopts = opts;
         if (opts && (*opts == '/' || *opts == '\\' || *opts == '@'))
             xtraopts = 0; /* NETHACKOPTIONS is a file name; ignore it */
@@ -6275,6 +6281,9 @@ initoptions_finish(void)
         (void) parseoptions(xtraopts, TRUE, FALSE);
         config_error_done();
     }
+
+    if (g.cmdline_rcfile)
+        free((genericptr_t) g.cmdline_rcfile), g.cmdline_rcfile = 0;
     /*[end of nethackrc handling]*/
 
     (void) fruitadd(g.pl_fruit, (struct fruit *) 0);
@@ -7712,7 +7721,146 @@ longest_option_name(int startpass, int endpass)
     return longest_name_len;
 }
 
-/* the #options command */
+/* #options - the user friendly version */
+int
+doset_simple(void)
+{
+    static boolean made_fmtstr = FALSE;
+    char buf[BUFSZ];
+    winid tmpwin;
+    anything any;
+    menu_item *pick_list;
+    int i, pick_cnt, pick_idx;
+    enum OptSection section;
+    boolean *bool_p;
+    const char *name;
+
+    if (iflags.menu_requested)
+        return doset();
+
+    if (!made_fmtstr) {
+        Sprintf(fmtstr_doset, "%%s%%-%us [%%s]",
+                longest_option_name(set_gameview, set_in_game));
+        made_fmtstr = TRUE;
+    }
+
+    give_opt_msg = FALSE;
+rerun:
+    tmpwin = create_nhwindow(NHW_MENU);
+    start_menu(tmpwin, MENU_BEHAVE_STANDARD);
+
+    for (section = OptS_General; section < OptS_Advanced; section++) {
+        any = cg.zeroany;
+        if (section != OptS_General)
+            add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
+                     0, "", MENU_ITEMFLAGS_NONE);
+        Sprintf(buf, " %-30s ", OptS_type[section]);
+        add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
+                 iflags.menu_headings, 0,
+                 buf /*OptS_type[section]*/, MENU_ITEMFLAGS_NONE);
+        for (i = 0; (name = allopt[i].name) != 0; i++) {
+            if (allopt[i].section != section)
+                continue;
+            if ((is_wc_option(name) && !wc_supported(name))
+                || (is_wc2_option(name) && !wc2_supported(name)))
+                continue;
+
+            any.a_int = i + 1;
+            switch (allopt[i].opttyp) {
+            case BoolOpt:
+                bool_p = allopt[i].addr;
+                Sprintf(buf, fmtstr_doset, "",
+                        name, *bool_p ? "X" : " ");
+                break;
+            case CompOpt:
+            case OthrOpt:
+                {
+                    const char *value = "unknown";
+                    int reslt = optn_err;
+                    char buf2[BUFSZ];
+
+                    buf2[0] = '\0';
+                    if (allopt[i].optfn)
+                        reslt = (*allopt[i].optfn)(allopt[i].idx, get_val,
+                                                   FALSE, buf2, empty_optstr);
+                    if (reslt == optn_ok && buf2[0])
+                        value = (const char *) buf2;
+                    Sprintf(buf, fmtstr_doset, "", name, value);
+                }
+                break;
+            default:
+                Sprintf(buf, "ERROR");
+                break;
+            }
+            add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
+                     ATR_NONE, 0, buf, MENU_ITEMFLAGS_NONE);
+        }
+    }
+
+    end_menu(tmpwin, "Options");
+    g.opt_need_redraw = FALSE;
+    g.opt_need_glyph_reset = FALSE;
+    if ((pick_cnt = select_menu(tmpwin, PICK_ONE, &pick_list)) > 0) {
+        for (pick_idx = 0; pick_idx < pick_cnt; ++pick_idx) {
+            int k = pick_list[pick_idx].item.a_int - 1;
+
+            if (allopt[k].opttyp == BoolOpt) {
+                /* boolean option */
+                Sprintf(buf, "%s%s", *allopt[k].addr ? "!" : "",
+                        allopt[k].name);
+                (void) parseoptions(buf, FALSE, FALSE);
+            } else {
+                /* compound option */
+                int reslt UNUSED;
+
+                if (allopt[k].has_handler && allopt[k].optfn) {
+                    reslt = (*allopt[k].optfn)(allopt[k].idx, do_handler,
+                                               FALSE, empty_optstr,
+                                               empty_optstr);
+                } else {
+                    char abuf[BUFSZ];
+
+                    Sprintf(buf, "Set %s to what?", allopt[k].name);
+                    abuf[0] = '\0';
+                    getlin(buf, abuf);
+                    if (abuf[0] == '\033')
+                        continue;
+                    Sprintf(buf, "%s:", allopt[k].name);
+                    (void) strncat(eos(buf), abuf,
+                                   (sizeof buf - 1 - strlen(buf)));
+                    /* pass the buck */
+                    (void) parseoptions(buf, FALSE, FALSE);
+                }
+            }
+            if (wc_supported(allopt[k].name)
+                || wc2_supported(allopt[k].name))
+                preference_update(allopt[k].name);
+        }
+        free((genericptr_t) pick_list), pick_list = (menu_item *) 0;
+    }
+    destroy_nhwindow(tmpwin);
+
+    if (g.opt_need_glyph_reset) {
+        reset_glyphmap(gm_optionchange);
+    }
+    if (g.opt_need_redraw) {
+        check_gold_symbol();
+        reglyph_darkroom();
+        (void) doredraw();
+        flush_screen(FALSE);
+    }
+    if (g.context.botl || g.context.botlx) {
+        bot();
+    }
+
+    if (pick_cnt > 0)
+        goto rerun;
+
+    give_opt_msg = TRUE;
+    return ECMD_OK;
+}
+
+/* the #optionsfull command */
 int
 doset(void) /* changing options via menu by Per Liboriussen */
 {

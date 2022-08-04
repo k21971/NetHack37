@@ -1963,6 +1963,7 @@ extern void initoptions_init(void);
 extern void initoptions_finish(void);
 extern boolean parseoptions(char *, boolean, boolean);
 extern char *get_option_value(const char *);
+extern int doset_simple(void);
 extern int doset(void);
 extern int dotogglepickup(void);
 extern void option_help(void);
@@ -2547,6 +2548,7 @@ extern void release_sound_mappings(void);
 
 #if !defined(CROSSCOMPILE) || defined(CROSSCOMPILE_TARGET)
 extern void create_des_coder(void);
+extern void reset_xystart_size(void);
 extern struct mapfragment *mapfrag_fromstr(char *);
 extern void mapfrag_free(struct mapfragment **);
 extern schar mapfrag_get(struct mapfragment *, int, int);

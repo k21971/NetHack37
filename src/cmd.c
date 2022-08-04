@@ -58,6 +58,7 @@ extern int doclose(void);            /**/
 extern int dosh(void);               /**/
 extern int dodiscovered(void);       /**/
 extern int doclassdisco(void);       /**/
+extern int doset_simple(void);       /**/
 extern int doset(void);              /**/
 extern int dotogglepickup(void);     /**/
 extern int dowhatis(void);           /**/
@@ -2528,7 +2529,9 @@ struct ext_func_tab extcmdlist[] = {
               dosacrifice, AUTOCOMPLETE | CMD_M_PREFIX, NULL },
     { 'o',    "open", "open a door",
               doopen, 0, NULL },
-    { 'O',    "options", "show option settings, possibly change them",
+    { 'O',    "options", "show option settings",
+              doset_simple, IFBURIED | GENERALCMD | CMD_M_PREFIX, NULL },
+    { '\0',   "optionsfull", "show all option settings, possibly change them",
               doset, IFBURIED | GENERALCMD, NULL },
     /* #overview used to need autocomplete and has retained that even
        after being assigned to ^O [old wizard mode ^O is now #wizwhere] */
