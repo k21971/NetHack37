@@ -455,8 +455,7 @@ has_aggravatables(struct monst *mon)
             continue;
         if (in_w_tower != In_W_tower(mtmp->mx, mtmp->my, &u.uz))
             continue;
-        if ((mtmp->mstrategy & STRAT_WAITFORU) != 0
-            || helpless(mtmp))
+        if ((mtmp->mstrategy & STRAT_WAITFORU) != 0 || helpless(mtmp))
             return TRUE;
     }
     return FALSE;
@@ -688,7 +687,8 @@ resurrect(void)
         mtmp = makemon(&mons[PM_WIZARD_OF_YENDOR], u.ux, u.uy, MM_NOWAIT);
         /* affects experience; he's not coming back from a corpse
            but is subject to repeated killing like a revived corpse */
-        if (mtmp) mtmp->mrevived = 1;
+        if (mtmp)
+            mtmp->mrevived = 1;
     } else {
         /* look for a migrating Wizard */
         verb = "elude";
@@ -709,6 +709,9 @@ resurrect(void)
                 if (!helpless(mtmp)) {
                     *mmtmp = mtmp->nmon;
                     mon_arrive(mtmp, -1); /* -1: Wiz_arrive (dog.c) */
+                    /* mx: mon_arrive() might have sent mtmp into limbo */
+                    if (!mtmp->mx)
+                        mtmp = 0;
                     /* note: there might be a second Wizard; if so,
                        he'll have to wait til the next resurrection */
                     break;
@@ -719,7 +722,17 @@ resurrect(void)
     }
 
     if (mtmp) {
-        mtmp->mtame = mtmp->mpeaceful = 0; /* paranoia */
+        /* FIXME: when a new wizard is created by makemon(), it gives
+           a "<mon> appears" message, delivered after he's been placed
+           on the map; however, when an existing wizard comes off
+           migrating_mons, he ends up triggering "<mon> vanishes and
+           reappears" on his first move (tactics when hero is carrying
+           the Amulet); setting STRAT_WAITMASK suppresses that but then
+           he just sits wherever he is, "meditating", contradicting the
+           threatening message below */
+        mtmp->mstrategy &= ~STRAT_WAITMASK;
+
+        mtmp->mtame = 0, mtmp->mpeaceful = 0; /* paranoia */
         set_malign(mtmp);
         if (!Deaf) {
             pline("A voice booms out...");
@@ -734,6 +747,7 @@ void
 intervene(void)
 {
     int which = Is_astralevel(&u.uz) ? rnd(4) : rn2(6);
+
     /* cases 0 and 5 don't apply on the Astral level */
     switch (which) {
     case 0:

@@ -398,6 +398,9 @@ mon_arrive(struct monst *mtmp, int when)
         else
             mnexto(mtmp, RLOC_NOMSG);
         return;
+    } else if (when == Wiz_arrive) {
+        /* resurrect() is bringing existing wizard to harass the hero */
+        xyloc = MIGR_WITH_HERO;
     }
     /*
      * The monster arrived on this level independently of the player.
@@ -410,10 +413,9 @@ mon_arrive(struct monst *mtmp, int when)
         long nmv = g.moves - 1L - mtmp->mlstmv;
 
         mon_catchup_elapsed_time(mtmp, nmv);
-        mtmp->mlstmv = g.moves - 1L;
 
         /* let monster move a bit on new level (see placement code below) */
-        wander = (xint16) min(nmv, 8);
+        wander = (xint16) min(nmv, 8L);
     } else
         wander = 0;
 
@@ -526,7 +528,7 @@ mon_arrive(struct monst *mtmp, int when)
         if (when != Wiz_arrive)
             /* losedogs() will deal with this */
             relmon(mtmp, &failed_arrivals);
-        else
+        else /* when==Wiz_arrive => not being called by losedogs() */
             m_into_limbo(mtmp);
     }
 }
@@ -629,6 +631,8 @@ mon_catchup_elapsed_time(
         mtmp->mhp = mtmp->mhpmax;
     else
         mtmp->mhp += imv;
+
+    set_mon_lastmove(mtmp);
 }
 
 /* bookkeeping when mtmp is about to leave the current level;
@@ -837,6 +841,54 @@ migrate_to_level(
        from local (monst->mx > 0) to global (mx==0, not on this level) */
     if (emits_light(mtmp->data))
         vision_recalc(0);
+}
+
+/* when entering the endgame, levels from the dungeon and its branches are
+   discarded because they can't be reached again; do the same for monsters
+   and objects scheduled to migrate to those levels */
+void
+discard_migrations(void)
+{
+    struct monst *mtmp, **mprev;
+    struct obj *otmp, **oprev;
+    d_level dest;
+
+    for (mprev = &g.migrating_mons; (mtmp = *mprev) != 0; ) {
+        dest.dnum = mtmp->mux;
+        dest.dlevel = mtmp->muy;
+        /* the Wizard is kept regardless of location so that he is
+           ready to be brought back; nothing should be scheduled to
+           migrate to the endgame but if we find such, we'll keep it */
+        if (mtmp->iswiz || In_endgame(&dest)) {
+            mprev = &mtmp->nmon; /* keep mtmp on migrating_mons */
+        } else {
+            *mprev = mtmp->nmon; /* remove mtmp from migrating_mons */
+            mtmp->nmon = 0;
+            discard_minvent(mtmp, FALSE);
+            /* bypass mongone() and its call to m_detach() plus dmonsfree() */
+            dealloc_monst(mtmp);
+        }
+    }
+
+    /* objects get similar treatment */
+    for (oprev = &g.migrating_objs; (otmp = *oprev) != 0; ) {
+        dest.dnum = otmp->ox;
+        dest.dlevel = otmp->oy;
+        /* there is no special case like the Wizard (certainly not the
+           Amulet; the hero has to be carrying it to enter the endgame
+           which triggers the call to this routine); again we don't
+           expect any objects to be migrating to the endgame but will
+           keep any we find so that they could be delivered */
+        if (In_endgame(&dest)) {
+            oprev = &otmp->nobj; /* keep otmp on migrating_objs */
+        } else {
+            /* bypass obj_extract_self() */
+            *oprev = otmp->nobj; /* remove otmp from migrating_objs */
+            otmp->nobj = 0;
+            otmp->where = OBJ_FREE;
+            obfree(otmp, (struct obj *) 0); /* releases any contents too */
+        }
+    }
 }
 
 /* return quality of food; the lower the better */

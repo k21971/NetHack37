@@ -1095,7 +1095,7 @@ cond_menu(void)
                 menutitle[g.condmenu_sortorder],
                 menutitle[1 - g.condmenu_sortorder]);
         add_menu(tmpwin, &nul_glyphinfo, &any, 'S', 0, ATR_NONE,
-                 clr, mbuf, MENU_ITEMFLAGS_NONE);
+                 clr, mbuf, MENU_ITEMFLAGS_SKIPINVERT);
         any = cg.zeroany;
         Sprintf(mbuf, "sorted %s", menutitle[g.condmenu_sortorder]);
         add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
@@ -4021,6 +4021,27 @@ status_hilites_viewall(void)
 
     display_nhwindow(datawin, FALSE);
     destroy_nhwindow(datawin);
+}
+
+void
+all_options_statushilites(strbuf_t *sbuf)
+{
+    struct _status_hilite_line_str *hlstr;
+    char buf[BUFSZ];
+
+    status_hilite_linestr_done();
+    status_hilite_linestr_gather();
+
+    hlstr = status_hilite_str;
+
+    while (hlstr) {
+        Sprintf(buf, "OPTIONS=hilite_status: %.*s\n",
+                (int) (BUFSZ - sizeof "OPTIONS=hilite_status:  " - 1),
+                hlstr->str);
+        strbuf_append(sbuf, buf);
+        hlstr = hlstr->next;
+    }
+    status_hilite_linestr_done();
 }
 
 boolean

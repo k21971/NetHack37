@@ -1467,6 +1467,8 @@ goto_level(
         /* mark #overview data for all dungeon branches as uninteresting */
         for (l_idx = 0; l_idx < g.n_dgns; ++l_idx)
             remdun_mapseen(l_idx);
+        /* get rid of mons & objs scheduled to migrate to discarded levels */
+        discard_migrations();
     }
 
     if (Is_rogue_level(newlevel) || Is_rogue_level(&u.uz))

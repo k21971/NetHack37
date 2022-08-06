@@ -990,6 +990,7 @@ no longer override the effect of a new moon by simply carring a lizard corpse
 make explosions burn monster's armor just like they do hero's armor
 make healing and extra healing better by upping the average amount healed
 lifesaving healing amount depends on the consitution
+hitting a monster with a wielded potion hits you far less
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1764,6 +1765,8 @@ some quest nemeses release a cloud of poisonous gas when they die
 taming magic acting on an already tame creature might make it become tamer
 eliminate scimitar skill and have scimitars use saber skill
 simplified configuration options menu
+rudimentary key rebinding in game options
+experimental #saveoptions command to allow saving configuration settings
 
 
 Platform- and/or Interface-Specific New Features

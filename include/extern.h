@@ -204,6 +204,7 @@ extern boolean parse_status_hl1(char *op, boolean);
 extern void status_notify_windowport(boolean);
 extern void clear_status_hilites(void);
 extern int count_status_hilites(void);
+extern void all_options_statushilites(strbuf_t *);
 extern boolean status_hilite_menu(void);
 #endif /* STATUS_HILITES */
 
@@ -265,6 +266,9 @@ extern void savech_extcmd(const char *, boolean);
 extern char extcmd_initiator(void);
 extern int doextcmd(void);
 extern struct ext_func_tab *extcmds_getentry(int);
+extern int count_bind_keys(void);
+extern void get_changed_key_binds(strbuf_t *);
+extern void handler_rebind_keys(void);
 extern int extcmds_match(const char *, int, int **);
 extern const char *key2extcmddesc(uchar);
 extern boolean bind_specialkey(uchar, const char *);
@@ -597,6 +601,7 @@ extern void mon_arrive(struct monst *, int);
 extern void mon_catchup_elapsed_time(struct monst *, long);
 extern void keepdogs(boolean);
 extern void migrate_to_level(struct monst *, coordxy, coordxy, coord *);
+extern void discard_migrations(void);
 extern int dogfood(struct monst *, struct obj *);
 extern boolean tamedog(struct monst *, struct obj *);
 extern void abuse_dog(struct monst *);
@@ -877,6 +882,7 @@ extern void nh_compress(const char *);
 extern void nh_uncompress(const char *);
 extern boolean lock_file(const char *, int, int);
 extern void unlock_file(const char *);
+extern int do_write_config_file(void);
 extern boolean parse_config_line(char *);
 #ifdef USER_SOUNDS
 extern boolean can_read_file(const char *);
@@ -1962,11 +1968,12 @@ extern void initoptions(void);
 extern void initoptions_init(void);
 extern void initoptions_finish(void);
 extern boolean parseoptions(char *, boolean, boolean);
-extern char *get_option_value(const char *);
+extern char *get_option_value(const char *, boolean);
 extern int doset_simple(void);
 extern int doset(void);
 extern int dotogglepickup(void);
 extern void option_help(void);
+extern void all_options_strbuf(strbuf_t *);
 extern void next_opt(winid, const char *);
 extern int fruitadd(char *, struct fruit *);
 extern int choose_classes_menu(const char *, int, boolean, char *, char *);
@@ -2670,6 +2677,8 @@ extern int do_symset(boolean);
 extern int load_symset(const char *, int);
 extern void free_symsets(void);
 extern const struct symparse *match_sym(char *);
+extern void savedsym_free(void);
+extern void savedsym_strbuf(strbuf_t *);
 extern boolean parsesymbols(char *, int);
 #ifdef ENHANCED_SYMBOLS
 extern struct customization_detail *find_matching_symset_customization(
