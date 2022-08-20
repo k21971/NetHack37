@@ -714,7 +714,7 @@ getspell(int* spell_no)
         for (;;) {
             Snprintf(qbuf, sizeof(qbuf), "Cast which spell? [%s *?]",
                      lets);
-            ilet = yn_function(qbuf, (char *) 0, '\0');
+            ilet = yn_function(qbuf, (char *) 0, '\0', TRUE);
             if (ilet == '*' || ilet == '?')
                 break; /* use menu mode */
             if (index(quitchars, ilet))
@@ -821,24 +821,20 @@ cast_protection(void)
             if (u.uspellprot) {
                 pline_The("%s haze around you becomes more dense.", hgolden);
             } else {
+                struct permonst *pm = u.ustuck ? u.ustuck->data : 0;
+
                 rmtyp = levl[u.ux][u.uy].typ;
                 atmosphere = u.uswallow
-                                ? ((u.ustuck->data == &mons[PM_FOG_CLOUD])
-                                   ? "mist"
-                                   : is_whirly(u.ustuck->data)
-                                      ? "maelstrom"
-                                      : is_animal(u.ustuck->data)
-                                         ? "maw"
+                                ? ((pm == &mons[PM_FOG_CLOUD]) ? "mist"
+                                   : is_whirly(u.ustuck->data) ? "maelstrom"
+                                     : enfolds(pm) ? "folds"
+                                       : is_animal(u.ustuck->data) ? "maw"
                                          : "ooze")
-                                : (u.uinwater
-                                   ? hliquid("water")
-                                   : (rmtyp == CLOUD)
-                                      ? "cloud"
-                                      : IS_TREE(rmtyp)
-                                         ? "vegetation"
-                                         : IS_STWALL(rmtyp)
-                                            ? "stone"
-                                            : "air");
+                                : (u.uinwater ? hliquid("water")
+                                   : (rmtyp == CLOUD) ? "cloud"
+                                     : IS_TREE(rmtyp) ? "vegetation"
+                                       : IS_STWALL(rmtyp) ? "stone"
+                                         : "air");
                 pline_The("%s around you begins to shimmer with %s haze.",
                           atmosphere, an(hgolden));
             }

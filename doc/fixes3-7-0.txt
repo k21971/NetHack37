@@ -1,4 +1,4 @@
-HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.975 $ $NHDT-Date: 1657868310 2022/07/15 06:58:30 $
+HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1011 $ $NHDT-Date: 1660588881 2022/08/15 18:41:21 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -992,6 +992,26 @@ make healing and extra healing better by upping the average amount healed
 lifesaving healing amount depends on the consitution
 hitting a monster with a wielded potion hits you far less
 pyrolisks get a mundane bite attack
+chances of random item being an artifact depends on already existing artifacts
+monsters can zap wands of teleportation at hero
+piranhas devour corpses
+turn on menucolors boolean automatically if any menucolors are defined
+blind hero was notified when brass lantern burned out even though it isn't
+	warm enough to detect that by touch; manually switching the lantern
+	on or off can be determined that way so still gives on/off message
+turn on statushilites automatically if any are defined
+change poison instakill to damage with attribute and max hp loss
+trappers and lurkers above enfold themselves around and crush their victims,
+	not swallow and digest
+attempting to move up or down when poly'd into a holder and holding a monster
+	rejected the move; release the monster instead
+thowing a non-weapon while engulfed by an ochre jelly reported that the item
+	vanished into the jelly's "currents"
+if a pet gelatinous cube eats a container, treat it the same as when a hostile
+	one does:  the container is destroyed but its conters are engulfed
+when breaking a wand of sleep hits the hero with the explosion, don't describe
+	that as "the sleep ray hits you"
+expose fuz tester to wizard-mode as #fuzzer extended command
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1336,6 +1356,9 @@ if the game crashed or the process was killed, recovering a save file ended
 when using --nethackrc=file on the command line (currently only implemented
 	for ports that use unixmain.c), options parsing freed the string
 	containing 'file' before using it as the RC file name
+using 'o'pen as a synonym for #loot of a container at the hero's location did
+	not work if the hero was in a pit
+update '?' menu to reflect change to 'O' command
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1355,6 +1378,9 @@ curses: when entering a count while in a menu, cursor would jump to the spot
 	on screen where the hero was, even if menu covered that part of map;
 	post-3.6--started when curses was changed to use core's get_count()
 curses: clipped map crashed due to uninitialized memory
+curses: changes for tty's TTY_PERM_INVENT resulted in viewing inventory under
+	curses while carrying only gold to crash; didn't matter if perm_invent
+	was On or if TTY_PERM_INVENT was enabled
 Qt: at Xp levels above 20 with 'showexp' On, the combined status field
 	"Level:NN/nnnnnnnn" was too big and truncated by a char at each end
 Qt: searching a text window for something that wasn't found and then searching
@@ -1372,6 +1398,9 @@ tty: for #wizidentify, using ^I as an unseen group accelerator to pick the
 	failing, so the 'all' choice wasn't being toggled on if user typed ^I
 tty: changes to support utf8 resulted in lines of text windows being shown
 	starting at their second character
+tty: changes to support TTY_PERM_INVENT resulted in blank inventory menu when
+	using the 'i' command while carrying only gold; didn't matter whether
+	or not TTY_PERM_INVENT was enabled during build
 Unix: after lua changes to Makefiles, 'make spotless' for dat subdirectory
 	left some generated data files which should have been deleted
 Windows: new tile additions in win/share did not trigger the creation of a new

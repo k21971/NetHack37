@@ -72,12 +72,6 @@ static struct allopt_t allopt_init[] = {
 #undef NHOPT_PARSE
 
 
-#if defined(USE_TILES) && defined(DEFAULT_WC_TILED_MAP)
-#define PREFER_TILED TRUE
-#else
-#define PREFER_TILED FALSE
-#endif
-
 #define PILE_LIMIT_DFLT 5
 #define rolestring(val, array, field) \
     ((val >= 0) ? array[val].field : (val == ROLE_RANDOM) ? randomrole : none)
@@ -4494,6 +4488,10 @@ optfn_boolean(int optidx, int req, boolean negated, char *opts, char *op)
         if (!g.opt_initial && (allopt[optidx].setwhere == set_in_config))
             return optn_err;
 
+        /* options that must NOT come from config file */
+        if (g.opt_initial && allopt[optidx].setwhere == set_wiznofuz)
+            return optn_err;
+
         op = string_for_opt(opts, TRUE);
         if (op != empty_optstr) {
             int ln;
@@ -5517,11 +5515,6 @@ handler_menu_colors(void)
             if (iflags.perm_invent)
                 update_inventory();
 
-        /* menu colors aren't being used yet; if any MENUCOLOR rules are
-           defined, remind player how to activate them */
-        } else if (nmc > 0) {
-            pline(
-    "To have menu colors become active, toggle 'menucolors' option to True.");
         }
         return optn_ok;
 
@@ -6463,6 +6456,17 @@ initoptions_finish(void)
     }
 #endif
     update_rest_on_space();
+
+    /* these can't rely on compile-time initialization for their defaults
+       because a multi-interface binary might need different values for
+       different interfaces; if neither tiled_map nor ascii_map pass the
+       wc_supported() test, assume ascii_map */
+    if (iflags.wc_tiled_map && !wc_supported("tiled_map"))
+        iflags.wc_tiled_map = FALSE, iflags.wc_ascii_map = TRUE;
+    else if (iflags.wc_ascii_map && !wc_supported("ascii_map")
+             && wc_supported("tiled_map"))
+        iflags.wc_ascii_map = FALSE, iflags.wc_tiled_map = TRUE;
+
 #ifdef ENHANCED_SYMBOLS
     if (glyphid_cache_status())
         free_glyphid_cache();
@@ -7254,6 +7258,7 @@ add_menu_coloring_parsed(const char *str, int c, int a)
     tmp->color = c;
     tmp->attr = a;
     g.menu_colorings = tmp;
+    iflags.use_menu_color = TRUE;
     return TRUE;
 }
 
@@ -7897,8 +7902,12 @@ doset_simple(void)
     boolean *bool_p;
     const char *name;
 
-    if (iflags.menu_requested)
+    if (iflags.menu_requested) {
+        /* doset() checks for 'm' and calls doset_simple(); clear the
+           menu-requested flag to avoid doing that recursively */
+        iflags.menu_requested = FALSE;
         return doset();
+    }
 
     if (!made_fmtstr) {
         Sprintf(fmtstr_doset, "%%s%%-%us [%%s]",
@@ -8056,6 +8065,13 @@ doset(void) /* changing options via menu by Per Liboriussen */
             gavehelp = FALSE, skiphelp = !iflags.cmdassist;
     int clr = 0;
 
+    if (iflags.menu_requested) {
+        /* doset_simple() checks for 'm' and calls doset(); clear the
+           menu-requested flag to avoid doing that recursively */
+        iflags.menu_requested = FALSE;
+        return doset_simple();
+    }
+
     /* if we offer '?' as a choice and it is the only thing chosen,
        we'll end up coming back here after showing the explanatory text */
  rerun:
@@ -8096,7 +8112,7 @@ doset(void) /* changing options via menu by Per Liboriussen */
     else
 #endif
         startpass = set_gameview;
-    endpass = (wizard) ? set_wizonly : set_in_game;
+    endpass = (wizard) ? set_wiznofuz : set_in_game;
 
     if (!made_fmtstr && !iflags.menu_tab_sep) {
         Sprintf(fmtstr_doset, "%%s%%-%us [%%s]",
@@ -8120,6 +8136,9 @@ doset(void) /* changing options via menu by Per Liboriussen */
                     continue; /* obsolete */
                 if (allopt[i].setwhere == set_wizonly && !wizard)
                     continue;
+                if (allopt[i].setwhere == set_wiznofuz
+                    && (!wizard || iflags.debug_fuzzer))
+                    continue;
                 if ((is_wc_option(name) && !wc_supported(name))
                     || (is_wc2_option(name) && !wc2_supported(name)))
                     continue;
@@ -8132,7 +8151,8 @@ doset(void) /* changing options via menu by Per Liboriussen */
                     Sprintf(buf, fmtstr_doset_tab,
                             name, *bool_p ? "true" : "false");
                 if (pass == 0)
-                    enhance_menu_text(buf, sizeof buf, pass, bool_p, &allopt[i]);
+                    enhance_menu_text(buf, sizeof buf, pass, bool_p,
+                                      &allopt[i]);
                 add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
                          ATR_NONE, clr, buf, MENU_ITEMFLAGS_NONE);
             }
@@ -8272,6 +8292,20 @@ doset(void) /* changing options via menu by Per Liboriussen */
         check_gold_symbol();
         reglyph_darkroom();
         docrt();
+        /*
+         * docrt() calls update_inventory() but
+         * (*windowprocs.win_update_inventory)(0) for curses ends up
+         * calling back to docrt() after creating its perm_invent
+         * window.  That call back has become a no-op because of the
+         * program_state.in_docrt flag.  So call update_inventory()
+         * explicitly in case perm_invent was toggled.  It's only
+         * needed if perm_invent was off and is now on but won't kill
+         * anybody if done when not necessary.
+         * Note:  doset_simple() doesn't need this because it doesn't
+         * offer a chance to toggle perm_invent.
+         */
+        if (iflags.perm_invent)
+            update_inventory();
     }
     if (g.context.botl || g.context.botlx) {
         bot();
@@ -8720,6 +8754,9 @@ option_help(void)
         if ((allopt[i].opttyp != BoolOpt || !allopt[i].addr)
             || (allopt[i].setwhere == set_wizonly && !wizard))
             continue;
+        if (allopt[i].setwhere == set_wiznofuz
+            && (!wizard || iflags.debug_fuzzer))
+            continue;
         optname = allopt[i].name;
         if ((is_wc_option(optname) && !wc_supported(optname))
             || (is_wc2_option(optname) && !wc2_supported(optname)))
@@ -8733,6 +8770,9 @@ option_help(void)
     for (i = 0; allopt[i].name; i++) {
         if (allopt[i].opttyp != CompOpt
             || (allopt[i].setwhere == set_wizonly && !wizard))
+            continue;
+        if (allopt[i].setwhere == set_wiznofuz
+            && (!wizard || iflags.debug_fuzzer))
             continue;
         optname = allopt[i].name;
         if ((is_wc_option(optname) && !wc_supported(optname))

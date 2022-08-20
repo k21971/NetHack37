@@ -365,7 +365,7 @@ check_here(boolean picked_some)
 {
     register struct obj *obj;
     register int ct = 0;
-    unsigned lhflags = picked_some ? LOOKHERE_PICKED_SOME : 0;
+    unsigned lhflags = picked_some ? LOOKHERE_PICKED_SOME : LOOKHERE_NOFLAGS;
 
     if (flags.mention_decor) {
         if (describe_decor())
@@ -467,11 +467,13 @@ allow_category(struct obj *obj)
         set_bknown(obj, 1);
 
     /*
-     * There are three types of filters possible and the first and
-     * third can have more than one entry:
+     * Version 3.6 had three types of filters possible and the first
+     * and third can have more than one entry:
      *  1) object class (armor, potion, &c);
      *  2) unpaid shop item;
      *  3) bless/curse state (blessed, uncursed, cursed, BUC-unknown).
+     * Version 3.7 added a fourth:
+     *  4) 'novelty' ('P' for just picked up items).
      * When only one type is present, the situation is simple:
      * to be accepted, obj's status must match one of the entries.
      * When more than one type is present, the obj will now only
@@ -1025,7 +1027,7 @@ query_objlist(const char *qstr,        /* query string */
             if ((qflags & FEEL_COCKATRICE) && curr->otyp == CORPSE
                 && will_feel_cockatrice(curr, FALSE)) {
                 destroy_nhwindow(win); /* stop the menu and revert */
-                (void) look_here(0, 0);
+                (void) look_here(0, LOOKHERE_NOFLAGS);
                 unsortloot(&sortedolist);
                 return 0;
             }
@@ -1064,7 +1066,7 @@ query_objlist(const char *qstr,        /* query string */
         any = cg.zeroany;
         if (sorted && n > 1) {
             Sprintf(buf, "%s Creatures",
-                    is_animal(u.ustuck->data) ? "Swallowed" : "Engulfed");
+                    digests(u.ustuck->data) ? "Swallowed" : "Engulfed");
             add_menu(win, &nul_glyphinfo, &any, 0, 0, iflags.menu_headings,
                      clr, buf, MENU_ITEMFLAGS_NONE);
         }
@@ -1937,7 +1939,7 @@ do_loot_cont(
                 && res != ECMD_TIME
                 && ccount == 1 && u_have_forceable_weapon()) {
                 /* single container, and we could #force it open... */
-                cmdq_add_ec(doforce); /* doforce asks for confirmation */
+                cmdq_add_ec(CQ_CANNED, doforce); /* doforce asks for confirmation */
                 g.abort_looting = TRUE;
             }
         }
@@ -2091,7 +2093,8 @@ doloot_core(void)
      * 3.3.1 introduced directional looting for some things.
      */
  lootmon:
-    if (c != 'y' && mon_beside(u.ux, u.uy)) {
+    if (c != 'y' && (mon_beside(u.ux, u.uy) || iflags.menu_requested)) {
+        boolean looted_mon = FALSE;
         if (!get_adjacent_loc("Loot in what direction?",
                               "Invalid loot location", u.ux, u.uy, &cc))
             return ECMD_OK;
@@ -2107,7 +2110,7 @@ doloot_core(void)
         if (mtmp) {
             timepassed = loot_mon(mtmp, &prev_inquiry, &prev_loot);
             if (timepassed)
-                underfoot = 1; /* not true but skips dont_find_anything */
+                looted_mon = TRUE;
         }
         /* always use a turn when choosing a direction is impaired,
            even if you've successfully targetted a saddled creature
@@ -2119,8 +2122,8 @@ doloot_core(void)
          * Adjust this if-block to allow container looting
          * from one square away to change that in the future.
          */
-        if (!underfoot) {
-            if (container_at(cc.x, cc.y, FALSE)) {
+        if (!looted_mon) {
+            if (!underfoot && container_at(cc.x, cc.y, FALSE)) {
                 if (mtmp) {
                     You_cant("loot anything %sthere with %s in the way.",
                              prev_inquiry ? "else " : "", mon_nam(mtmp));
@@ -2129,8 +2132,9 @@ doloot_core(void)
                     You("have to be at a container to loot it.");
                 }
             } else {
-                You("%s %sthere to loot.", dont_find_anything,
-                    (prev_inquiry || prev_loot) ? "else " : "");
+                You("%s %s%shere to loot.", dont_find_anything,
+                    (prev_inquiry || prev_loot) ? "else " : "",
+                    !underfoot ? "t" : "");
                 return (timepassed ? ECMD_TIME : ECMD_OK);
             }
         }
@@ -2237,7 +2241,7 @@ loot_mon(struct monst *mtmp, int *passed_info, boolean *prev_loot)
         Sprintf(qbuf, "Do you want to remove the saddle from %s?",
                 x_monnam(mtmp, ARTICLE_THE, (char *) 0,
                          SUPPRESS_SADDLE, FALSE));
-        if ((c = yn_function(qbuf, ynqchars, 'n')) == 'y') {
+        if ((c = yn_function(qbuf, ynqchars, 'n', TRUE)) == 'y') {
             if (nolimbs(g.youmonst.data)) {
                 You_cant("do that without limbs."); /* not body_part(HAND) */
                 return 0;
@@ -2890,7 +2894,7 @@ use_container(
                 Strcat(xbuf, "?");
             if (*xbuf)
                 Strcat(strcat(pbuf, "\033"), xbuf);
-            c = yn_function(qbuf, pbuf, more_containers ? 'n' : 'q');
+            c = yn_function(qbuf, pbuf, more_containers ? 'n' : 'q', TRUE);
         } /* PARTIAL|FULL vs other modes */
 
         if (c == '?') {

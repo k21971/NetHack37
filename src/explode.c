@@ -156,7 +156,7 @@ explode(
             break;
         case 4:
             adstr = (olet == WAND_CLASS) ? "death field"
-                                       : "disintegration field";
+                                         : "disintegration field";
             adtyp = AD_DISN;
             break;
         case 5:
@@ -372,7 +372,7 @@ explode(
                 if (engulfing_u(mtmp)) {
                     const char *adj = (char *) 0;
 
-                    if (is_animal(u.ustuck->data)) {
+                    if (digests(u.ustuck->data)) {
                         switch (adtyp) {
                         case AD_FIRE:
                             adj = "heartburn";

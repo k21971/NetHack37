@@ -1,4 +1,4 @@
-/* NetHack 3.7	invent.c	$NHDT-Date: 1654205933 2022/06/02 21:38:53 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.391 $ */
+/* NetHack 3.7	invent.c	$NHDT-Date: 1660588881 2022/08/15 18:41:21 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.418 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1526,13 +1526,15 @@ getobj(
                        * between "you don't have anything to <foo>"
                        * versus "you don't have anything _else_ to <foo>"
                        * (also used for GETOBJ_EXCLUDE_NONINVENT) */
-    long cnt;
+    long cnt = 0L;
     boolean cntgiven = FALSE;
     boolean msggiven = FALSE;
     boolean oneloop = FALSE;
     Loot *sortedinvent, *srtinv;
     struct _cmd_queue cq, *cmdq;
+    boolean need_more_cq = FALSE;
 
+ need_more_cq:
     if ((cmdq = cmdq_pop()) != 0) {
         cq = *cmdq;
         free(cmdq);
@@ -1559,12 +1561,30 @@ getobj(
                                 break;
                         }
                 }
+            } else if (cq.typ == CMDQ_INT) {
+                /* getting a partial stack */
+                if (!cntgiven && allowcnt) {
+                    cnt = cq.intval;
+                    cntgiven = TRUE;
+                    goto need_more_cq; /* now, get CMDQ_KEY */
+                } else {
+                    cmdq_clear(CQ_CANNED); /* this should maybe clear the CQ_REPEAT too? */
+                    return NULL;
+                }
             }
             if (!otmp)        /* didn't find what we were looking for, */
-                cmdq_clear(); /* so discard any other queued commands  */
+                cmdq_clear(CQ_CANNED); /* so discard any other queued commands  */
+            else if (cntgiven) {
+                /* if stack is smaller than count, drop the whole stack */
+                if (cnt < 1 || otmp->quan <= cnt)
+                    cntgiven = FALSE;
+                goto split_otmp;
+            }
             return otmp;
         } /* !CMDQ_USER_INPUT */
-    } /* cmdq */
+    } else if (need_more_cq) {
+        return NULL;
+    }
 
     /* is "hands"/"self" a valid thing to do this action on? */
     switch ((*obj_ok)((struct obj *) 0)) {
@@ -1669,7 +1689,7 @@ getobj(
                 Strcat(qbuf, " [*]");
             else
                 Sprintf(eos(qbuf), " [%s or ?*]", buf);
-            ilet = yn_function(qbuf, (char *) 0, '\0');
+            ilet = yn_function(qbuf, (char *) 0, '\0', FALSE);
         }
         if (digit(ilet)) {
             long tmpcnt = 0;
@@ -1782,7 +1802,11 @@ getobj(
             }
         }
         g.context.botl = 1; /* May have changed the amount of money */
-        savech(ilet);
+        if (otmp && !g.in_doagain) {
+            if (cntgiven && cnt > 0)
+                cmdq_add_int(CQ_REPEAT, cnt);
+            cmdq_add_key(CQ_REPEAT, ilet);
+        }
         /* [we used to set otmp (by finding ilet in invent) here, but
            that's been moved above so that otmp can be checked earlier] */
         /* verify the chosen object */
@@ -1803,6 +1827,7 @@ getobj(
         silly_thing(word, otmp);
         return (struct obj *) 0;
     }
+split_otmp:
     if (cntgiven) {
         if (cnt == 0)
             return (struct obj *) 0;
@@ -2439,9 +2464,8 @@ update_inventory(void)
     if (WINDOWPORT(tty))
         sync_perminvent();
     else
-#else
-        (*windowprocs.win_update_inventory)(0);
 #endif
+        (*windowprocs.win_update_inventory)(0);
     iflags.suppress_price = save_suppress_price;
 }
 
@@ -2990,110 +3014,110 @@ itemactions(struct obj *otmp)
         case IA_NONE:
             break;
         case IA_UNWIELD:
-            cmdq_add_ec((otmp == uwep) ? dowield
+            cmdq_add_ec(CQ_CANNED, (otmp == uwep) ? dowield
                         : (otmp == uswapwep) ? remarm_swapwep
                           : (otmp == uquiver) ? dowieldquiver
                             : donull); /* can't happen */
-            cmdq_add_key('-');
+            cmdq_add_key(CQ_CANNED, '-');
             break;
         case IA_APPLY_OBJ:
-            cmdq_add_ec(doapply);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, doapply);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_DIP_OBJ:
             /* #altdip instead of normal #dip - takes potion to dip into
                first (the inventory item instigating this) and item to
                be dipped second, also ignores floor features such as
                fountain/sink so we don't need to force m-prefix here */
-            cmdq_add_ec(dip_into);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, dip_into);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_NAME_OBJ:
         case IA_NAME_OTYP:
-            cmdq_add_ec(docallcmd);
-            cmdq_add_key((act == IA_NAME_OBJ) ? 'i' : 'o');
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, docallcmd);
+            cmdq_add_key(CQ_CANNED, (act == IA_NAME_OBJ) ? 'i' : 'o');
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_DROP_OBJ:
-            cmdq_add_ec(dodrop);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, dodrop);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_EAT_OBJ:
             /* start with m-prefix; for #eat, it means ignore floor food
                if present and eat food from invent */
-            cmdq_add_ec(do_reqmenu);
-            cmdq_add_ec(doeat);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, do_reqmenu);
+            cmdq_add_ec(CQ_CANNED, doeat);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_ENGRAVE_OBJ:
-            cmdq_add_ec(doengrave);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, doengrave);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_ADJUST_OBJ:
-            cmdq_add_ec(doorganize); /* #adjust */
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, doorganize); /* #adjust */
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_ADJUST_STACK:
-            cmdq_add_ec(adjust_split); /* #altadjust */
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, adjust_split); /* #altadjust */
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_SACRIFICE:
-            cmdq_add_ec(dosacrifice);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, dosacrifice);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_BUY_OBJ:
-            cmdq_add_ec(dopay);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, dopay);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_QUAFF_OBJ:
             /* start with m-prefix; for #quaff, it means ignore fountain
                or sink if present and drink a potion from invent */
-            cmdq_add_ec(do_reqmenu);
-            cmdq_add_ec(dodrink);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, do_reqmenu);
+            cmdq_add_ec(CQ_CANNED, dodrink);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_QUIVER_OBJ:
-            cmdq_add_ec(dowieldquiver);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, dowieldquiver);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_READ_OBJ:
-            cmdq_add_ec(doread);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, doread);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_RUB_OBJ:
-            cmdq_add_ec(dorub);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, dorub);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_THROW_OBJ:
-            cmdq_add_ec(dothrow);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, dothrow);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_TAKEOFF_OBJ:
-            cmdq_add_ec(dotakeoff);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, dotakeoff);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_TIP_CONTAINER:
-            cmdq_add_ec(dotip);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, dotip);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_INVOKE_OBJ:
-            cmdq_add_ec(doinvoke);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, doinvoke);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_WIELD_OBJ:
-            cmdq_add_ec(dowield);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, dowield);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_WEAR_OBJ:
-            cmdq_add_ec(dowear);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, dowear);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         case IA_SWAPWEAPON:
-            cmdq_add_ec(doswapweapon);
+            cmdq_add_ec(CQ_CANNED, doswapweapon);
             break;
         case IA_ZAP_OBJ:
-            cmdq_add_ec(dozap);
-            cmdq_add_key(otmp->invlet);
+            cmdq_add_ec(CQ_CANNED, dozap);
+            cmdq_add_key(CQ_CANNED, otmp->invlet);
             break;
         }
     }
@@ -3173,7 +3197,10 @@ display_pickinv(
     boolean want_reply,      /* True: select an item, False: just display */
     long *out_cnt) /* optional; count player entered when selecting an item */
 {
-    static const char not_carrying_anything[] = "Not carrying anything";
+    static const char /* potential entries for perm_invent window */
+        not_carrying_anything[] = "Not carrying anything",
+        not_using_anything[] = "Not using any items",
+        only_carrying_gold[] = "Only carrying gold";
     struct obj *otmp, wizid_fakeobj;
     char ilet, ret, *formattedobj;
     const char *invlet = flags.inv_order;
@@ -3186,15 +3213,17 @@ display_pickinv(
     boolean wizid = (wizard && iflags.override_ID), gotsomething = FALSE;
     int clr = 0, menu_behavior = MENU_BEHAVE_STANDARD;
     boolean show_gold = TRUE, sparse = FALSE, inuse_only = FALSE,
+            skipped_gold = FALSE, skipped_noninuse = FALSE,
             doing_perm_invent = FALSE, save_flags_sortpack = flags.sortpack;
 
     if (lets && !*lets)
         lets = 0; /* simplify tests: (lets) instead of (lets && *lets) */
 
-    if ((iflags.perm_invent && (lets || xtra_choice || wizid))
+    if (!iflags.perm_invent
 #ifdef TTY_PERM_INVENT
         || !g.in_sync_perminvent
 #endif
+        || (lets || xtra_choice || wizid || want_reply)
         || WIN_INVEN == WIN_ERR) {
         /* partial inventory in perm_invent setting; don't operate on
            full inventory window, use an alternate one instead; create
@@ -3343,11 +3372,19 @@ display_pickinv(
         if (!flags.sortpack || otmp->oclass == *invlet) {
             if (wizid && !not_fully_identified(otmp))
                 continue;
-            if (doing_perm_invent
-                && ((otmp->invlet == GOLD_SYM && !show_gold)
-                    || ((otmp->invlet != GOLD_SYM)
-                        && (!otmp->owornmask && inuse_only))))
-                continue;
+            if (doing_perm_invent) {
+                /* when showing equipment in use, gold shouldn't be excluded
+                   just because !show_gold is set; it might be quivered */
+                if (inuse_only) {
+                    if (!otmp->owornmask) {
+                        skipped_noninuse = TRUE;
+                        continue;
+                    }
+                } else if (otmp->invlet == GOLD_SYM && !show_gold) {
+                    skipped_gold = TRUE;
+                    continue;
+                }
+            }
             any = cg.zeroany; /* all bits zero */
             ilet = otmp->invlet;
             if (flags.sortpack && !classcount) {
@@ -3398,14 +3435,16 @@ display_pickinv(
         gotsomething = TRUE;
     }
     unsortloot(&sortedinvent);
-    /* for permanent inventory where we intend to show everything but
-       nothing has been listed (because there isn't anyhing to list;
-       the n==0 case above gets skipped for perm_invent), put something
-       into the menu */
+    /* for permanent inventory where nothing has been listed (because
+       there isn't anything applicable to list; the n==0 case above
+       gets skipped for perm_invent), put something into the menu */
     if (iflags.perm_invent && !lets && !gotsomething) {
         any = cg.zeroany;
         add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr,
-                 not_carrying_anything, MENU_ITEMFLAGS_NONE);
+                 (inuse_only && skipped_noninuse) ? not_using_anything
+                 : (!show_gold && skipped_gold) ? only_carrying_gold
+                   : not_carrying_anything,
+                 MENU_ITEMFLAGS_NONE);
         want_reply = FALSE;
     }
 #ifdef TTY_PERM_INVENT
@@ -3481,7 +3520,7 @@ display_inventory(const char *lets, boolean want_reply)
 
         /* cmdq not a key, or did not find the object, abort */
         free(cmdq);
-        cmdq_clear();
+        cmdq_clear(CQ_CANNED);
         return '\0';
     }
     return display_pickinv(lets, (char *) 0, (char *) 0,
@@ -3607,8 +3646,10 @@ count_buc(struct obj *list, int type, boolean (*filterfunc)(OBJ_P))
 /* similar to count_buc(), but tallies all states at once
    rather than looking for a specific type */
 void
-tally_BUCX(struct obj *list, boolean by_nexthere,
-           int *bcp, int *ucp, int *ccp, int *xcp, int *ocp, int *jcp)
+tally_BUCX(
+    struct obj *list,
+    boolean by_nexthere,
+    int *bcp, int *ucp, int *ccp, int *xcp, int *ocp, int *jcp)
 {
     /* Future extensions:
      *  Skip current_container when list is invent, uchain when
@@ -3645,14 +3686,15 @@ tally_BUCX(struct obj *list, boolean by_nexthere,
 
 /* count everything inside a container, or just shop-owned items inside */
 long
-count_contents(struct obj *container,
-               boolean nested,  /* include contents of any nested containers */
-               boolean quantity,   /* count all vs count separate stacks     */
-               boolean everything, /* all objects vs only unpaid objects     */
-               boolean newdrop)    /* on floor, but hero-owned items haven't
-                                    * been marked no_charge yet and shop-owned
-                                    * items are still marked unpaid -- used
-                                    * when asking the player whether to sell */
+count_contents(
+    struct obj *container,
+    boolean nested,     /* include contents of any nested containers */
+    boolean quantity,   /* count all vs count separate stacks        */
+    boolean everything, /* all objects vs only unpaid objects        */
+    boolean newdrop)    /* on floor, but hero-owned items haven't
+                         * been marked no_charge yet and shop-owned
+                         * items are still marked unpaid -- used
+                         * when asking the player whether to sell    */
 {
     struct obj *otmp, *topc;
     boolean shoppy = FALSE;
@@ -3911,8 +3953,7 @@ dotypeinv(void)
             }
 
         if (class_count > 1) {
-            c = yn_function(prompt, types, '\0');
-            savech(c);
+            c = yn_function(prompt, types, '\0', TRUE);
             if (c == '\0') {
                 clear_nhwindow(WIN_MESSAGE);
                 goto doI_done;
@@ -4272,7 +4313,7 @@ dolook(void)
        MSGTYPE={norep,noshow} "You see here"
        interfere with feedback from the look-here command */
     hide_unhide_msgtypes(TRUE, MSGTYP_MASK_REP_SHOW);
-    res = look_here(0, FALSE);
+    res = look_here(0, LOOKHERE_NOFLAGS);
     /* restore normal msgtype handling */
     hide_unhide_msgtypes(FALSE, MSGTYP_MASK_REP_SHOW);
     return res;
@@ -4902,7 +4943,7 @@ adjust_split(void)
         splitamount = 1L;
     } else {
         /* get first digit; doesn't wait for <return> */
-        dig = yn_function("Split off how many?", (char *) 0, '\0');
+        dig = yn_function("Split off how many?", (char *) 0, '\0', TRUE);
         if (!digit(dig)) {
             pline1(Never_mind);
             return ECMD_CANCEL;
@@ -5023,7 +5064,7 @@ doorganize_core(struct obj *obj)
     Sprintf(eos(qbuf), " to what [%s]%s?", lets,
             g.invent ? " (? see used letters)" : "");
     for (trycnt = 1; ; ++trycnt) {
-        let = !isgold ? yn_function(qbuf, (char *) 0, '\0') : GOLD_SYM;
+        let = !isgold ? yn_function(qbuf, (char *) 0, '\0', TRUE) : GOLD_SYM;
         if (let == '?' || let == '*') {
             let = display_used_invlets(splitting ? obj->invlet : 0);
             if (!let)
@@ -5388,15 +5429,23 @@ display_binventory(coordxy x, coordxy y, boolean as_if_seen)
 void
 prepare_perminvent(winid window)
 {
-    win_request_info *wri UNUSED;
+    win_request_info *wri;
 
     if (!done_setting_perminv_flags) {
-        wri_info = zerowri;
         /*TEMPORARY*/
         char *envtmp = nh_getenv("TTYINV");
-        wri_info.fromcore.invmode = envtmp ? atoi(envtmp) : InvNormal;
+        /* default for non-tty includes gold, for tty excludes gold;
+           if non-tty specifies any value, gold will be excluded unless
+           that value includes the show-gold bit (1) */
+        int invmode = envtmp ? atoi(envtmp)
+                      : !WINDOWPORT(tty) ? InvShowGold
+                        : InvNormal;
+
+        wri_info = zerowri;
+        wri_info.fromcore.invmode = invmode;
         /*  relay the mode settings to the window port */
         wri = ctrl_nhwindow(window, set_mode, &wri_info);
+        nhUse(wri);
         done_setting_perminv_flags = 1;
     }
 }
@@ -5450,7 +5499,8 @@ sync_perminvent(void)
         /* Send windowport a request to return the related settings to us */
         if ((iflags.perm_invent && !g.core_invent_state)
             || in_perm_invent_toggled) {
-            if ((wri = ctrl_nhwindow(WIN_INVEN, request_settings, &wri_info))) {
+            if ((wri = ctrl_nhwindow(WIN_INVEN, request_settings, &wri_info))
+                != 0) {
                 if ((wri->tocore.tocore_flags & prohibited) != 0) {
                     /* sizes aren't good enough */
                     set_option_mod_status("perm_invent", set_gameview);
@@ -5478,7 +5528,8 @@ sync_perminvent(void)
     if (!wri || wri->tocore.maxslot == 0)
         return;
 
-    if (in_perm_invent_toggled && g.perm_invent_toggling_direction == toggling_on) {
+    if (in_perm_invent_toggled
+        && g.perm_invent_toggling_direction == toggling_on) {
         WIN_INVEN = create_nhwindow(NHW_MENU);
     }
 

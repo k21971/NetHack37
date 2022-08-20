@@ -969,8 +969,8 @@ use_pick_axe(struct obj *obj)
     if (obj != uwep) {
         if (wield_tool(obj, "swing")) {
             /* we're now wielding it. next turn, apply to dig. */
-            cmdq_add_ec(doapply);
-            cmdq_add_key(obj->invlet);
+            cmdq_add_ec(CQ_CANNED, doapply);
+            cmdq_add_key(CQ_CANNED, obj->invlet);
             return ECMD_TIME;
         }
         return ECMD_OK;
@@ -1411,14 +1411,14 @@ zap_dig(void)
         mtmp = u.ustuck;
 
         if (!is_whirly(mtmp->data)) {
-            if (is_animal(mtmp->data))
+            if (digests(mtmp->data))
                 You("pierce %s %s wall!", s_suffix(mon_nam(mtmp)),
                     mbodypart(mtmp, STOMACH));
             if (unique_corpstat(mtmp->data))
                 mtmp->mhp = (mtmp->mhp + 1) / 2;
             else
                 mtmp->mhp = 1; /* almost dead */
-            expels(mtmp, mtmp->data, !is_animal(mtmp->data));
+            expels(mtmp, mtmp->data, !digests(mtmp->data));
         }
         return;
     } /* swallowed */

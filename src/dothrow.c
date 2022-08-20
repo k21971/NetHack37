@@ -115,11 +115,11 @@ throw_obj(struct obj *obj, int shotlimit)
     if (!canletgo(obj, "throw")) {
         return ECMD_OK;
     }
-    if (obj->oartifact == ART_MJOLLNIR && obj != uwep) {
+    if (is_art(obj, ART_MJOLLNIR) && obj != uwep) {
         pline("%s must be wielded before it can be thrown.", The(xname(obj)));
         return ECMD_OK;
     }
-    if ((obj->oartifact == ART_MJOLLNIR && ACURR(A_STR) < STR19(25))
+    if ((is_art(obj, ART_MJOLLNIR) && ACURR(A_STR) < STR19(25))
         || (obj->otyp == BOULDER && !throws_rocks(g.youmonst.data))) {
         pline("It's too heavy.");
         return ECMD_TIME;
@@ -480,8 +480,8 @@ dofire(void)
                        && !(uswapwep->cursed && uswapwep->bknown)) {
                 /* we have a known not-cursed polearm as swap weapon.
                    swap to it and retry */
-                cmdq_add_ec(doswapweapon);
-                cmdq_add_ec(dofire);
+                cmdq_add_ec(CQ_CANNED, doswapweapon);
+                cmdq_add_ec(CQ_CANNED, dofire);
                 return ECMD_OK; /* haven't taken any time yet */
             } else {
                 You("have no ammunition readied.");
@@ -522,16 +522,16 @@ dofire(void)
             obj = uquiver;
         } else if (ammo_and_launcher(uquiver, uswapwep)) {
             /* swap weapons and retry fire */
-            cmdq_add_ec(doswapweapon);
-            cmdq_add_ec(dofire);
+            cmdq_add_ec(CQ_CANNED, doswapweapon);
+            cmdq_add_ec(CQ_CANNED, dofire);
             return res;
         } else if ((olauncher = find_launcher(uquiver)) != 0) {
             /* wield launcher, retry fire */
             if (uwep && !flags.pushweapon)
-                cmdq_add_ec(doswapweapon);
-            cmdq_add_ec(dowield);
-            cmdq_add_key(olauncher->invlet);
-            cmdq_add_ec(dofire);
+                cmdq_add_ec(CQ_CANNED, doswapweapon);
+            cmdq_add_ec(CQ_CANNED, dowield);
+            cmdq_add_key(CQ_CANNED, olauncher->invlet);
+            cmdq_add_ec(CQ_CANNED, dofire);
             return res;
         }
     }
@@ -1524,7 +1524,7 @@ throwit(struct obj *obj,
 
         if (obj->otyp == BOULDER)
             range = 20; /* you must be giant */
-        else if (obj->oartifact == ART_MJOLLNIR)
+        else if (is_art(obj, ART_MJOLLNIR))
             range = (range + 1) / 2; /* it's heavy */
         else if (tethered_weapon) /* primary weapon is aklys */
             /* if an aklys is going to return, range is limited by the
@@ -2068,10 +2068,14 @@ thitmonst(
             mon->mstrategy &= ~STRAT_WAITMASK;
         }
     } else if (guaranteed_hit) {
+        char trail[BUFSZ];
+        char *monname;
+        struct permonst *md = u.ustuck->data;
+
         /* this assumes that guaranteed_hit is due to swallowing */
         wakeup(mon, TRUE);
         if (obj->otyp == CORPSE && touch_petrifies(&mons[obj->corpsenm])) {
-            if (is_animal(u.ustuck->data)) {
+            if (is_animal(md)) {
                 minstapetrify(u.ustuck, TRUE);
                 /* Don't leave a cockatrice corpse available in a statue */
                 if (!u.uswallow) {
@@ -2080,9 +2084,12 @@ thitmonst(
                 }
             }
         }
-        pline("%s into %s %s.", Tobjnam(obj, "vanish"),
-              s_suffix(mon_nam(mon)),
-              is_animal(u.ustuck->data) ? "entrails" : "currents");
+        Strcpy(trail,
+               digests(md) ? " entrails" : is_whirly(md) ? " currents" : "");
+        monname = mon_nam(mon);
+        if (*trail)
+            monname = s_suffix(monname);
+        pline("%s into %s%s.", Tobjnam(obj, "vanish"), monname, trail);
     } else {
         tmiss(obj, mon, TRUE);
     }
@@ -2429,10 +2436,11 @@ throw_gold(struct obj *obj)
     freeinv(obj);
     if (u.uswallow) {
         const char *swallower = mon_nam(u.ustuck);
-        if (is_animal(u.ustuck->data))
-            swallower = s_suffix(swallower);
-        pline_The("gold disappears into %s%s.", swallower,
-                  is_animal(u.ustuck->data) ? " entrails" : "");
+
+        if (digests(u.ustuck->data))
+            /* note: s_suffix() returns a modifiable buffer */
+            swallower = strcat(s_suffix(swallower), " entrails");
+        pline_The("gold disappears into %s.", swallower);
         add_to_minv(u.ustuck, obj);
         return ECMD_TIME;
     }

@@ -1404,7 +1404,7 @@ is_valid_travelpt(coordxy x, coordxy y)
    (all failures and most successful escapes leave hero at original spot) */
 static boolean
 trapmove(
-    coordxy x, coordxy y,          /* targetted destination, <u.ux+u.dx,u.uy+u.dy> */
+    coordxy x, coordxy y, /* targetted destination, <u.ux+u.dx,u.uy+u.dy> */
     struct trap *desttrap) /* nonnull if another trap at <x,y> */
 {
     boolean anchored = FALSE;
@@ -1441,7 +1441,7 @@ trapmove(
         climb_pit();
         break;
     case TT_WEB:
-        if (uwep && uwep->oartifact == ART_STING) {
+        if (u_wield_art(ART_STING)) {
             /* escape trap but don't move and don't destroy it */
             u.utrap = 0; /* caller will call reset_utrap() */
             pline("Sting cuts through the web!");
@@ -1747,7 +1747,7 @@ domove_fight_web(coordxy x, coordxy y)
 
     if (g.context.forcefight && trap && trap->ttyp == WEB
         && trap->tseen && uwep) {
-        if (uwep->oartifact == ART_STING) {
+        if (u_wield_art(ART_STING)) {
             /* guaranteed success */
             pline("%s cuts through the web!",
                   bare_artifactname(uwep));
@@ -2058,13 +2058,11 @@ slippery_ice_fumbling(void)
     boolean on_ice = !Levitation && is_ice(u.ux, u.uy);
 
     if (on_ice) {
-        static int skates = 0;
-
-        if (!skates)
-            skates = find_skates();
-        if ((uarmf && uarmf->otyp == skates) || resists_cold(&g.youmonst)
-            || Flying || is_floater(g.youmonst.data)
-            || is_clinger(g.youmonst.data) || is_whirly(g.youmonst.data)) {
+        if ((uarmf && objdescr_is(uarmf, "snow boots"))
+            || resists_cold(&g.youmonst) || Flying
+            || is_floater(g.youmonst.data) || is_clinger(g.youmonst.data)
+            || is_whirly(g.youmonst.data)) {
+            pline("skates!");
             on_ice = FALSE;
         } else if (!rn2(Cold_resistance ? 3 : 2)) {
             HFumbling |= FROMOUTSIDE;
@@ -2149,18 +2147,16 @@ avoid_moving_on_liquid(
 static boolean
 avoid_running_into_trap_or_liquid(coordxy x, coordxy y)
 {
+    boolean would_stop = (g.context.run >= 2);
     if (!g.context.run)
         return FALSE;
 
-    if (avoid_moving_on_trap(x,y, TRUE)) {
+    if (avoid_moving_on_trap(x,y, would_stop)
+        || (Blind && avoid_moving_on_liquid(x,y, would_stop))) {
         nomul(0);
-        g.context.move = 0;
-        return TRUE;
-    }
-    if (Blind && avoid_moving_on_liquid(x,y, TRUE)) {
-        nomul(0);
-        g.context.move = 0;
-        return TRUE;
+        if (would_stop)
+            g.context.move = 0;
+        return would_stop;
     }
     return FALSE;
 }
@@ -3208,7 +3204,7 @@ pickup_checks(void)
     /* uswallow case added by GAN 01/29/87 */
     if (u.uswallow) {
         if (!u.ustuck->minvent) {
-            if (is_animal(u.ustuck->data)) {
+            if (digests(u.ustuck->data)) {
                 You("pick up %s tongue.", s_suffix(mon_nam(u.ustuck)));
                 pline("But it's kind of slimy, so you drop it.");
             } else
@@ -3363,6 +3359,14 @@ lookaround(void)
             if (x == u.ux - u.dx && y == u.uy - u.dy)
                 continue;
 
+            /* stop for traps, sometimes */
+            if (avoid_moving_on_trap(x, y, (infront && g.context.run > 1))) {
+                if (g.context.run == 1)
+                    goto bcorr; /* if you must */
+                if (infront)
+                    goto stop;
+            }
+
             /* more uninteresting terrain */
             if (IS_ROCK(levl[x][y].typ) || levl[x][y].typ == ROOM
                 || IS_AIR(levl[x][y].typ) || levl[x][y].typ == ICE) {
@@ -3407,12 +3411,6 @@ lookaround(void)
                     }
                     corrct++;
                 }
-                continue;
-            } else if (avoid_moving_on_trap(x, y, infront)) {
-                if (g.context.run == 1)
-                    goto bcorr; /* if you must */
-                if (infront)
-                    goto stop;
                 continue;
             } else if (is_pool_or_lava(x, y)) {
                 if (infront && avoid_moving_on_liquid(x, y, TRUE))
@@ -3571,7 +3569,7 @@ nomul(int nval)
     if (nval == 0)
         g.multi_reason = NULL, g.multireasonbuf[0] = '\0';
     end_running(TRUE);
-    cmdq_clear();
+    cmdq_clear(CQ_CANNED);
 }
 
 /* called when a non-movement, multi-turn action has completed */
@@ -3837,7 +3835,7 @@ spot_checks(coordxy x, coordxy y, schar old_typ)
         db_ice_now = ((levl[x][y].drawbridgemask & DB_UNDER) == DB_ICE);
         /*FALLTHRU*/
     case ICE:
-        if ((new_typ != old_typ) 
+        if ((new_typ != old_typ)
             || (old_typ == DRAWBRIDGE_UP && !db_ice_now)) {
             /* make sure there's no MELT_ICE_AWAY timer */
             if (spot_time_left(x, y, MELT_ICE_AWAY)) {

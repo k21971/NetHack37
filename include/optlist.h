@@ -78,6 +78,8 @@ static int optfn_##a(int, int, boolean, char *, char *);
     { m, OptS_##sec, 0, b, opt_##a, s, OthrOpt, n, v, d, No, c,         \
       (boolean *) 0, &optfn_##a, al, z, (const char *) 0, On, On, 0 },
 
+/* this is not reliable because USE_TILES might be defined in a
+   multi-interface binary but not apply to the current interface */
 #ifdef USE_TILES
 #define tiled_map_Def On
 #define ascii_map_Def Off
@@ -180,6 +182,12 @@ static int optfn_##a(int, int, boolean, char *, char *);
                 Yes, Yes, No, No, NoAlias,
                 "load DECGraphics display symbols into symset")
 #endif
+    NHOPTB(debug_hunger, Advanced, 0, opt_in, set_wiznofuz,
+                Off, Yes, No, No, NoAlias, &iflags.debug_hunger)
+    NHOPTB(debug_mongen, Advanced, 0, opt_in, set_wiznofuz,
+                Off, Yes, No, No, NoAlias, &iflags.debug_mongen)
+    NHOPTB(debug_overwrite_stairs, Advanced, 0, opt_in, set_wiznofuz,
+                Off, Yes, No, No, NoAlias, &iflags.debug_overwrite_stairs)
     NHOPTC(disclose, Advanced, sizeof flags.end_disclose * 2,
                 opt_in, set_in_game,
                 Yes, Yes, No, Yes, NoAlias,

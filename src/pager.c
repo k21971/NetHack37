@@ -19,7 +19,8 @@ static void checkfile(char *, struct permonst *, boolean, boolean, char *);
 static int add_cmap_descr(int, int, int, int, coord,
                           const char *, const char *,
                           boolean *, const char **, char *);
-static void look_region_nearby(coordxy *, coordxy *, coordxy *, coordxy *, boolean);
+static void look_region_nearby(coordxy *, coordxy *, coordxy *, coordxy *,
+                               boolean);
 static void look_all(boolean, boolean);
 static void look_traps(boolean);
 static void do_supplemental_info(char *, struct permonst *, boolean);
@@ -352,8 +353,8 @@ look_at_monster(char *buf,
             name);
     if (u.ustuck == mtmp) {
         if (u.uswallow || iflags.save_uswallow) /* monster detection */
-            Strcat(buf, is_animal(mtmp->data)
-                          ? ", swallowing you" : ", engulfing you");
+            Strcat(buf, digests(mtmp->data) ? ", swallowing you"
+                                            : ", engulfing you");
         else
             Strcat(buf, (Upolyd && sticks(g.youmonst.data))
                           ? ", being held" : ", holding you");
@@ -2247,14 +2248,14 @@ dowhatdoes(void)
 #if defined(UNIX) || defined(VMS)
     introff(); /* disables ^C but not ^\ */
 #endif
-    q = yn_function("What command?", (char *) 0, '\0');
+    q = yn_function("What command?", (char *) 0, '\0', TRUE);
 #ifdef ALTMETA
     if (q == '\033' && iflags.altmeta) {
         /* in an ideal world, we would know whether another keystroke
            was already pending, but this is not an ideal world...
            if user typed ESC, we'll essentially hang until another
            character is typed */
-        q = yn_function("]", (char *) 0, '\0');
+        q = yn_function("]", (char *) 0, '\0', TRUE);
         if (q != '\033')
             q = (char) ((uchar) q | 0200);
     }
@@ -2464,24 +2465,58 @@ dohelp(void)
 RESTORE_WARNING_FORMAT_NONLITERAL
 
 /* format the key or extended command name of command used to set options;
-   normally 'O' but could be bound to something else, or not bound at all */
+   normally 'O' but could be bound to something else, or not bound at all;
+   with the implementation of a simple options subset, now need 'mO' to get
+   the full options command; format it as 'm O' */
 static char *
 setopt_cmd(char *outbuf)
 {
-    char cmdnambuf[QBUFSZ];
-    const char *cmdname;
-    char key = cmd_from_func(doset);
+    char cmdbuf[QBUFSZ];
+    const char *cmdnm;
+    char key;
 
+    Strcpy(outbuf, "\'");
+    /* #optionsfull */
+    key = cmd_from_func(doset);
     if (key) {
-        /* key value enclosed within single quotes */
-        Sprintf(outbuf, "'%s'", visctrl(key));
+        Strcat(outbuf, visctrl(key));
     } else {
-        /* extended command name, with leading "#", also in single quotes */
-        cmdname = cmdname_from_func(doset, cmdnambuf, TRUE);
-        if (!cmdname) /* paranoia */
-            cmdname = "options";
-        Sprintf(outbuf, "'%s%.31s'", (*cmdname != '#') ? "#" : "", cmdname);
+        /* extended command name, with leading "#" */
+        cmdnm = cmdname_from_func(doset, cmdbuf, TRUE);
+        if (!cmdnm) /* paranoia */
+            cmdnm = "optionsfull";
+        Sprintf(eos(outbuf), "%s%.31s", (*cmdnm != '#') ? "#" : "", cmdnm);
+
+        /* since there's no key bound to #optionsfull, include 'm O' */
+        Strcat(outbuf, "\' or \'");
+        /* m prefix plus #options */
+        key = cmd_from_func(do_reqmenu);
+        if (key) {
+            /* key for 'm' prefix */
+            Strcat(outbuf, visctrl(key));
+        } else {
+            /* extended command name for 'm' prefix */
+            cmdnm = cmdname_from_func(do_reqmenu, cmdbuf, TRUE);
+            if (!cmdnm)
+                cmdnm = "reqmenu";
+            Sprintf(eos(outbuf), "%s%.31s", (*cmdnm != '#') ? "#" : "", cmdnm);
+        }
+        /* this is slightly iffy because the user shouldn't type <space> to
+           get the command we're describing, but it improves readability */
+        Strcat(outbuf, " ");
+        /* now #options, normally 'O' */
+        key = cmd_from_func(doset_simple);
+        if (key) {
+            Strcat(outbuf, visctrl(key));
+        } else {
+            /* extended command name */
+            cmdnm = cmdname_from_func(doset_simple, cmdbuf, TRUE);
+            if (!cmdnm) /* paranoia */
+                cmdnm = "options";
+            Sprintf(eos(outbuf), "%s%.31s", (*cmdnm != '#') ? "#" : "", cmdnm);
+        }
     }
+    Strcat(outbuf, "\'");
     return outbuf;
 }
 

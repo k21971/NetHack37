@@ -353,30 +353,36 @@ ghitm(register struct monst *mtmp, register struct obj *gold)
                           ? "I'll take care of that; please move along."
                           : "I'll take that; now get moving.");
         } else if (is_mercenary(mtmp->data)) {
+            boolean was_angry = !mtmp->mpeaceful;
             long goldreqd = 0L;
 
-            if (rn2(3)) {
-                if (mtmp->data == &mons[PM_SOLDIER])
-                    goldreqd = 100L;
-                else if (mtmp->data == &mons[PM_SERGEANT])
-                    goldreqd = 250L;
-                else if (mtmp->data == &mons[PM_LIEUTENANT])
-                    goldreqd = 500L;
-                else if (mtmp->data == &mons[PM_CAPTAIN])
-                    goldreqd = 750L;
+            if (mtmp->data == &mons[PM_SOLDIER])
+                goldreqd = 100L;
+            else if (mtmp->data == &mons[PM_SERGEANT])
+                goldreqd = 250L;
+            else if (mtmp->data == &mons[PM_LIEUTENANT])
+                goldreqd = 500L;
+            else if (mtmp->data == &mons[PM_CAPTAIN])
+                goldreqd = 750L;
 
-                if (goldreqd) {
-                    umoney = money_cnt(g.invent);
-                    if (value
-                        > goldreqd
-                              + (umoney + u.ulevel * rn2(5)) / ACURR(A_CHA))
-                        mtmp->mpeaceful = TRUE;
-                }
+            if (goldreqd && rn2(3)) {
+                umoney = money_cnt(g.invent);
+                goldreqd += (umoney + u.ulevel * rn2(5)) / ACURR(A_CHA);
+                if (value > goldreqd)
+                    mtmp->mpeaceful = TRUE;
             }
-            if (mtmp->mpeaceful)
+
+            if (!mtmp->mpeaceful) {
+                if (goldreqd)
+                    verbalize("That's not enough, coward!");
+                else /* unbribeable (watchman) */
+                    verbalize("I don't take bribes from scum like you!");
+            } else if (was_angry) {
                 verbalize("That should do.  Now beat it!");
-            else
-                verbalize("That's not enough, coward!");
+            } else {
+                verbalize("Thanks for the tip, %s.",
+                          flags.female ? "lady" : "buddy");
+            }
         }
         return TRUE;
     }
@@ -561,7 +567,7 @@ really_kick_object(coordxy x, coordxy y)
     }
 
     /* Mjollnir is magically too heavy to kick */
-    if (g.kickedobj->oartifact == ART_MJOLLNIR)
+    if (is_art(g.kickedobj, ART_MJOLLNIR))
         range = 1;
 
     /* see if the object has a place to move into */
@@ -864,7 +870,7 @@ dokick(void)
         You("are too small to do any kicking.");
         no_kick = TRUE;
     } else if (u.usteed) {
-        if (yn_function("Kick your steed?", ynchars, 'y') == 'y') {
+        if (yn_function("Kick your steed?", ynchars, 'y', TRUE) == 'y') {
             You("kick %s.", mon_nam(u.usteed));
             kick_steed();
             return ECMD_TIME;
@@ -927,7 +933,7 @@ dokick(void)
             You_cant("move your %s!", body_part(LEG));
             break;
         case 1:
-            if (is_animal(u.ustuck->data)) {
+            if (digests(u.ustuck->data)) {
                 pline("%s burps loudly.", Monnam(u.ustuck));
                 break;
             }

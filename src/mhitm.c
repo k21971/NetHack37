@@ -719,7 +719,8 @@ engulf_target(struct monst *magr, struct monst *mdef)
     int dx, dy;
 
     /* can't swallow something that's too big */
-    if (mdef->data->msize >= MZ_HUGE)
+    if (mdef->data->msize >= MZ_HUGE
+        || (magr->data->msize < mdef->data->msize && !is_whirly(magr->data)))
         return FALSE;
 
     /* can't (move to) swallow if trapped. TODO: could do some? */
@@ -765,7 +766,8 @@ gulpmm(
         /* [this two-part formatting dates back to when only one x_monnam
            result could be included in an expression because the next one
            would overwrite first's result -- that's no longer the case] */
-        Sprintf(buf, "%s swallows", Monnam(magr));
+        Sprintf(buf, "%s %s", Monnam(magr),
+                digests(magr->data) ? "swallows" : "engulfs");
         pline("%s %s.", buf, mon_nam(mdef));
     }
     if (!flaming(magr->data)) {

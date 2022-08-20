@@ -490,7 +490,7 @@ release_hold(void)
     if (!mtmp) {
         impossible("release_hold when not held?");
     } else if (u.uswallow) { /* possible for sticky hero to be swallowed */
-        if (is_animal(mtmp->data)) {
+        if (digests(mtmp->data)) {
             if (!Blind)
                 pline("%s opens its mouth!", Monnam(mtmp));
             else
@@ -2633,7 +2633,10 @@ zapyourself(struct obj *obj, boolean ordinary)
             You("don't feel sleepy!");
             monstseesu(M_SEEN_SLEEP);
         } else {
-            pline_The("sleep ray hits you!");
+            if (ordinary)
+                pline_The("sleep ray hits you!");
+            else
+                You("fall alseep!");
             fall_asleep(-rnd(50), TRUE);
         }
         break;

@@ -1246,7 +1246,7 @@ use_crystal_ball(struct obj **optr)
     /* read a single character */
     if (Verbose(0, use_crystal_ball1))
         You("may look for an object, monster, or special map symbol.");
-    ch = yn_function("What do you look for?", (char *) 0, '\0');
+    ch = yn_function("What do you look for?", (char *) 0, '\0', TRUE);
     /* Don't filter out ' ' here; it has a use */
     if ((ch != def_monsyms[S_GHOST].sym) && index(quitchars, ch)) {
         if (Verbose(0, use_crystal_ball2))
@@ -1680,11 +1680,17 @@ openit(void)
     int num = 0;
 
     if (u.uswallow) {
-        if (is_animal(u.ustuck->data)) {
+        if (digests(u.ustuck->data)) {
+            /* purple worm */
             if (Blind)
                 pline("Its mouth opens!");
             else
                 pline("%s opens its mouth!", Monnam(u.ustuck));
+#if 0   /* expels() will take care of this */
+        } else if (enfolds(u.ustuck->data)) {
+            /* trapper or lurker above */
+            pline("%s unfolds!", Monnam(u.ustuck));
+#endif
         }
         expels(u.ustuck, u.ustuck->data, TRUE);
         return -1;
@@ -1985,8 +1991,11 @@ reveal_terrain_getglyph(coordxy x, coordxy y, int full, unsigned swallowed,
             }
         }
     }
+    /* FIXME: dirty hack */
     if (glyph == cmap_to_glyph(S_darkroom))
-        glyph = cmap_to_glyph(S_room); /* FIXME: dirty hack */
+        glyph = cmap_to_glyph(S_room);
+    else if (glyph == cmap_to_glyph(S_litcorr))
+        glyph = cmap_to_glyph(S_corr);
     return glyph;
 }
 

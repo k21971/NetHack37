@@ -2084,7 +2084,7 @@ trapeffect_anti_magic(
             if (Half_physical_damage || Half_spell_damage)
                 dmgval2 += rnd(4);
             /* give Magicbane wielder dose of own medicine */
-            if (uwep && uwep->oartifact == ART_MAGICBANE)
+            if (u_wield_art(ART_MAGICBANE))
                 dmgval2 += rnd(4);
             /* having an artifact--other than own quest one--which
                confers magic resistance simply by being carried
@@ -2130,7 +2130,7 @@ trapeffect_anti_magic(
             int dmgval2 = rnd(4);
 
             if ((otmp = MON_WEP(mtmp)) != 0
-                && otmp->oartifact == ART_MAGICBANE)
+                && is_art(otmp, ART_MAGICBANE))
                 dmgval2 += rnd(4);
             for (otmp = mtmp->minvent; otmp; otmp = otmp->nobj)
                 if (otmp->oartifact
@@ -3419,10 +3419,11 @@ float_up(void)
     } else if (u.uinwater) {
         spoteffects(TRUE);
     } else if (u.uswallow) {
-        You(is_animal(u.ustuck->data) ? "float away from the %s."
-                                      : "spiral up into %s.",
-            is_animal(u.ustuck->data) ? surface(u.ux, u.uy)
-                                      : mon_nam(u.ustuck));
+        /* FIXME: this isn't correct for trapper/lurker above */
+        if (is_animal(u.ustuck->data))
+            You("float away from the %s.", surface(u.ux, u.uy));
+        else
+            You("spiral up into %s.", mon_nam(u.ustuck));
     } else if (Hallucination) {
         pline("Up, up, and awaaaay!  You're walking on air!");
     } else if (Is_airlevel(&u.uz)) {
@@ -3506,7 +3507,7 @@ float_down(
     }
     if (u.uswallow) {
         You("float down, but you are still %s.",
-            is_animal(u.ustuck->data) ? "swallowed" : "engulfed");
+            digests(u.ustuck->data) ? "swallowed" : "engulfed");
         (void) encumber_msg();
         return 1;
     }

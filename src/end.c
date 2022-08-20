@@ -839,7 +839,7 @@ disclose(int how, boolean taken)
             Strcpy(qbuf, "Do you want your possessions identified?");
 
         ask = should_query_disclose_option('i', &defquery);
-        c = ask ? yn_function(qbuf, ynqchars, defquery) : defquery;
+        c = ask ? yn_function(qbuf, ynqchars, defquery, TRUE) : defquery;
         if (c == 'y') {
             /* caller has already ID'd everything */
             (void) display_inventory((char *) 0, FALSE);
@@ -852,7 +852,7 @@ disclose(int how, boolean taken)
     if (!done_stopprint) {
         ask = should_query_disclose_option('a', &defquery);
         c = ask ? yn_function("Do you want to see your attributes?", ynqchars,
-                              defquery)
+                              defquery, TRUE)
                 : defquery;
         if (c == 'y')
             enlightenment((BASICENLIGHTENMENT | MAGICENLIGHTENMENT),
@@ -884,7 +884,7 @@ disclose(int how, boolean taken)
                        to plural vs singular for conducts but the less
                        specific "conduct and achievements" is sufficient */
                     (acnt > 0) ? " and achievements" : "");
-            c = yn_function(qbuf, ynqchars, defquery);
+            c = yn_function(qbuf, ynqchars, defquery, TRUE);
         } else {
             c = defquery;
         }
@@ -897,7 +897,7 @@ disclose(int how, boolean taken)
     if (!done_stopprint) {
         ask = should_query_disclose_option('o', &defquery);
         c = ask ? yn_function("Do you want to see the dungeon overview?",
-                              ynqchars, defquery)
+                              ynqchars, defquery, TRUE)
                 : defquery;
         if (c == 'y')
             show_overview((how >= PANICKED) ? 1 : 2, how);
