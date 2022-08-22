@@ -1284,6 +1284,7 @@ extern void dealloc_mextra(struct monst *);
 extern struct monst *makemon(struct permonst *, coordxy, coordxy, mmflags_nht);
 extern struct monst *unmakemon(struct monst *, mmflags_nht);
 extern boolean create_critters(int, struct permonst *, boolean);
+extern struct permonst *rndmonst_adj(int, int);
 extern struct permonst *rndmonst(void);
 extern struct permonst *mkclass(char, int);
 extern struct permonst *mkclass_aligned(char, int, aligntyp);
@@ -1442,6 +1443,7 @@ extern struct obj *mkobj_at(char, coordxy, coordxy, boolean);
 extern struct obj *mksobj_at(int, coordxy, coordxy, boolean, boolean);
 extern struct obj *mksobj_migr_to_species(int, unsigned, boolean, boolean);
 extern struct obj *mkobj(int, boolean);
+extern int rndmonnum_adj(int, int);
 extern int rndmonnum(void);
 extern boolean bogon_is_pname(char);
 extern struct obj *splitobj(struct obj *, long);
@@ -1660,6 +1662,9 @@ extern boolean olfaction(struct permonst *);
 unsigned long cvt_adtyp_to_mseenres(uchar);
 extern void monstseesu(unsigned long);
 extern boolean resist_conflict(struct monst *);
+extern boolean mon_knows_traps(struct monst *, int);
+extern void mon_learns_traps(struct monst *, int);
+extern void mons_see_trap(struct trap *);
 
 /* ### monmove.c ### */
 
@@ -1775,7 +1780,7 @@ extern boolean hits_bars(struct obj **, coordxy, coordxy, coordxy, coordxy, int,
 
 /* ### muse.c ### */
 
-extern boolean find_defensive(struct monst *);
+extern boolean find_defensive(struct monst *, boolean);
 extern int use_defensive(struct monst *);
 extern int rnd_defensive_item(struct monst *);
 extern boolean find_offensive(struct monst *);
@@ -2064,7 +2069,7 @@ extern void msmsg(const char *, ...) PRINTF_F(1, 2);
 extern void gettty(void);
 extern void settty(const char *);
 extern void setftty(void);
-extern void error(const char *, ...) PRINTF_F(1, 2);
+extern void error(const char *, ...) PRINTF_F(1, 2) NORETURN;
 #if defined(TIMED_DELAY) && defined(_MSC_VER)
 extern void msleep(unsigned);
 #endif
@@ -2981,7 +2986,7 @@ extern void settty(const char *);
 extern void setftty(void);
 extern void intron(void);
 extern void introff(void);
-extern void error (const char *, ...) PRINTF_F(1, 2);
+extern void error (const char *, ...) PRINTF_F(1, 2) NORETURN;
 #ifdef ENHANCED_SYMBOLS
 extern void tty_utf8graphics_fixup(void);
 #endif
@@ -3148,7 +3153,7 @@ extern void shuttty(const char *);
 extern void setftty(void);
 extern void intron(void);
 extern void introff(void);
-extern void error (const char *, ...) PRINTF_F(1, 2);
+extern void error (const char *, ...) PRINTF_F(1, 2) NORETURN;
 #ifdef TIMED_DELAY
 extern void msleep(unsigned);
 #endif

@@ -1372,4 +1372,48 @@ resist_conflict(struct monst* mtmp)
     return (rnd(20) > resist_chance);
 }
 
+/* does monster mtmp know traps of type ttyp */
+boolean
+mon_knows_traps(struct monst *mtmp, int ttyp)
+{
+    if (ttyp == ALL_TRAPS)
+        return (boolean)(mtmp->mtrapseen);
+    else if (ttyp == NO_TRAP)
+        return !(boolean)(mtmp->mtrapseen);
+    else
+        return ((mtmp->mtrapseen & (1L << (ttyp - 1))) != 0);
+}
+
+/* monster mtmp learns all traps of type ttyp */
+void
+mon_learns_traps(struct monst *mtmp, int ttyp)
+{
+    if (ttyp == ALL_TRAPS)
+        mtmp->mtrapseen = ~0L;
+    else if (ttyp == NO_TRAP)
+        mtmp->mtrapseen = 0L;
+    else
+        mtmp->mtrapseen |= (1L << (ttyp - 1));
+}
+
+/* monsters see a trap trigger, and remember it */
+void
+mons_see_trap(struct trap *ttmp)
+{
+    struct monst *mtmp;
+    coordxy tx = ttmp->tx, ty = ttmp->ty;
+    int maxdist = levl[tx][ty].lit ? 7*7 : 2;
+
+    for (mtmp = fmon; mtmp; mtmp = mtmp->nmon) {
+        if (is_animal(mtmp->data) || mindless(mtmp->data)
+            || !haseyes(mtmp->data) || !mtmp->mcansee)
+            continue;
+        if (dist2(mtmp->mx, mtmp->my, tx, ty) > maxdist)
+            continue;
+        if (!m_cansee(mtmp, tx, ty))
+            continue;
+        mon_learns_traps(mtmp, ttmp->ttyp);
+    }
+}
+
 /*mondata.c*/

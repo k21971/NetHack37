@@ -1223,9 +1223,13 @@ wiz_map(void)
 static int
 wiz_genesis(void)
 {
-    if (wizard)
+    if (wizard) {
+        boolean mongen_saved = iflags.debug_mongen;
+
+        iflags.debug_mongen = FALSE;
         (void) create_particular();
-    else
+        iflags.debug_mongen = mongen_saved;
+    } else
         pline(unavailcmd, ecname_from_fn(wiz_genesis));
     return ECMD_OK;
 }
@@ -1535,13 +1539,13 @@ wiz_panic(void)
     return ECMD_OK;
 }
 
-/* #fuzzer command - fuztest the program */
+/* #debugfuzzer command - fuzztest the program */
 static int
 wiz_fuzzer(void)
 {
-    pline("The fuz tester will make NetHack execute random keypresses.");
+    pline("The fuzz tester will make NetHack execute random keypresses.");
     pline("There is no conventional way out of this mode.");
-    if (paranoid_query(TRUE, "Do you want to start fuz testing?"))
+    if (paranoid_query(TRUE, "Do you want to start fuzz testing?"))
         iflags.debug_fuzzer = TRUE; /* Thoth, take the reins */
     return ECMD_OK;
 }
@@ -2500,6 +2504,8 @@ struct ext_func_tab extcmdlist[] = {
               doclose, 0, NULL },
     { M('C'), "conduct", "list voluntary challenges you have maintained",
               doconduct, IFBURIED | AUTOCOMPLETE | GENERALCMD, NULL },
+    { '\0',   "debugfuzzer", "start the fuzz tester",
+              wiz_fuzzer, IFBURIED | WIZMODECMD | NOFUZZERCMD, NULL },
     { M('d'), "dip", "dip an object into something",
               dodip, AUTOCOMPLETE | CMD_M_PREFIX, NULL },
     { '>',    "down", "go down a staircase",
@@ -2527,8 +2533,6 @@ struct ext_func_tab extcmdlist[] = {
               dofire, 0, NULL },
     { M('f'), "force", "force a lock",
               doforce, AUTOCOMPLETE, NULL },
-    { '\0',   "fuzzer", "start the fuz tester",
-              wiz_fuzzer, IFBURIED | WIZMODECMD | NOFUZZERCMD, NULL },
     { ';',    "glance", "show what type of thing a map symbol corresponds to",
               doquickwhatis, IFBURIED | GENERALCMD, NULL },
     { '?',    "help", "give a help message",
@@ -2565,7 +2569,7 @@ struct ext_func_tab extcmdlist[] = {
 #endif
     { M('m'), "monster", "use monster's special ability",
               domonability, IFBURIED | AUTOCOMPLETE, NULL },
-    { 'N',    "name", "same as call; name a monster or object or object type",
+    { M('n'), "name", "same as call; name a monster or object or object type",
               docallcmd, IFBURIED | AUTOCOMPLETE, NULL },
     { M('o'), "offer", "offer a sacrifice to the gods",
               dosacrifice, AUTOCOMPLETE | CMD_M_PREFIX, NULL },
@@ -3231,6 +3235,7 @@ commands_init(void)
     (void) bind_key('k',    "kick");
     (void) bind_key('l',    "loot");
     (void) bind_key(C('n'), "annotate");
+    (void) bind_key('N',    "name");
     (void) bind_key('u',    "untrap");
     (void) bind_key('5',    "run");
     (void) bind_key(M('5'), "rush");
@@ -3239,7 +3244,6 @@ commands_init(void)
     /* alt keys: */
     (void) bind_key(M('O'), "overview");
     (void) bind_key(M('2'), "twoweapon");
-    (void) bind_key(M('n'), "name");
     (void) bind_key(M('N'), "name");
 #if 0
     /* don't do this until the rest_on_space option is set or cleared */

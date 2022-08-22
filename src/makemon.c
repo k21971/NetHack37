@@ -1252,13 +1252,15 @@ makemon(
     else
         mtmp->female = femaleok ? rn2(2) : 0;
 
-    if (In_sokoban(&u.uz) && !mindless(ptr)) /* know about traps here */
-        mtmp->mtrapseen = (1L << (PIT - 1)) | (1L << (HOLE - 1));
+    if (In_sokoban(&u.uz) && !mindless(ptr)) { /* know about traps here */
+        mon_learns_traps(mtmp, PIT);
+        mon_learns_traps(mtmp, HOLE);
+    }
     if (Is_stronghold(&u.uz) && !mindless(ptr)) /* know about the trap doors */
-        mtmp->mtrapseen = (1L << (TRAPDOOR - 1));
+        mon_learns_traps(mtmp, TRAPDOOR);
     /* quest leader and nemesis both know about all trap types */
     if (ptr->msound == MS_LEADER || ptr->msound == MS_NEMESIS)
-        mtmp->mtrapseen = ~0;
+        mon_learns_traps(mtmp, ALL_TRAPS);
 
     place_monster(mtmp, x, y);
     mtmp->mcansee = mtmp->mcanmove = TRUE;
@@ -1597,6 +1599,13 @@ align_shift(register struct permonst *ptr)
 struct permonst *
 rndmonst(void)
 {
+    return rndmonst_adj(0, 0);
+}
+
+/* select a random monster type, with adjusted difficulty */
+struct permonst *
+rndmonst_adj(int minadj, int maxadj)
+{
     register struct permonst *ptr;
     register int mndx;
     int weight, totalweight, selected_mndx, zlevel, minmlev, maxmlev;
@@ -1606,8 +1615,8 @@ rndmonst(void)
         return ptr;
 
     zlevel = level_difficulty();
-    minmlev = monmin_difficulty(zlevel);
-    maxmlev = monmax_difficulty(zlevel);
+    minmlev = monmin_difficulty(zlevel) + minadj;
+    maxmlev = monmax_difficulty(zlevel) + maxadj;
     upper = Is_rogue_level(&u.uz); /* prefer uppercase only on rogue level */
     elemlevel = In_endgame(&u.uz) && !Is_astralevel(&u.uz); /* elmntl plane */
 

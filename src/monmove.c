@@ -45,7 +45,7 @@ mb_trapped(struct monst *mtmp, boolean canseeit)
             return TRUE;
         /* will get here if lifesaved */
     }
-    mtmp->mtrapseen |= (1 << (TRAPPED_DOOR - 1));
+    mon_learns_traps(mtmp, TRAPPED_DOOR);
     return FALSE;
 }
 
@@ -645,7 +645,7 @@ dochug(register struct monst* mtmp)
     distfleeck(mtmp, &inrange, &nearby, &scared);
 
     /* search for and potentially use defensive or miscellaneous items. */
-    if (find_defensive(mtmp)) {
+    if (find_defensive(mtmp, FALSE)) {
         if (use_defensive(mtmp) != 0)
             return 1;
     } else if (find_misc(mtmp)) {
@@ -1269,6 +1269,7 @@ m_move(register struct monst* mtmp, register int after)
         register struct obj *otmp;
         register coordxy xx, yy;
         coordxy oomx, oomy, lmx, lmy;
+        struct trap *ttmp;
 
         /* cut down the search radius if it thinks character is closer. */
         if (distmin(mtmp->mux, mtmp->muy, omx, omy) < SQSRCHRADIUS
@@ -1320,6 +1321,16 @@ m_move(register struct monst* mtmp, register int after)
                     if ((is_pool(xx, yy) && !is_swimmer(ptr))
                         || (is_lava(xx, yy) && !likes_lava(ptr)))
                         continue;
+
+                    /* ignore obj if there's a trap and monster knows it */
+                    if ((ttmp = t_at(xx, yy)) != 0
+                        && mon_knows_traps(mtmp, ttmp->ttyp)) {
+                        if (gx == xx && gy == yy) {
+                            gx = mtmp->mux;
+                            gy = mtmp->muy;
+                        }
+                        continue;
+                    }
 
                     if (((likegold && otmp->oclass == COIN_CLASS)
                          || (likeobjs && index(practical, otmp->oclass)
@@ -1391,8 +1402,11 @@ m_move(register struct monst* mtmp, register int after)
         coord poss[9];
 
         cnt = mfndpos(mtmp, poss, info, flag);
-        if (cnt == 0)
+        if (cnt == 0) {
+            if (find_defensive(mtmp, TRUE))
+                (void) use_defensive(mtmp);
             return MMOVE_NOMOVES;
+        }
         chcnt = 0;
         jcnt = min(MTSZ, cnt - 1);
         chi = -1;
@@ -1942,7 +1956,7 @@ undesirable_disp(
 
     /* Monsters avoid a trap if they've seen that type before */
     } else if (trap && rn2(40)
-               && (mtmp->mtrapseen & (1 << (trap->ttyp - 1))) != 0) {
+               && mon_knows_traps(mtmp, trap->ttyp)) {
         return TRUE;
     }
 

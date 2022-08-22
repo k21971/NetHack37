@@ -20,6 +20,7 @@ static void mplayhorn(struct monst *, struct obj *, boolean);
 static void mreadmsg(struct monst *, struct obj *);
 static void mquaffmsg(struct monst *, struct obj *);
 static boolean m_use_healing(struct monst *);
+static boolean m_sees_sleepy_soldier(struct monst *);
 static boolean linedup_chk_corpse(coordxy, coordxy);
 static void m_use_undead_turning(struct monst *, struct obj *);
 static boolean hero_behind_chokepoint(struct monst *);
@@ -322,10 +323,34 @@ m_use_healing(struct monst* mtmp)
     return FALSE;
 }
 
+/* return TRUE if monster mtmp can see at least one sleeping soldier */
+static boolean
+m_sees_sleepy_soldier(struct monst *mtmp)
+{
+    coordxy x = mtmp->mx, y = mtmp->my;
+    coordxy xx, yy;
+    struct monst *mon;
+
+    /* Distance is arbitrary.  What we really want to do is
+     * have the soldier play the bugle when it sees or
+     * remembers soldiers nearby...
+     */
+    for (xx = x - 3; xx <= x + 3; xx++)
+        for (yy = y - 3; yy <= y + 3; yy++) {
+            if (!isok(xx, yy) || (xx == x && yy == y))
+                continue;
+            if ((mon = m_at(xx, yy)) != 0 && is_mercenary(mon->data)
+                && mon->data != &mons[PM_GUARD]
+                && helpless(mon))
+                return TRUE;
+        }
+    return FALSE;
+}
+
 /* Select a defensive item/action for a monster.  Returns TRUE iff one is
    found. */
 boolean
-find_defensive(struct monst* mtmp)
+find_defensive(struct monst* mtmp, boolean tryescape)
 {
     struct obj *obj;
     struct trap *t;
@@ -340,7 +365,7 @@ find_defensive(struct monst* mtmp)
 
     if (is_animal(mtmp->data) || mindless(mtmp->data))
         return FALSE;
-    if (dist2(x, y, mtmp->mux, mtmp->muy) > 25)
+    if (!tryescape && dist2(x, y, mtmp->mux, mtmp->muy) > 25)
         return FALSE;
     if (u.uswallow && stuck)
         return FALSE;
@@ -423,17 +448,20 @@ find_defensive(struct monst* mtmp)
             }
     }
 
-    fraction = u.ulevel < 10 ? 5 : u.ulevel < 14 ? 4 : 3;
-    if (mtmp->mhp >= mtmp->mhpmax
-        || (mtmp->mhp >= 10 && mtmp->mhp * fraction >= mtmp->mhpmax))
-        return FALSE;
+    if (!tryescape) {
+        /* do we try to heal? */
+        fraction = u.ulevel < 10 ? 5 : u.ulevel < 14 ? 4 : 3;
+        if (mtmp->mhp >= mtmp->mhpmax
+            || (mtmp->mhp >= 10 && mtmp->mhp * fraction >= mtmp->mhpmax))
+            return FALSE;
 
-    if (mtmp->mpeaceful) {
-        if (!nohands(mtmp->data)) {
-            if (m_use_healing(mtmp))
-                return TRUE;
+        if (mtmp->mpeaceful) {
+            if (!nohands(mtmp->data)) {
+                if (m_use_healing(mtmp))
+                    return TRUE;
+            }
+            return FALSE;
         }
-        return FALSE;
     }
 
     if (stuck || immobile) {
@@ -516,29 +544,10 @@ find_defensive(struct monst* mtmp)
     if (nohands(mtmp->data)) /* can't use objects */
         goto botm;
 
-    if (is_mercenary(mtmp->data) && (obj = m_carrying(mtmp, BUGLE)) != 0) {
-        coordxy xx, yy;
-        struct monst *mon;
-
-        /* Distance is arbitrary.  What we really want to do is
-         * have the soldier play the bugle when it sees or
-         * remembers soldiers nearby...
-         */
-        for (xx = x - 3; xx <= x + 3; xx++) {
-            for (yy = y - 3; yy <= y + 3; yy++) {
-                if (!isok(xx, yy) || (xx == x && yy == y))
-                    continue;
-                if ((mon = m_at(xx, yy)) != 0 && is_mercenary(mon->data)
-                    && mon->data != &mons[PM_GUARD]
-                    && helpless(mon)) {
-                    g.m.defensive = obj;
-                    g.m.has_defense = MUSE_BUGLE;
-                    goto toot; /* double break */
-                }
-            }
-        }
- toot:
-        ;
+    if (is_mercenary(mtmp->data) && (obj = m_carrying(mtmp, BUGLE)) != 0
+        && m_sees_sleepy_soldier(mtmp)) {
+        g.m.defensive = obj;
+        g.m.has_defense = MUSE_BUGLE;
     }
 
     /* use immediate physical escape prior to attempting magic */
@@ -586,7 +595,7 @@ find_defensive(struct monst* mtmp)
              * about teleport traps.
              */
             if (!noteleport_level(mtmp)
-                || !(mtmp->mtrapseen & (1 << (TELEP_TRAP - 1)))) {
+                || !mon_knows_traps(mtmp, TELEP_TRAP)) {
                 g.m.defensive = obj;
                 g.m.has_defense = (mon_has_amulet(mtmp))
                                     ? MUSE_WAN_TELEPORTATION
@@ -600,7 +609,7 @@ find_defensive(struct monst* mtmp)
                                  && !mtmp->isgd && !mtmp->ispriest))) {
             /* see WAN_TELEPORTATION case above */
             if (!noteleport_level(mtmp)
-                || !(mtmp->mtrapseen & (1 << (TELEP_TRAP - 1)))) {
+                || !mon_knows_traps(mtmp, TELEP_TRAP)) {
                 g.m.defensive = obj;
                 g.m.has_defense = MUSE_SCR_TELEPORTATION;
             }
@@ -713,7 +722,7 @@ use_defensive(struct monst* mtmp)
                 makeknown(how);
             /* monster learns that teleportation isn't useful here */
             if (noteleport_level(mtmp))
-                mtmp->mtrapseen |= (1 << (TELEP_TRAP - 1));
+                mon_learns_traps(mtmp, TELEP_TRAP);
             return 2;
         }
         if ((mon_has_amulet(mtmp) || On_W_tower_level(&u.uz)) && !rn2(3)) {
@@ -732,7 +741,7 @@ use_defensive(struct monst* mtmp)
         mbhit(mtmp, rn1(8, 6), mbhitm, bhito, otmp);
         /* monster learns that teleportation isn't useful here */
         if (noteleport_level(mtmp))
-            mtmp->mtrapseen |= (1 << (TELEP_TRAP - 1));
+            mon_learns_traps(mtmp, TELEP_TRAP);
         g.m_using = FALSE;
         return 2;
     case MUSE_SCR_TELEPORTATION: {
@@ -1341,7 +1350,7 @@ find_offensive(struct monst* mtmp)
             && !Teleport_control
             /* same hack as MUSE_WAN_TELEPORTATION_SELF */
             && (!noteleport_level(mtmp)
-                || !(mtmp->mtrapseen & (1 << (TELEP_TRAP - 1))))
+                || !mon_knows_traps(mtmp, TELEP_TRAP))
             /* do try to move hero to a more vulnerable spot */
             && (onscary(u.ux, u.uy, mtmp)
                 || (hero_behind_chokepoint(mtmp) && mon_has_friends(mtmp))
