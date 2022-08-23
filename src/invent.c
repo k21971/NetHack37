@@ -3219,7 +3219,7 @@ display_pickinv(
     if (lets && !*lets)
         lets = 0; /* simplify tests: (lets) instead of (lets && *lets) */
 
-#ifdef DUMPLOG
+#if defined(DUMPLOG) || defined(DUMPHTML)
     if (iflags.in_dumplog) {
         win = 0; /* passed to dump_putstr() which ignores it... */
     } else
