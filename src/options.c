@@ -6633,6 +6633,9 @@ parsebindings(char *bindings)
     uchar key;
     int i;
     boolean ret = TRUE; /* assume success */
+    static const char *const mousebtn_names[NUM_MOUSE_BUTTONS] = {
+        "mouse1", "mouse2"
+    };
 
     /* look for first comma, then decide whether it is the key being bound
        or a list element separator; if it's a key, find separator beyond it */
@@ -6661,14 +6664,23 @@ parsebindings(char *bindings)
         return FALSE; /* it's not a binding */
     *bind++ = 0;
 
+    bind = trimspaces(bind);
+
+    for (i = 0; i < SIZE(mousebtn_names); i++)
+        if (!strcmp(bindings, mousebtn_names[i])) {
+            if (!bind_mousebtn(i + 1, bind)) {
+                config_error_add("Error binding mouse button %i", i + 1);
+            } else {
+                return ret;
+            }
+        }
+
     /* read the key to be bound */
     key = txt2key(bindings);
     if (!key) {
         config_error_add("Unknown key binding key '%s'", bindings);
         return FALSE;
     }
-
-    bind = trimspaces(bind);
 
     /* is it a special key? */
     if (bind_specialkey(key, bind))

@@ -280,6 +280,7 @@ extern void rhack(char *);
 extern int doextlist(void);
 extern int extcmd_via_menu(void);
 extern int enter_explore_mode(void);
+extern boolean bind_mousebtn(int, const char *);
 extern boolean bind_key(uchar, const char *);
 extern void dokeylist(void);
 extern coordxy xytod(coordxy, coordxy);
@@ -292,7 +293,7 @@ extern const char *directionname(int);
 extern int isok(coordxy, coordxy);
 extern int get_adjacent_loc(const char *, const char *, coordxy, coordxy,
                             coord *);
-extern const char *click_to_cmd(coordxy, coordxy, int);
+extern void click_to_cmd(coordxy, coordxy, int);
 extern char get_count(const char *, char, long, cmdcount_nht *, unsigned);
 #ifdef HANGUPHANDLING
 extern void hangup(int);
@@ -2594,7 +2595,7 @@ extern boolean pm_good_location(coordxy, coordxy, struct permonst *);
 extern void get_location_coord(coordxy *, coordxy *, int, struct mkroom *, long);
 extern void selection_setpoint(coordxy, coordxy, struct selectionvar *, int);
 extern struct selectionvar * selection_not(struct selectionvar *);
-extern void selection_filter_percent(struct selectionvar *, int);
+extern struct selectionvar *selection_filter_percent(struct selectionvar *, int);
 extern int selection_rndcoord(struct selectionvar *, coordxy *, coordxy *,
                               boolean);
 extern void selection_do_grow(struct selectionvar *, int);
