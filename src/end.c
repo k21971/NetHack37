@@ -787,6 +787,7 @@ dump_everything(
                                              : g.urole.name.m);
     putstr(0, ATR_SUBHEAD, pbuf);
     putstr(NHW_DUMPTXT, 0, "");
+    dump_start_screendump();
 
     /* info about current game state */
     dump_map();
