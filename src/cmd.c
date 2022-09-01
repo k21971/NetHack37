@@ -15,6 +15,9 @@
 #define NR_OF_EOFS 20
 #endif
 #endif
+#if (NH_DEVEL_STATUS != NH_STATUS_RELEASED) || defined(DEBUG)
+static int wiz_display_macros(void);
+#endif
 
 #ifdef DUMB /* stuff commented out in extern.h, but needed here */
 extern int doapply(void);            /**/
@@ -129,9 +132,7 @@ static int wiz_intrinsic(void);
 static int wiz_show_wmodes(void);
 static int wiz_show_stats(void);
 static int wiz_rumor_check(void);
-#ifdef DEBUG_MIGRATING_MONS
 static int wiz_migrate_mons(void);
-#endif
 
 static void makemap_unmakemon(struct monst *, boolean);
 static void makemap_remove_mons(void);
@@ -162,6 +163,8 @@ static char readchar_core(coordxy *, coordxy *, int *);
 static char *parse(void);
 static void show_direction_keys(winid, char, boolean);
 static boolean help_dir(char, uchar, const char *);
+static int QSORTCALLBACK migrsort_cmp(const genericptr, const genericptr);
+static void list_migrating_mons(d_level *);
 
 static void handler_rebind_keys_add(boolean);
 static boolean bind_key_fn(uchar, int (*)(void));
@@ -454,8 +457,6 @@ pgetchar(void) /* courtesy of aeb@cwi.nl */
 {
     register int ch = '\0';
 
-    if (g.occupation)
-        return '\0';
     if (iflags.debug_fuzzer)
         return randomkey();
     ch = nhgetch();
@@ -1357,7 +1358,7 @@ wiz_load_lua(void)
 {
     if (wizard) {
         char buf[BUFSZ];
-        nhl_sandbox_info sbi = {NHL_SB_SAFE, 0, 0, 0};
+        nhl_sandbox_info sbi = {NHL_SB_SAFE | NHL_SB_DEBUGGING, 0, 0, 0};
 
         buf[0] = '\0';
         getlin("Load which lua file?", buf);
@@ -2564,10 +2565,13 @@ struct ext_func_tab extcmdlist[] = {
               dolook, IFBURIED, NULL },
     { M('l'), "loot", "loot a box on the floor",
               doloot, AUTOCOMPLETE | CMD_M_PREFIX, NULL },
-#ifdef DEBUG_MIGRATING_MONS
-    { '\0',   "migratemons", "migrate N random monsters",
-              wiz_migrate_mons, IFBURIED | AUTOCOMPLETE | WIZMODECMD, NULL },
+    { '\0',   "migratemons",
+#ifdef DEBUG_MIGRATING_MONSTERS
+              "show migrating monsters and migrate N random ones",
+#else
+              "show migrating monsters",
 #endif
+              wiz_migrate_mons, IFBURIED | AUTOCOMPLETE | WIZMODECMD, NULL },
     { M('m'), "monster", "use monster's special ability",
               domonability, IFBURIED | AUTOCOMPLETE, NULL },
     { M('n'), "name", "same as call; name a monster or object or object type",
@@ -2741,6 +2745,10 @@ struct ext_func_tab extcmdlist[] = {
 #endif
     { C('e'), "wizdetect", "reveal hidden things within a small radius",
               wiz_detect, IFBURIED | WIZMODECMD, NULL },
+#if (NH_DEVEL_STATUS != NH_STATUS_RELEASED) || defined(DEBUG)
+    { '\0',   "wizdispmacros", "validate the display macro ranges",
+              wiz_display_macros, IFBURIED | AUTOCOMPLETE | WIZMODECMD, NULL },
+#endif
     { '\0',   "wizfliplevel", "flip the level",
               wiz_flip_level, IFBURIED | WIZMODECMD, NULL },
     { C('g'), "wizgenesis", "create a monster",
@@ -3989,6 +3997,87 @@ wiz_show_stats(void)
     return ECMD_OK;
 }
 
+#if (NH_DEVEL_STATUS != NH_STATUS_RELEASED) || defined(DEBUG)
+/* the #wizdispmacros command
+ * Verify that some display macros are returning sane values */
+static int
+wiz_display_macros(void)
+{
+    char buf[BUFSZ];
+    winid win;
+    int test, trouble = 0, no_glyph = NO_GLYPH, max_glyph = MAX_GLYPH;
+    static const char *const display_issues = "Display macro issues:";
+
+    win = create_nhwindow(NHW_TEXT);
+
+    for (int glyph = 0; glyph < MAX_GLYPH; ++glyph) {
+        /* glyph_is_cmap / glyph_to_cmap() */
+        if (glyph_is_cmap(glyph)) {
+            test = glyph_to_cmap(glyph);
+            /* check for MAX_GLYPH return */
+            if (test == no_glyph) {
+                if (!trouble++)
+                    putstr(win, 0, display_issues);
+                Sprintf(buf,
+                        "glyph_is_cmap() / glyph_to_cmap(glyph=%d)"
+                        " sync failure, returned NO_GLYPH (%d)",
+                        glyph, test);
+                 putstr(win, 0, buf);
+            }
+            if (glyph_is_cmap_zap(glyph)
+                && !(test >= S_vbeam && test <= S_rslant)) {
+                if (!trouble++)
+                    putstr(win, 0, display_issues);
+                Sprintf(buf,
+                        "glyph_is_cmap_zap(glyph=%d) returned non-zap cmap %d",
+                        glyph, test);
+                 putstr(win, 0, buf);
+            }
+            /* check against defsyms array subscripts */
+            if (test < 0 || test >= SIZE(defsyms)) {
+                if (!trouble++)
+                    putstr(win, 0, display_issues);
+                Sprintf(buf, "glyph_to_cmap(glyph=%d) returns %d"
+                        " exceeds defsyms[%d] bounds (MAX_GLYPH = %d)",
+                        glyph, test, SIZE(defsyms), max_glyph);
+                putstr(win, 0, buf);
+            }
+        }
+        /* glyph_is_monster / glyph_to_mon */
+        if (glyph_is_monster(glyph)) {
+            test = glyph_to_mon(glyph);
+            /* check against mons array subscripts */
+            if (test < 0 || test >= NUMMONS) {
+                if (!trouble++)
+                    putstr(win, 0, display_issues);
+                Sprintf(buf, "glyph_to_mon(glyph=%d) returns %d"
+                        " exceeds mons[%d] bounds",
+                        glyph, test, NUMMONS);
+                putstr(win, 0, buf);
+            }
+        }
+        /* glyph_is_object / glyph_to_obj */
+        if (glyph_is_object(glyph)) {
+            test = glyph_to_obj(glyph);
+            /* check against objects array subscripts */
+            if (test < 0 || test > NUM_OBJECTS) {
+                if (!trouble++)
+                    putstr(win, 0, display_issues);
+                Sprintf(buf, "glyph_to_obj(glyph=%d) returns %d"
+                        " exceeds objects[%d] bounds",
+                        glyph, test, NUM_OBJECTS);
+                putstr(win, 0, buf);
+            }
+        }
+    }
+    if (!trouble)
+        putstr(win, 0, "No display macro issues detected");
+    display_nhwindow(win, FALSE);
+    destroy_nhwindow(win);
+    return ECMD_OK;
+}
+#endif /* (NH_DEVEL_STATUS != NH_STATUS_RELEASED) || defined(DEBUG) */
+
 RESTORE_WARNING_FORMAT_NONLITERAL
 
 static void
@@ -4018,8 +4107,25 @@ sanity_check(void)
     trap_sanity_check();
 }
 
-#ifdef DEBUG_MIGRATING_MONS
-static void list_migrating_mons(d_level *);
+/* qsort() comparison routine for use in list_migrating_mons() */
+static int QSORTCALLBACK
+migrsort_cmp(const genericptr vptr1, const genericptr vptr2)
+{
+    const struct monst *m1 = *(const struct monst **) vptr1,
+                       *m2 = *(const struct monst **) vptr2;
+    int d1 = (int) m1->mux, l1 = (int) m1->muy,
+        d2 = (int) m2->mux, l2 = (int) m2->muy;
+
+    /* if different branches, sort by dungeon number */
+    if (d1 != d2)
+        return d1 - d2;
+    /* within same branch, sort by level number */
+    if (l1 != l2)
+        return l1 - l2;
+    /* same destination level:  use a tie-breaker to force stable sort;
+       monst->m_id is unsigned so we need more than just simple subtraction */
+    return (m1->m_id < m2->m_id) ? -1 : (m1->m_id > m2->m_id);
+}
 
 /* called by #migratemons; might turn it into separate wizard mode command */
 static void
@@ -4028,10 +4134,11 @@ list_migrating_mons(
 {
     winid win = WIN_ERR;
     boolean showit = FALSE;
-    int n, xyloc;
+    unsigned n;
+    int xyloc;
     coordxy x, y;
     char c, prmpt[10], xtra[10], buf[BUFSZ];
-    struct monst *mtmp;
+    struct monst *mtmp, **marray;
     int here = 0, nxtlv = 0, other = 0;
 
     for (mtmp = g.migrating_mons; mtmp; mtmp = mtmp->nmon) {
@@ -4078,8 +4185,12 @@ list_migrating_mons(
             }
             putstr(win, 0, buf);
             putstr(win, 0, "");
-            /* TODO? make multiple passes in order to show mons in
-               destination order */
+            /* collect the migrating monsters into an array; for 'o' and 'a'
+               where multiple destination levels might be present, sort by
+               the destination; 'c' and 'n' don't need to be sorted but we
+               do that anyway to get the same tie-breaker as 'o' and 'a' */
+            marray = (struct monst **) alloc((n + 1) * sizeof *marray);
+            n = 0;
             for (mtmp = g.migrating_mons; mtmp; mtmp = mtmp->nmon) {
                 if (c == 'a')
                     showit = TRUE;
@@ -4087,25 +4198,34 @@ list_migrating_mons(
                     showit = (c == 'c');
                 else if (mtmp->mux == nextlevl->dnum
                          && mtmp->muy == nextlevl->dlevel)
-                    showit = (c = 'n');
+                    showit = (c == 'n');
                 else
                     showit = (c == 'o');
 
-                if (showit) {
-                    Sprintf(buf, "  %s", minimal_monnam(mtmp, FALSE));
-                    /* minimal_monnam() appends map coordinates; strip that */
-                    (void) strsubst(buf, " <0,0>", "");
-                    if (c == 'o' || c == 'a')
-                        Sprintf(eos(buf), " to %d:%d", mtmp->mux, mtmp->muy);
-                    xyloc = mtmp->mtrack[0].x; /* (for legibility) */
-                    if (xyloc == MIGR_EXACT_XY) {
-                        x = mtmp->mtrack[1].x;
-                        y = mtmp->mtrack[1].y;
-                        Sprintf(eos(buf), " at <%d,%d>", (int) x, (int) y);
-                    }
-                    putstr(win, 0, buf);
-                }
+                if (showit)
+                    marray[n++] = mtmp;;
             }
+            marray[n] = (struct monst *) 0; /* mark end for traversal loop */
+            if (n > 1)
+                qsort((genericptr_t) marray, (size_t) n, sizeof *marray,
+                      migrsort_cmp); /* sort elements [0] through [n-1] */
+            for (n = 0; (mtmp = marray[n]) != 0; ++n) {
+                Sprintf(buf, "  %s", minimal_monnam(mtmp, FALSE));
+                /* minimal_monnam() appends map coordinates; strip that */
+                (void) strsubst(buf, " <0,0>", "");
+                if (has_mgivenname(mtmp)) /* if mtmp is named, include that */
+                    Sprintf(eos(buf), " named %s", MGIVENNAME(mtmp));
+                if (c == 'o' || c == 'a')
+                    Sprintf(eos(buf), " to %d:%d", mtmp->mux, mtmp->muy);
+                xyloc = mtmp->mtrack[0].x; /* (for legibility) */
+                if (xyloc == MIGR_EXACT_XY) {
+                    x = mtmp->mtrack[1].x;
+                    y = mtmp->mtrack[1].y;
+                    Sprintf(eos(buf), " at <%d,%d>", (int) x, (int) y);
+                }
+                putstr(win, 0, buf);
+            }
+            free((genericptr_t) marray);
             display_nhwindow(win, FALSE);
             destroy_nhwindow(win);
         } else if (c != 'q') {
@@ -4115,28 +4235,43 @@ list_migrating_mons(
     }
 }
 
+/* #migratemons command */
 static int
 wiz_migrate_mons(void)
 {
+#ifdef DEBUG_MIGRATING_MONS
     int mcount;
-    char inbuf[BUFSZ] = DUMMY;
+    char inbuf[BUFSZ];
     struct permonst *ptr;
     struct monst *mtmp;
+#endif
     d_level tolevel;
 
     if (Is_stronghold(&u.uz))
         assign_level(&tolevel, &valley_level);
-    else
+    else if (!Is_botlevel(&u.uz))
         get_level(&tolevel, depth(&u.uz) + 1);
+    else
+        tolevel.dnum = 0, tolevel.dlevel = 0;
 
     list_migrating_mons(&tolevel);
 
-    getlin("How many random monsters to migrate to next level? [0]", inbuf);
+#ifdef DEBUG_MIGRATING_MONS
+    inbuf[0] = '\033', inbuf[1] = '\0';
+    if (tolevel.dnum || tolevel.dlevel)
+        getlin("How many random monsters to migrate to next level? [0]",
+               inbuf);
+    else
+        pline("Can't get there from here.");
     if (*inbuf == '\033')
         return ECMD_OK;
+
     mcount = atoi(inbuf);
-    if (mcount < 0 || mcount > (COLNO * ROWNO) || Is_botlevel(&u.uz))
-        return ECMD_OK;
+    if (mcount < 1)
+        mcount = 0;
+    else if (mcount > ((COLNO - 1) * ROWNO))
+        mcount = (COLNO - 1) * ROWNO;
+
     while (mcount > 0) {
         ptr = rndmonst();
         mtmp = makemon(ptr, 0, 0, MM_NOMSG);
@@ -4145,9 +4280,9 @@ wiz_migrate_mons(void)
                              (coord *) 0);
         mcount--;
     }
+#endif /* DEBUG_MIGRATING_MONS */
     return ECMD_OK;
 }
-#endif /* DEBUG_MIGRATING_MONS */
 
 static struct {
     int nhkf;
@@ -4278,6 +4413,24 @@ parseautocomplete(char *autocomplete, boolean condition)
     raw_printf("Bad autocomplete: invalid extended command '%s'.",
                autocomplete);
     wait_synch();
+}
+
+/* save&clear the mouse button actions, or restore the saved ones */
+void
+lock_mouse_buttons(boolean savebtns)
+{
+    static const struct ext_func_tab *mousebtn[NUM_MOUSE_BUTTONS] = { 0 };
+    int i;
+
+    if (savebtns) {
+        for (i = 0; i < NUM_MOUSE_BUTTONS; i++) {
+            mousebtn[i] = g.Cmd.mousebtn[i];
+            g.Cmd.mousebtn[i] = NULL;
+        }
+    } else {
+        for (i = 0; i < NUM_MOUSE_BUTTONS; i++)
+            g.Cmd.mousebtn[i] = mousebtn[i];
+    }
 }
 
 /* called at startup and after number_pad is twiddled */
@@ -5469,6 +5622,9 @@ there_cmd_menu_next2u(
         mcmd_addmenu(win, MCMD_MOVE_DIR, "Move on the trap"), ++K;
     }
 
+    if (levl[x][y].glyph == objnum_to_glyph(BOULDER))
+        mcmd_addmenu(win, MCMD_MOVE_DIR, "Push the boulder"), ++K;
+
     mtmp = m_at(x, y);
     if (mtmp && !canspotmon(mtmp))
         mtmp = 0;
@@ -5491,15 +5647,18 @@ there_cmd_menu_next2u(
     if (mtmp && (mtmp->mpeaceful || mtmp->mtame)) {
         Sprintf(buf, "Talk to %s", mon_nam(mtmp));
         mcmd_addmenu(win, MCMD_TALK, buf), ++K;
-    }
-    if (mtmp) {
+
+        Sprintf(buf, "Swap places with %s", mon_nam(mtmp));
+        mcmd_addmenu(win, MCMD_MOVE_DIR, buf), ++K;
+
         Sprintf(buf, "%s %s",
                 !has_mgivenname(mtmp) ? "Name" : "Rename",
                 mon_nam(mtmp));
         mcmd_addmenu(win, MCMD_NAME, buf), ++K;
     }
 
-    if (mtmp || glyph_is_invisible(glyph_at(x, y))) {
+    if ((mtmp && !(mtmp->mpeaceful || mtmp->mtame))
+        || glyph_is_invisible(glyph_at(x, y))) {
         Sprintf(buf, "Attack %s", mtmp ? mon_nam(mtmp) : "unseen creature");
         mcmd_addmenu(win, MCMD_ATTACK_NEXT2U, buf), ++K;
         /* attacking overrides any other automatic action */
@@ -6227,7 +6386,7 @@ doclicklook(void)
         return ECMD_OK;
 
     g.context.move = FALSE;
-    (void) do_look(2, &g.clicklook_cc);
+    auto_describe(g.clicklook_cc.x, g.clicklook_cc.y);
 
     return ECMD_OK;
 }

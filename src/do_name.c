@@ -16,7 +16,6 @@ static void gloc_filter_init(void);
 static void gloc_filter_done(void);
 static boolean gather_locs_interesting(coordxy, coordxy, int);
 static void gather_locs(coord **, int *, int);
-static void auto_describe(int, int);
 static void truncate_to_map(int *, int *, schar, schar);
 static void do_mgivenname(void);
 static boolean alreadynamed(struct monst *, char *, char *);
@@ -553,8 +552,8 @@ coord_desc(coordxy x, coordxy y, char *outbuf, char cmode)
 
 RESTORE_WARNING_FORMAT_NONLITERAL
 
-static void
-auto_describe(int cx, int cy)
+void
+auto_describe(coordxy cx, coordxy cy)
 {
     coord cc;
     int sym = 0;
@@ -751,6 +750,7 @@ getpos(coord *ccp, boolean force, const char *goal)
 #ifdef MAC
     lock_mouse_cursor(TRUE);
 #endif
+    lock_mouse_buttons(TRUE);
     for (;;) {
         if (show_goal_msg) {
             pline("Move cursor to %s:", goal);
@@ -769,7 +769,8 @@ getpos(coord *ccp, boolean force, const char *goal)
                 c = cmdq->key;
             } else {
                 cmdq_clear(CQ_CANNED);
-                return -1;
+                result = -1;
+                goto exitgetpos;
             }
             free(cmdq);
         } else {
@@ -1036,9 +1037,11 @@ getpos(coord *ccp, boolean force, const char *goal)
         curs(WIN_MAP, cx, cy);
         flush_screen(0);
     }
+ exitgetpos:
 #ifdef MAC
     lock_mouse_cursor(FALSE);
 #endif
+    lock_mouse_buttons(FALSE);
     if (msg_given)
         clear_nhwindow(WIN_MESSAGE);
     ccp->x = cx;

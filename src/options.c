@@ -332,6 +332,7 @@ static int handler_msgtype(void);
 #ifndef NO_VERBOSE_GRANULARITY
 static int handler_verbose(int optidx);
 #endif
+static int handler_windowborders(void);
 
 static boolean is_wc_option(const char *);
 static boolean wc_supported(const char *);
@@ -353,7 +354,10 @@ extern char *curses_fmt_attrs(char *);
  **********************************
  */
 boolean
-parseoptions(register char *opts, boolean tinitial, boolean tfrom_file)
+parseoptions(
+    register char *opts,
+    boolean tinitial,
+    boolean tfrom_file)
 {
     char *op;
     boolean negated, got_match = FALSE, pfx_match = FALSE;
@@ -4075,6 +4079,9 @@ optfn_windowborders(
         Sprintf(opts, "%i", iflags.wc2_windowborders);
         return optn_ok;
     }
+    if (req == do_handler) {
+        return handler_windowborders();
+    }
     if (req == get_val) {
         if (!opts)
             return optn_err;
@@ -5728,6 +5735,41 @@ RESTORE_WARNING_FORMAT_NONLITERAL
 
 #endif
 
+static int
+handler_windowborders(void)
+{
+    winid tmpwin;
+    anything any;
+    int i;
+    const char *mode_name;
+    menu_item *mode_pick = (menu_item *) 0;
+    int clr = 0;
+    static const char *windowborders_text[] = {
+        "Off, never show borders",
+        "On, always show borders",
+        "Auto, on if display is at least (24+2)x(80+2)",
+        "On, except forced off for perm_invent",
+        "Auto, except forced off for perm_invent"
+    };
+
+    tmpwin = create_nhwindow(NHW_MENU);
+    start_menu(tmpwin, MENU_BEHAVE_STANDARD);
+    any = cg.zeroany;
+    for (i = 0; i < SIZE(windowborders_text); i++) {
+        mode_name = windowborders_text[i];
+        any.a_int = i + 1;
+        add_menu(tmpwin, &nul_glyphinfo, &any, 'a' + i,
+                 0, ATR_NONE, clr, mode_name, MENU_ITEMFLAGS_NONE);
+    }
+    end_menu(tmpwin, "Select window borders mode:");
+    if (select_menu(tmpwin, PICK_ONE, &mode_pick) > 0) {
+        iflags.wc2_windowborders = mode_pick->item.a_int - 1;
+        free((genericptr_t) mode_pick);
+    }
+    destroy_nhwindow(tmpwin);
+    return optn_ok;
+}
+
 /*
  **********************************
  *
@@ -6203,6 +6245,17 @@ initoptions_init(void)
     memcpy(allopt, allopt_init, sizeof(allopt));
     determine_ambiguities();
 
+    /* if windowtype has been specified on the command line, set it up
+       early so windowtype-specific options use it as their base; we will
+       set it again in initoptions_finish() so that NETHACKOPTIONS and
+       .nethrackrc can't override it (command line takes precedence) */
+    if (g.cmdline_windowsys) {
+        config_error_init(FALSE, "command line", FALSE);
+        choose_windows(g.cmdline_windowsys);
+        config_error_done();
+        /* do not free g.cmdline_windowsys yet */
+    }
+
 #ifdef ENHANCED_SYMBOLS
     /* make any symbol parsing quicker */
     if (!glyphid_cache_status())
@@ -6412,6 +6465,14 @@ initoptions_finish(void)
         config_error_init(FALSE, envname, FALSE);
         (void) parseoptions(xtraopts, TRUE, FALSE);
         config_error_done();
+    }
+
+    /* after .nethackrc and NETHACKOPTIONS so that cmdline takes precedence */
+    if (g.cmdline_windowsys) {
+        config_error_init(FALSE, "command line", FALSE);
+        choose_windows(g.cmdline_windowsys);
+        config_error_done();
+        free((genericptr_t) g.cmdline_windowsys), g.cmdline_windowsys = NULL;
     }
 
     if (g.cmdline_rcfile)
@@ -6658,7 +6719,7 @@ parsebindings(char *bindings)
         if (!parsebindings(bind))
             ret = FALSE;
     }
-    
+
     /* parse a single binding: first split around : */
     if (! (bind = index(bindings, ':')))
         return FALSE; /* it's not a binding */
@@ -9474,4 +9535,3 @@ enhance_menu_text(
 #endif /* OPTION_LISTS_ONLY */
 
 /*options.c*/
-

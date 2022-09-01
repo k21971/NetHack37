@@ -274,6 +274,7 @@ extern int extcmds_match(const char *, int, int **);
 extern const char *key2extcmddesc(uchar);
 extern boolean bind_specialkey(uchar, const char *);
 extern void parseautocomplete(char *, boolean);
+extern void lock_mouse_buttons(boolean);
 extern void reset_commands(boolean);
 extern void update_rest_on_space(void);
 extern void rhack(char *);
@@ -491,6 +492,7 @@ extern void heal_legs(int);
 
 extern char *dxdy_to_dist_descr(coordxy, coordxy, boolean);
 extern char *coord_desc(coordxy, coordxy, char *, char);
+extern void auto_describe(coordxy, coordxy);
 extern boolean getpos_menu(coord *, int);
 extern int getpos(coord *, boolean, const char *);
 extern void getpos_sethilite(void(*f)(int), boolean(*d)(coordxy,coordxy));
@@ -1064,7 +1066,6 @@ extern void strbuf_append(strbuf_t *, const char *);
 extern void strbuf_reserve(strbuf_t *, int);
 extern void strbuf_empty(strbuf_t *);
 extern void strbuf_nl_to_crlf(strbuf_t *);
-extern char *nonconst(const char *, char *, size_t);
 extern int swapbits(int, int, int);
 extern void shuffle_int_array(int *, int);
 /* note: the snprintf CPP wrapper includes the "fmt" argument in "..."
@@ -1666,6 +1667,7 @@ extern boolean resist_conflict(struct monst *);
 extern boolean mon_knows_traps(struct monst *, int);
 extern void mon_learns_traps(struct monst *, int);
 extern void mons_see_trap(struct trap *);
+extern int get_atkdam_type(int);
 
 /* ### monmove.c ### */
 
@@ -2313,6 +2315,7 @@ extern void init_rect(void);
 extern void free_rect(void);
 extern NhRect *get_rect(NhRect *);
 extern NhRect *rnd_rect(void);
+extern void rect_bounds(NhRect, NhRect, NhRect *);
 extern void remove_rect(NhRect *);
 extern void add_rect(NhRect *);
 extern void split_rects(NhRect *, NhRect *);
@@ -2588,7 +2591,9 @@ extern boolean load_special(const char *);
 extern coordxy selection_getpoint(coordxy, coordxy, struct selectionvar *);
 extern struct selectionvar *selection_new(void);
 extern void selection_free(struct selectionvar *, boolean);
+extern void selection_clear(struct selectionvar *, int);
 extern struct selectionvar *selection_clone(struct selectionvar *);
+extern void selection_getbounds(struct selectionvar *, NhRect *);
 extern void set_selection_floodfillchk(int(*)(coordxy, coordxy));
 extern void selection_floodfill(struct selectionvar *, coordxy, coordxy, boolean);
 extern boolean pm_good_location(coordxy, coordxy, struct permonst *);
@@ -2613,6 +2618,8 @@ extern void selection_do_gradient(struct selectionvar *, long, long, long,
 extern int lspo_reset_level(lua_State *);
 extern int lspo_finalize_level(lua_State *);
 extern boolean get_coord(lua_State *, int, lua_Integer *, lua_Integer *);
+extern void cvt_to_abscoord(coordxy *, coordxy *);
+extern void cvt_to_relcoord(coordxy *, coordxy *);
 extern int nhl_abs_coord(lua_State *);
 extern void update_croom(void);
 extern const char *get_trapname_bytype(int);
