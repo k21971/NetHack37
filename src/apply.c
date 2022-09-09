@@ -1061,7 +1061,7 @@ use_mirror(struct obj *obj)
         return ECMD_TIME;
 
     /* couldsee(mtmp->mx, mtmp->my) is implied by the fact that bhit()
-       targetted it, so we can ignore possibility of X-ray vision */
+       targeted it, so we can ignore possibility of X-ray vision */
     vis = canseemon(mtmp);
     /* ways to directly see monster (excludes X-ray vision, telepathy,
        extended detection, type-specific warning) */
@@ -1922,7 +1922,7 @@ jump(int magic) /* 0=Physical, otherwise skill level */
 
     /* attempt "jumping" spell if hero has no innate jumping ability */
     if (!magic && !Jumping && known_spell(SPE_JUMPING) >= spe_Fresh)
-        return spelleffects(SPE_JUMPING, FALSE);
+        return spelleffects(SPE_JUMPING, FALSE, FALSE);
 
     if (!magic && (nolimbs(g.youmonst.data) || slithy(g.youmonst.data))) {
         /* normally (nolimbs || slithy) implies !Jumping,
@@ -3161,13 +3161,12 @@ static boolean
 find_poleable_mon(coord *pos, int min_range, int max_range)
 {
     struct monst *mtmp;
-    coord mpos;
+    coord mpos = { 0, 0 }; /* no candidate location yet */
     boolean impaired;
     coordxy x, y, lo_x, hi_x, lo_y, hi_y, rt;
     int glyph;
 
     impaired = (Confusion || Stunned || Hallucination);
-    mpos.x = mpos.y = 0; /* no candidate location yet */
     rt = isqrt(max_range);
     lo_x = max(u.ux - rt, 1), hi_x = min(u.ux + rt, COLNO - 1);
     lo_y = max(u.uy - rt, 0), hi_y = min(u.uy + rt, ROWNO - 1);
@@ -3825,7 +3824,7 @@ do_break_wand(struct obj *obj)
             continue;
         } else if (x != u.ux || y != u.uy) {
             /*
-             * Wand breakage is targetting a square adjacent to the hero,
+             * Wand breakage is targeting a square adjacent to the hero,
              * which might contain a monster or a pile of objects or both.
              * Handle objects last; avoids having undead turning raise an
              * undead's corpse and then attack resulting undead monster.
@@ -3844,7 +3843,7 @@ do_break_wand(struct obj *obj)
             }
         } else {
             /*
-             * Wand breakage is targetting the hero.  Using xdir[]+ydir[]
+             * Wand breakage is targeting the hero.  Using xdir[]+ydir[]
              * deltas for location selection causes this case to happen
              * after all the surrounding squares have been handled.
              * Process objects first, in case damage is fatal and leaves

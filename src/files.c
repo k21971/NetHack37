@@ -1351,7 +1351,7 @@ get_saved_games(void)
 
                     if (strcmp(fq_old_save, fq_new_save) != 0
                         && !file_exists(fq_new_save))
-                        rename(fq_old_save, fq_new_save);
+                        (void) rename(fq_old_save, fq_new_save);
 
                     result[j++] = r;
                 }
@@ -4002,7 +4002,7 @@ recover_savefile(void)
             if (lnhfp) {
                 /* any or all of these may not exist */
                 levc = (xint16) lev;
-                write(snhfp->fd, (genericptr_t) &levc, sizeof(levc));
+                (void) write(snhfp->fd, (genericptr_t) &levc, sizeof(levc));
                 if (!copy_bytes(lnhfp->fd, snhfp->fd)) {
                     close_nhfile(lnhfp);
                     close_nhfile(snhfp);

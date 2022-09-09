@@ -12,6 +12,10 @@
 
 #include <ctype.h>
 
+#ifndef A_ITALIC
+#define A_ITALIC A_UNDERLINE
+#endif
+
 /* Misc. curses interface functions */
 
 /* Private declarations */
@@ -747,6 +751,9 @@ curses_convert_attr(int attr)
         break;
     case ATR_INVERSE:
         curses_attr = A_REVERSE;
+        break;
+    case ATR_ITALIC:
+        curses_attr = A_ITALIC;
         break;
     default:
         curses_attr = A_NORMAL;

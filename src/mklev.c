@@ -838,7 +838,9 @@ fill_ordinary_room(struct mkroom *croom)
                 impossible("trycnt overflow4");
                 break;
             }
-            (void) mkobj_at(RANDOM_CLASS, pos.x, pos.y, TRUE);
+            if (somexyspace(croom, &pos)) {
+                (void) mkobj_at(RANDOM_CLASS, pos.x, pos.y, TRUE);
+            }
         }
     }
 }
@@ -990,7 +992,7 @@ makelevel(void)
  *      Place deposits of minerals (gold and misc gems) in the stone
  *      surrounding the rooms on the map.
  *      Also place kelp in water.
- *      mineralize(-1, -1, -1, -1, FALSE); => "default" behaviour
+ *      mineralize(-1, -1, -1, -1, FALSE); => "default" behavior
  */
 void
 mineralize(int kelp_pool, int kelp_moat, int goldprob, int gemprob,
@@ -1476,7 +1478,7 @@ mktrap(
                 return;
             if (mktrapflags & MKTRAP_MAZEFLAG)
                 mazexy(&m);
-            else if (!somexy(croom, &m))
+            else if (!somexyspace(croom, &m))
                 return;
         } while (occupied(m.x, m.y)
                  || (avoid_boulder && sobj_at(BOULDER, m.x, m.y)));
@@ -1776,7 +1778,7 @@ find_okay_roompos(struct mkroom *croom, coord *crd)
     do {
         if (++tryct > 200)
             return FALSE;
-        if (!somexy(croom, crd))
+        if (!somexyspace(croom, crd))
             return FALSE;
     } while (occupied(crd->x, crd->y) || bydoor(crd->x, crd->y));
     return TRUE;

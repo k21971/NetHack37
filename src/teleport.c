@@ -500,7 +500,7 @@ vault_tele(void)
     register struct mkroom *croom = search_special(VAULT);
     coord c;
 
-    if (croom && somexy(croom, &c) && teleok(c.x, c.y, FALSE)) {
+    if (croom && somexyspace(croom, &c) && teleok(c.x, c.y, FALSE)) {
         teleds(c.x, c.y, TELEDS_TELEPORT);
         return;
     }
@@ -822,7 +822,7 @@ dotele(
         if (castit) {
             /* energy cost is deducted in spelleffects() */
             exercise(A_WIS, TRUE);
-            if ((spelleffects(SPE_TELEPORT_AWAY, TRUE) & ECMD_TIME))
+            if ((spelleffects(SPE_TELEPORT_AWAY, TRUE, FALSE) & ECMD_TIME))
                 return 1;
             else if (!break_the_rules)
                 return 0;
@@ -1465,7 +1465,7 @@ mvault_tele(struct monst* mtmp)
     struct mkroom *croom = search_special(VAULT);
     coord c;
 
-    if (croom && somexy(croom, &c) && goodpos(c.x, c.y, mtmp, 0)) {
+    if (croom && somexyspace(croom, &c) && goodpos(c.x, c.y, mtmp, 0)) {
         rloc_to(mtmp, c.x, c.y);
         return;
     }
