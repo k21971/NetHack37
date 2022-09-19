@@ -31,18 +31,17 @@ static int lift_object(struct obj *, struct obj *, long *, boolean);
 static boolean mbag_explodes(struct obj *, int);
 static boolean is_boh_item_gone(void);
 static void do_boh_explosion(struct obj *, boolean);
-static long boh_loss(struct obj *, int);
+static long boh_loss(struct obj *, boolean);
 static int in_container(struct obj *);
 static int out_container(struct obj *);
-static long mbag_item_gone(int, struct obj *, boolean);
+static long mbag_item_gone(boolean, struct obj *, boolean);
 static int stash_ok(struct obj *);
 static void explain_container_prompt(boolean);
 static int traditional_loot(boolean);
 static int menu_loot(int, boolean);
 static int tip_ok(struct obj *);
-static int count_containers(struct obj *);
 static struct obj *tipcontainer_gettarget(struct obj *, boolean *);
-static int tipcontainer_checks(struct obj *, boolean);
+static int tipcontainer_checks(struct obj *, struct obj *, boolean);
 static char in_or_out_menu(const char *, struct obj *, boolean, boolean,
                            boolean, boolean);
 static boolean able_to_loot(coordxy, coordxy, boolean);
@@ -1958,7 +1957,7 @@ do_loot_cont(
         g.abort_looting = TRUE;
         return ECMD_TIME;
     }
-    return use_container(cobjp, 0, (boolean) (cindex < ccount));
+    return use_container(cobjp, FALSE, (boolean) (cindex < ccount));
 }
 
 /* #loot extended command */
@@ -2308,14 +2307,14 @@ is_boh_item_gone(void)
     return (boolean) (!rn2(13));
 }
 
-/* Scatter most of Bag of holding contents around.
-   Some items will be destroyed with the same chance as looting a cursed bag.
- */
+/* Scatter most of Bag of holding contents around.  Some items will be
+   destroyed with the same chance as looting a cursed bag. */
 static void
 do_boh_explosion(struct obj *boh, boolean on_floor)
 {
     struct obj *otmp, *nobj;
 
+    boh->in_use = 1; /* in case scatter() leads to bones creation */
     for (otmp = boh->cobj; otmp; otmp = nobj) {
         nobj = otmp->nobj;
         if (is_boh_item_gone()) {
@@ -2326,10 +2325,11 @@ do_boh_explosion(struct obj *boh, boolean on_floor)
             (void) scatter(u.ux, u.uy, 4, MAY_HIT | MAY_DESTROY, otmp);
         }
     }
+    /* boh is about to be deleted so no need to reset its in_use flag here */
 }
 
 static long
-boh_loss(struct obj *container, int held)
+boh_loss(struct obj *container, boolean held)
 {
     /* sometimes toss objects if a cursed magic bag */
     if (Is_mbag(container) && container->cursed && Has_contents(container)) {
@@ -2449,6 +2449,7 @@ in_container(struct obj *obj)
             (void) stop_timer(SHRINK_GLOB, obj_to_any(obj));
         }
     } else if (Is_mbag(g.current_container) && mbag_explodes(obj, 0)) {
+        livelog_printf(LL_ACHIEVE, "just blew up %s bag of holding", uhis());
         /* explicitly mention what item is triggering the explosion */
         urgent_pline(
               "As you put %s inside, you are blasted by a magical explosion!",
@@ -2457,9 +2458,8 @@ in_container(struct obj *obj)
         if (was_unpaid)
             addtobill(obj, FALSE, FALSE, TRUE);
         if (obj->otyp == BAG_OF_HOLDING) /* one bag of holding into another */
-            do_boh_explosion(obj, (obj->where == OBJ_FLOOR));
+            do_boh_explosion(obj, (boolean) (obj->where == OBJ_FLOOR));
         obfree(obj, (struct obj *) 0);
-        livelog_printf(LL_ACHIEVE, "just blew up %s bag of holding", uhis());
         /* if carried, shop goods will be flagged 'unpaid' and obfree() will
            handle bill issues, but if on floor, we need to put them on bill
            before deleting them (non-shop items will be flagged 'no_charge') */
@@ -2598,7 +2598,7 @@ removed_from_icebox(struct obj *obj)
 
 /* an object inside a cursed bag of holding is being destroyed */
 static long
-mbag_item_gone(int held, struct obj *item, boolean silent)
+mbag_item_gone(boolean held, struct obj *item, boolean silent)
 {
     struct monst *shkp;
     long loss = 0L;
@@ -2755,7 +2755,7 @@ stash_ok(struct obj *obj)
 int
 use_container(
     struct obj **objp,
-    int held,
+    boolean held,
     boolean more_containers) /* True iff #loot multiple and this isn't last */
 {
     struct obj *otmp, *obj = *objp;
@@ -3436,7 +3436,7 @@ static void
 tipcontainer(struct obj *box) /* or bag */
 {
     coordxy ox = u.ux, oy = u.uy; /* #tip only works at hero's location */
-    boolean empty_it = TRUE, maybeshopgoods;
+    boolean srcheld = FALSE, dstheld = FALSE, maybeshopgoods;
     struct obj *targetbox = (struct obj *) 0;
     boolean cancelled = FALSE;
 
@@ -3446,6 +3446,11 @@ tipcontainer(struct obj *box) /* or bag */
     if (get_obj_location(box, &ox, &oy, 0))
         box->ox = ox, box->oy = oy;
 
+    /*
+     * TODO?
+     *  if 'box' is known to be empty or known to be locked, give up
+     *  before choosing 'targetbox'.
+     */
     targetbox = tipcontainer_gettarget(box, &cancelled);
     if (cancelled)
         return;
@@ -3464,19 +3469,20 @@ tipcontainer(struct obj *box) /* or bag */
        to reduce the chance of exhausting shk's billing capacity. */
     maybeshopgoods = !carried(box) && costly_spot(box->ox, box->oy);
 
-    if (tipcontainer_checks(box, FALSE) != TIPCHECK_OK)
+    if (tipcontainer_checks(box, targetbox, FALSE) != TIPCHECK_OK)
         return;
-    if (targetbox && tipcontainer_checks(targetbox, TRUE) != TIPCHECK_OK)
+    if (targetbox && tipcontainer_checks(targetbox, NULL, TRUE) != TIPCHECK_OK)
         return;
 
-    if (empty_it) {
+    {
         struct obj *otmp, *nobj;
         boolean terse, highdrop = !can_reach_floor(TRUE),
                 altarizing = IS_ALTAR(levl[ox][oy].typ),
                 cursed_mbag = (Is_mbag(box) && box->cursed);
-        int held = carried(box) || (targetbox && carried(targetbox));
         long loss = 0L;
 
+        srcheld = carried(box);
+        dstheld = (targetbox && carried(targetbox));
         if (u.uswallow)
             highdrop = altarizing = FALSE;
         terse = !(highdrop || altarizing || costly_spot(box->ox, box->oy));
@@ -3494,6 +3500,7 @@ tipcontainer(struct obj *box) /* or bag */
             pline("%s out%c",
               box->cobj->nobj ? "Objects spill" : "An object spills",
               terse ? ':' : '.');
+
         for (otmp = box->cobj; otmp; otmp = nobj) {
             nobj = otmp->nobj;
             obj_extract_self(otmp);
@@ -3502,19 +3509,48 @@ tipcontainer(struct obj *box) /* or bag */
             if (box->otyp == ICE_BOX) {
                 removed_from_icebox(otmp); /* resume rotting for corpse */
             } else if (cursed_mbag && is_boh_item_gone()) {
-                loss += mbag_item_gone(held, otmp, FALSE);
+                loss += mbag_item_gone(srcheld, otmp, FALSE);
                 /* abbreviated drop format is no longer appropriate */
                 terse = FALSE;
                 continue;
             }
-
             if (maybeshopgoods) {
                 addtobill(otmp, FALSE, FALSE, TRUE);
                 iflags.suppress_price++; /* doname formatting */
             }
 
             if (targetbox) {
-                (void) add_to_container(targetbox, otmp);
+                if (Is_mbag(targetbox) && mbag_explodes(otmp, 0)) {
+                    livelog_printf(LL_ACHIEVE,
+                                 "just blew up %s bag of holding via tipping",
+                                   uhis());
+                    /* explicitly mention what item is triggering explosion */
+                    urgent_pline(
+                   "As %s %s inside, you are blasted by a magical explosion!",
+                                 doname(otmp), otense(otmp, "tumble"));
+
+                    /* if putting one bag of holding into another, first
+                       blow up the one going in, then (below) blow up the
+                       one it's going into */
+                    if (otmp->otyp == BAG_OF_HOLDING) /* BoH into another */
+                        do_boh_explosion(otmp, !srcheld);
+                    /* always delete the item which triggered the explosion */
+                    obfree(otmp, (struct obj *) 0); /* where==OBJ_FREE */
+
+                    /* [assumes targetbox is carried, otherwise shop bill
+                       handling becomes necessary here] */
+                    do_boh_explosion(targetbox, !dstheld);
+                    if (dstheld)
+                        useup(targetbox);
+                    else
+                        useupf(targetbox, targetbox->quan);
+                    targetbox = 0; /* it's gone */
+                    nobj = 0; /* stop tipping; want loop to exit 'normally' */
+
+                    losehp(d(6, 6), "magical explosion", KILLED_BY_AN);
+                } else {
+                    (void) add_to_container(targetbox, otmp);
+                }
             } else if (highdrop) {
                 /* might break or fall down stairs; handles altars itself */
                 hitfloor(otmp, TRUE);
@@ -3541,96 +3577,142 @@ tipcontainer(struct obj *box) /* or bag */
         box->owt = weight(box); /* mbag_item_gone() doesn't update this */
         if (targetbox)
             targetbox->owt = weight(targetbox);
-        if (held)
+        if (srcheld || dstheld)
             (void) encumber_msg();
     }
-    if (carried(box) || (targetbox && carried(targetbox)))
+
+    if (srcheld || dstheld)
         update_inventory();
 }
 
-/* Returns number of containers in object chain,
-   does not recurse into containers */
+#if 0
+static int count_target_containers(struct obj *, struct obj *);
+
+/* returns number of containers in object chain; does not recurse into
+   containers; skips bags of tricks when they're known */
 static int
-count_containers(struct obj *otmp)
+count_target_containers(
+    struct obj *olist,   /* list of objects (invent) */
+    struct obj *excludo) /* particular object to exclude if found in list */
 {
     int ret = 0;
 
-    while (otmp) {
-        if (Is_container(otmp))
+    while (olist) {
+        if (olist != excludo && Is_container(olist)
+            /* include bag of tricks when not known to be such */
+            && (box->otyp != BAG_OF_TRICKS || !box->dknown
+                || !objects[box->otyp].oc_name_known))
             ret++;
-        otmp = otmp->nobj;
+        olist = olist->nobj;
     }
     return ret;
 }
+#endif
 
-/* ask user for a carried container where they want box to be emptied
-   cancelled is TRUE if user cancelled the menu pick. */
+/* ask user for a carried container into which they want box to be emptied;
+   cancelled is TRUE if user cancelled the menu pick; hands aren't required
+   when tipping to the floor but are when tipping into another container */
 static struct obj *
-tipcontainer_gettarget(struct obj *box, boolean *cancelled)
+tipcontainer_gettarget(
+    struct obj *box,
+    boolean *cancelled)
 {
-    int n;
+    int n, n_conts;
     winid win;
     anything any;
     char buf[BUFSZ];
     menu_item *pick_list = (menu_item *) 0;
     struct obj dummyobj, *otmp;
-    int n_conts = count_containers(g.invent);
+    boolean hands_available = TRUE, exclude_it;
     int clr = 0;
 
-    /* we're carrying the box, don't count it as possible target */
-    if (box->where == OBJ_INVENT)
-        n_conts--;
+#if 0   /* [skip potential early return so that menu response is needed
+         *  regardless of whether other containers are being carried] */
+    int n_conts = count_target_containers(g.invent, box);
 
-    if (n_conts < 1) {
-        if (cancelled)
-            *cancelled = FALSE;
+    if (n_conts < 1 || !u_handsy()) {
+        if (n_conts >= 1)
+            pline("Tipping contents to floor only...");
+        *cancelled = FALSE;
         return (struct obj *) 0;
     }
+#endif
 
     win = create_nhwindow(NHW_MENU);
     start_menu(win, MENU_BEHAVE_STANDARD);
 
+    dummyobj = cg.zeroobj; /* lint suppression; only its address matters */
     any = cg.zeroany;
     any.a_obj = &dummyobj;
-    add_menu(win, &nul_glyphinfo, &any, '-', 0, ATR_NONE,
-             clr, "on the floor", MENU_ITEMFLAGS_SELECTED);
-
+    /* tip to floor does not require free hands */
+    add_menu(win, &nul_glyphinfo, &any, '-', 0, ATR_NONE, clr,
+             /* [TODO? vary destination string depending on surface()] */
+             "on the floor", MENU_ITEMFLAGS_SELECTED);
     any = cg.zeroany;
-    add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
-             clr, "", MENU_ITEMFLAGS_NONE);
+    add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr,
+             "", MENU_ITEMFLAGS_NONE);
 
-    for (otmp = g.invent; otmp; otmp = otmp->nobj)
-        if (Is_container(otmp) && (otmp != box)) {
-            any = cg.zeroany;
-            any.a_obj = otmp;
-            add_menu(win, &nul_glyphinfo, &any, otmp->invlet, 0,
-                     ATR_NONE, clr, doname(otmp), MENU_ITEMFLAGS_NONE);
-        }
+    n_conts = 0;
+    for (otmp = g.invent; otmp; otmp = otmp->nobj) {
+        if (otmp == box)
+            continue;
+        /* skip non-containers; bag of tricks passes Is_container() test,
+           only include it if it isn't known to be a bag of tricks */
+        if (!Is_container(otmp)
+            || (otmp->otyp == BAG_OF_TRICKS && otmp->dknown
+                && objects[otmp->otyp].oc_name_known))
+            continue;
+        if (!n_conts++)
+            hands_available = u_handsy(); /* might issue message */
+        /* container-to-container tip requires free hands;
+           exclude container as possible target when known to be locked */
+        exclude_it = !hands_available || (otmp->olocked && otmp->lknown);
+        any = cg.zeroany;
+        any.a_obj = !exclude_it ? otmp : 0;
+        Sprintf(buf, "%s%s", !exclude_it ? "" : "    ", doname(otmp));
+        add_menu(win, &nul_glyphinfo, &any, !exclude_it ? otmp->invlet : 0, 0,
+                 ATR_NONE, clr, buf, MENU_ITEMFLAGS_NONE);
+    }
 
     Sprintf(buf, "Where to tip the contents of %s", doname(box));
     end_menu(win, buf);
     n = select_menu(win, PICK_ONE, &pick_list);
     destroy_nhwindow(win);
 
-    otmp = (n <= 0) ? (struct obj *) 0 : pick_list[0].item.a_obj;
-    if (n > 1 && otmp == &dummyobj)
-        otmp = pick_list[1].item.a_obj;
-    if (pick_list)
+    otmp = 0;
+    if (pick_list) {
+        otmp = pick_list[0].item.a_obj;
+        /* PICK_ONE with a preselected item might return 2;
+           if so, choose the one that wasn't preselected */
+        if (n > 1 && otmp == &dummyobj)
+            otmp = pick_list[1].item.a_obj;
+        if (otmp == &dummyobj)
+            otmp = 0;
         free((genericptr_t) pick_list);
-    if (cancelled)
-        *cancelled = (n == -1);
-    if (otmp && otmp != &dummyobj)
-        return otmp;
-
-    return (struct obj *) 0;
+    }
+    *cancelled = (boolean) (n == -1);
+    return otmp;
 }
 
 /* Perform check on box if we can tip it.
    Returns one of TIPCHECK_foo values.
    If allowempty if TRUE, return TIPCHECK_OK instead of TIPCHECK_EMPTY. */
 static int
-tipcontainer_checks(struct obj *box, boolean allowempty)
+tipcontainer_checks(
+    struct obj *box,       /* container player wants to tip */
+    struct obj *targetbox, /* destination (used here for horn of plenty) */
+    boolean allowempty)    /* affects result when box is empty */
 {
+    /* undiscovered bag of tricks is acceptable as a container-to-container
+       destination but it can't receive items; it has to be opened in
+       preparation so apply it once before even trying to tip source box */
+    if (targetbox && targetbox->otyp == BAG_OF_TRICKS) {
+        int seencount = 0;
+
+        bagotricks(targetbox, FALSE, &seencount);
+        return TIPCHECK_CANNOT;
+    }
+
     /* caveat: this assumes that cknown, lknown, olocked, and otrapped
        fields haven't been overloaded to mean something special for the
        non-standard "container" horn of plenty */
@@ -3641,7 +3723,7 @@ tipcontainer_checks(struct obj *box, boolean allowempty)
     }
 
     if (box->olocked) {
-        pline("It's locked.");
+        pline("%s is locked.", upstart(thesimpleoname(box)));
         return TIPCHECK_LOCKED;
 
     } else if (box->otrapped) {
@@ -3656,10 +3738,17 @@ tipcontainer_checks(struct obj *box, boolean allowempty)
         return TIPCHECK_TRAPPED;
 
     } else if (box->otyp == BAG_OF_TRICKS || box->otyp == HORN_OF_PLENTY) {
-        boolean bag = box->otyp == BAG_OF_TRICKS;
-        int old_spe = box->spe, seen = 0;
-        boolean maybeshopgoods = !carried(box) && costly_spot(box->ox, box->oy);
+        int res = TIPCHECK_OK;
+        boolean bag = (box->otyp == BAG_OF_TRICKS);
+        int old_spe = box->spe, seen, totseen;
+        boolean maybeshopgoods = (!carried(box)
+                                  && costly_spot(box->ox, box->oy));
         coordxy ox = u.ux, oy = u.uy;
+
+        if (targetbox
+            && ((res = tipcontainer_checks(targetbox, NULL, TRUE))
+                != TIPCHECK_OK))
+            return res;
 
         if (get_obj_location(box, &ox, &oy, 0))
             box->ox = ox, box->oy = oy;
@@ -3668,17 +3757,17 @@ tipcontainer_checks(struct obj *box, boolean allowempty)
             addtobill(box, FALSE, FALSE, TRUE);
         /* apply this bag/horn until empty or monster/object creation fails
            (if the latter occurs, force the former...) */
+        seen = totseen = 0;
         do {
             if (!(bag ? bagotricks(box, TRUE, &seen)
-                      : hornoplenty(box, TRUE)))
+                      : hornoplenty(box, TRUE, targetbox)))
                 break;
+            totseen += seen;
         } while (box->spe > 0);
 
         if (box->spe < old_spe) {
-            if (bag)
-                pline((seen == 0) ? "Nothing seems to happen."
-                                  : (seen == 1) ? "A monster appears."
-                                                : "Monsters appear!");
+            if (bag && !totseen)
+                pline("Nothing seems to happen.");
             /* check_unpaid wants to see a non-zero charge count */
             box->spe = old_spe;
             check_unpaid_usage(box, TRUE);
@@ -3687,7 +3776,7 @@ tipcontainer_checks(struct obj *box, boolean allowempty)
         }
         if (maybeshopgoods && !box->no_charge)
             subfrombill(box, shop_keeper(*in_rooms(ox, oy, SHOPBASE)));
-        return TIPCHECK_CANNOT;
+        return TIPCHECK_CANNOT; /* actually means 'already done' */
 
     } else if (SchroedingersBox(box)) {
         char yourbuf[BUFSZ];
@@ -3704,7 +3793,7 @@ tipcontainer_checks(struct obj *box, boolean allowempty)
 
     } else if (!allowempty && !Has_contents(box)) {
         box->cknown = 1;
-        pline("It's empty.");
+        pline("%s is empty.", upstart(thesimpleoname(box)));
         return TIPCHECK_EMPTY;
 
     }

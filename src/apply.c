@@ -4006,7 +4006,7 @@ doapply(void)
     case SACK:
     case BAG_OF_HOLDING:
     case OILSKIN_SACK:
-        res = use_container(&obj, 1, FALSE);
+        res = use_container(&obj, TRUE, FALSE);
         break;
     case BAG_OF_TRICKS:
         (void) bagotricks(obj, FALSE, (int *) 0);
@@ -4115,7 +4115,7 @@ doapply(void)
         res = do_play_instrument(obj);
         break;
     case HORN_OF_PLENTY: /* not a musical instrument */
-        (void) hornoplenty(obj, FALSE);
+        (void) hornoplenty(obj, FALSE, (struct obj *) 0);
         break;
     case LAND_MINE:
     case BEARTRAP:

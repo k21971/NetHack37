@@ -1499,7 +1499,7 @@ extern void add_to_buried(struct obj *);
 extern void dealloc_obj(struct obj *);
 extern void obj_ice_effects(coordxy, coordxy, boolean);
 extern long peek_at_iced_corpse_age(struct obj *);
-extern int hornoplenty(struct obj *, boolean);
+extern int hornoplenty(struct obj *, boolean, struct obj *);
 extern void obj_sanity_check(void);
 extern struct obj *obj_nexto(struct obj *);
 extern struct obj *obj_nexto_xy(struct obj *, coordxy, coordxy, boolean);
@@ -1612,6 +1612,7 @@ extern boolean angry_guards(boolean);
 extern void pacify_guards(void);
 extern void decide_to_shapeshift(struct monst *, int);
 extern boolean vamp_stone(struct monst *);
+extern void check_gear_next_turn(struct monst *);
 
 /* ### mondata.c ### */
 
@@ -2114,7 +2115,7 @@ extern int doloot(void);
 extern void observe_quantum_cat(struct obj *, boolean, boolean);
 extern boolean container_gone(int(*)(struct obj *));
 extern boolean u_handsy(void);
-extern int use_container(struct obj **, int, boolean);
+extern int use_container(struct obj **, boolean, boolean);
 extern int loot_mon(struct monst *, int *, boolean *);
 extern int dotip(void);
 extern struct autopickup_exception *check_autopickup_exceptions(struct obj *);
@@ -2621,6 +2622,7 @@ extern boolean get_coord(lua_State *, int, lua_Integer *, lua_Integer *);
 extern void cvt_to_abscoord(coordxy *, coordxy *);
 extern void cvt_to_relcoord(coordxy *, coordxy *);
 extern int nhl_abs_coord(lua_State *);
+extern struct selectionvar *selection_from_mkroom(struct mkroom *);
 extern void update_croom(void);
 extern const char *get_trapname_bytype(int);
 extern void l_register_des(lua_State *);

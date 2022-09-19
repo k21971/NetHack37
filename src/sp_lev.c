@@ -55,7 +55,7 @@ static boolean m_bad_boulder_spot(coordxy, coordxy);
 static int pm_to_humidity(struct permonst *);
 static unsigned int sp_amask_to_amask(unsigned int sp_amask);
 static void create_monster(monster *, struct mkroom *);
-static void create_object(object *, struct mkroom *);
+static struct obj *create_object(object *, struct mkroom *);
 static void create_altar(altar *, struct mkroom *);
 static boolean search_door(struct mkroom *, coordxy *, coordxy *, xint16, int);
 static void create_corridor(corridor *);
@@ -1071,7 +1071,7 @@ shared_with_room(int x, int y, struct mkroom *droom)
 static void
 maybe_add_door(int x, int y, struct mkroom* droom)
 {
-    if (droom->hx >= 0 && g.doorindex < DOORMAX
+    if (droom->hx >= 0
         && ((!droom->irregular && inside_room(droom, x, y))
             || (int) levl[x][y].roomno == (droom - g.rooms) + ROOMOFFSET
             || shared_with_room(x, y, droom))) {
@@ -2125,7 +2125,7 @@ create_monster(monster* m, struct mkroom* croom)
 /*
  * Create an object in a room.
  */
-static void
+static struct obj *
 create_object(object* o, struct mkroom* croom)
 {
     struct obj *otmp;
@@ -2267,7 +2267,7 @@ create_object(object* o, struct mkroom* croom)
                     artifact_exists(otmp, safe_oname(otmp), FALSE,
                                     ONAME_NO_FLAGS); /* flags don't matter */
                 obfree(otmp, NULL);
-                return;
+                return NULL;
             }
         }
     }
@@ -2359,11 +2359,14 @@ create_object(object* o, struct mkroom* croom)
             boolean dealloced;
 
             (void) bury_an_obj(otmp, &dealloced);
-            if (dealloced && container_idx) {
-                container_obj[container_idx - 1] = NULL;
+            if (dealloced) {
+                if (container_idx)
+                    container_obj[container_idx - 1] = NULL;
+                otmp = NULL;
             }
         }
     }
+    return otmp;
 }
 
 /*
@@ -3461,6 +3464,7 @@ lspo_object(lua_State *L)
     lua_Integer ox = -1, oy = -1;
     int argc = lua_gettop(L);
     int maybe_contents = 0;
+    struct obj *otmp = NULL;
 
     create_des_coder();
 
@@ -3601,14 +3605,15 @@ lspo_object(lua_State *L)
     }
 
     do {
-        create_object(&tmpobj, g.coder->croom);
+        otmp = create_object(&tmpobj, g.coder->croom);
         quancnt--;
     } while ((quancnt > 0) && ((tmpobj.id > STRANGE_OBJECT)
                                && !objects[tmpobj.id].oc_merge));
 
     if (lua_type(L, -1) == LUA_TFUNCTION) {
         lua_remove(L, -2);
-        if (nhl_pcall(L, 0, 0)){
+        nhl_push_obj(L, otmp);
+        if (nhl_pcall(L, 1, 0)){
             impossible("Lua error: %s", lua_tostring(L, -1));
         }
     } else
@@ -6056,7 +6061,8 @@ lspo_region(lua_State *L)
             lua_getfield(L, 1, "contents");
             if (lua_type(L, -1) == LUA_TFUNCTION) {
                 lua_remove(L, -2);
-                if (nhl_pcall(L, 0, 0)){
+                l_push_mkroom_table(L, troom);
+                if (nhl_pcall(L, 1, 0)){
                     impossible("Lua error: %s", lua_tostring(L, -1));
                 }
             } else
@@ -6662,6 +6668,27 @@ TODO: g.coder->croom needs to be updated
     }
 
     return 0;
+}
+
+struct selectionvar *
+selection_from_mkroom(struct mkroom *croom)
+{
+    struct selectionvar *sel = selection_new();
+    coordxy x, y;
+    unsigned rmno;
+
+    if (!croom && g.coder && g.coder->croom)
+        croom = g.coder->croom;
+    if (!croom)
+        return sel;
+
+    rmno = (unsigned)((croom - g.rooms) + ROOMOFFSET);
+    for (y = croom->ly; y <= croom->hy; y++)
+        for (x = croom->lx; x <= croom->hx; x++)
+            if (isok(x, y) && !levl[x][y].edge
+                && levl[x][y].roomno == rmno)
+                selection_setpoint(x, y, sel, 1);
+    return sel;
 }
 
 void

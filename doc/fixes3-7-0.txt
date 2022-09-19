@@ -1380,6 +1380,9 @@ command line processing interleaved with options file processing is complex:
 when the Astral level got created, any fake player character monsters that
 	were seen or sensed when created were reported as "<mon> suddenly
 	appears!" rather than be treated as part of level's initial population
+tipping contents of one container directly into another allowed transferring
+	wands of cancellation and bags of holding or tricks that were inside
+	a sack, box, or chest into a bag of holding without blowing it up
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1985,6 +1988,9 @@ vampire shapeshifting in a door (pr #794 by entrez)
 split "act_on_act" into separate function (pr #777 by argrath)
 unnecessary null-check on parsesymbols() (pr #793 by argrath)
 split cleaning-up on gd_move() into separate function (pr #791 by argrath)
+from xNetHack:  better handling for monsters putting on equipment; fixes
+	issue #843:  "Mon dies.  Mon puts on <armor>.  The seemingly dead Mon
+	rises as a vampire."
 
 
 Code Cleanup and Reorganization
@@ -2107,4 +2113,5 @@ for Planes of Water and Air, save the air bubbles and clouds with the level
 switch to a flags arg on newcham() in place of the pair of boolean args
 replace some old 'time_t' hackery in system.h and hacklib.c with something
 	less obtrusive in unixconf.h
+remove the per dungeon level door limit
 
