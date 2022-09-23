@@ -16,9 +16,6 @@
 # linux.370 hints file provides a single-user build for Linux (such
 # as Ubuntu focal).
 
-WANT_WIN_TTY=1
-WANT_WIN_CURSES=1
-
 # note: '#-INCLUDE' is not just a comment
 #        multiw-1.370 contains sections 1 to 2
 #-INCLUDE multiw-1.370
