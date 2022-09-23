@@ -3290,6 +3290,12 @@ extern void genl_status_finish(void);
 extern void genl_status_enablefield(int, const char *, const char *, boolean);
 extern void genl_status_update(int, genericptr_t, int, int, int,
                                unsigned long *);
+#ifdef DUMPHTML
+extern void dump_start_screendump(void);
+extern void dump_end_screendump(void);
+extern void html_print_glyph(winid, coordxy, coordxy, const glyph_info *,
+                             const glyph_info *);
+#endif
 #ifdef DUMPLOG
 extern char *dump_fmtstr(const char *, char *, boolean);
 extern void livelog_dump_url(unsigned int);

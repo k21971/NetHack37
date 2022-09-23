@@ -76,7 +76,7 @@ static char fqn_filename_buffer[FQN_NUMBUF][FQN_MAX_FILENAME];
 #endif
 
 #ifdef WHEREIS_FILE
-char whereis_file[255]=WHEREIS_FILE;
+char whereis_file[255] = WHEREIS_FILE;
 #endif
 
 #if !defined(SAVE_EXTENSION)
@@ -93,7 +93,8 @@ char whereis_file[255]=WHEREIS_FILE;
 #endif
 
 #ifdef WHEREIS_FILE
-static void write_whereis(int);
+static void set_whereisfile(void);
+static void write_whereis(boolean);
 #endif
 
 #ifdef AMIGA
@@ -670,9 +671,9 @@ nhclose(int fd)
 }
 
 #ifdef WHEREIS_FILE
-/** Set the filename for the whereis file. */
+/* Set the filename for the whereis file */
 void
-set_whereisfile()
+set_whereisfile(void)
 {
     char *p = (char *) strstr(whereis_file, "%n");
     if (p) {
@@ -695,8 +696,7 @@ set_whereisfile()
 
 /* Write out information about current game to plname.whereis */
 void
-write_whereis(playing)
-boolean playing; /* < True if game is running */
+write_whereis(boolean playing) /* < True if game is running */
 {
     FILE* fp;
     char whereis_work[511];
@@ -745,20 +745,19 @@ boolean playing; /* < True if game is running */
 
 /** Signal handler to update whereis information. */
 void
-signal_whereis(sig_unused)
-int sig_unused UNUSED;
+signal_whereis(int sig_unused UNUSED)
 {
     touch_whereis();
 }
 
 void
-touch_whereis()
+touch_whereis(void)
 {
     write_whereis(TRUE);
 }
 
 void
-delete_whereis()
+delete_whereis(void)
 {
     write_whereis(FALSE);
 }

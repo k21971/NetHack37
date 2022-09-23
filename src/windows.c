@@ -82,10 +82,23 @@ static void dump_headers(void);
 static void dump_footers(void);
 static void dump_set_color_attr(int, int, boolean);
 #ifdef DUMPHTML
+static void html_write_tags(FILE *, winid, int, boolean);
+static void html_dump_char(FILE *, char);
+static void html_dump_str(FILE *, const char *);
+static void html_dump_line(FILE *, winid, int, const char *);
+static void dump_set_color_attr(int, int, boolean);
 static void html_init_sym(void);
+static unsigned mg_hl_attr(unsigned);
+static int condcolor(long, unsigned long *);
+static int condattr(long, unsigned long *);
+static void dump_render_status(void);
+static void dump_status_update(int, genericptr_t, int, int,
+                               int, unsigned long *);
+static void dump_headers(void);
+static void dump_footers(void);
 static void dump_css(void);
 static void dump_outrip(winid, int, time_t);
-#endif
+#endif /* DUMPHTML */
 
 #endif /* DUMPLOG */
 
@@ -1260,17 +1273,17 @@ dump_fmtstr(const char *fmt, char *buf,
    then delimit the item with <li></li>
    for preformatted text, we don't mess with any existing bullet list, but try to
    keep consecutive preformatted strings in a single block.  */
-static
 void
-html_write_tags(fp, win, attr, before)
-FILE *fp;
-winid win;
-int attr;
-boolean before; /* Tags before/after string */
+html_write_tags(
+    FILE *fp,
+    winid win,
+    int attr,
+    boolean before) /* Tags before/after string */
 {
     static boolean in_list = FALSE;
     static boolean in_preform = FALSE;
-    if (!fp) return;
+    if (!fp)
+        return;
     if (before) { /* before next string is written,
                      close any finished blocks
                      and open a new block if necessary */
@@ -1316,54 +1329,56 @@ boolean before; /* Tags before/after string */
 }
 
 /* Write HTML-escaped char to a file */
-static void
-html_dump_char(fp, c)
-FILE *fp;
-char c;
+void
+html_dump_char(
+    FILE *fp,
+    char c)
 {
-    if (!fp) return;
+    if (!fp)
+        return;
     switch (c) {
-        case '<':
-            fprintf(fp, "&lt;");
-            break;
-        case '>':
-            fprintf(fp, "&gt;");
-            break;
-        case '&':
-            fprintf(fp, "&amp;");
-            break;
-        case '\"':
-            fprintf(fp, "&quot;");
-            break;
-        case '\'':
-            fprintf(fp, "&#39;");
-            break;
-        case '\n':
-            fprintf(fp, "<br />\n");
-            break;
-        default:
-            fprintf(fp, "%c", c);
+    case '<':
+        fprintf(fp, "&lt;");
+        break;
+    case '>':
+        fprintf(fp, "&gt;");
+        break;
+    case '&':
+        fprintf(fp, "&amp;");
+        break;
+    case '\"':
+        fprintf(fp, "&quot;");
+        break;
+    case '\'':
+        fprintf(fp, "&#39;");
+        break;
+    case '\n':
+        fprintf(fp, "<br />\n");
+        break;
+    default:
+        fprintf(fp, "%c", c);
     }
 }
 
 /* Write HTML-escaped string to a file */
-static void
-html_dump_str(fp, str)
-FILE *fp;
-const char *str;
+void
+html_dump_str(
+    FILE *fp,
+    const char *str)
 {
     const char *p;
-    if (!fp) return;
+    if (!fp)
+        return;
     for (p = str; *p; p++)
         html_dump_char(fp, *p);
 }
 
-static void
-html_dump_line(fp, win, attr, str)
-FILE *fp;
-winid win;
-int attr;
-const char *str;
+void
+html_dump_line(
+    FILE *fp,
+    winid win,
+    int attr,
+    const char *str)
 {
     if (strlen(str) == 0) {
        /* if it's a blank line, just print a blank line */
@@ -1375,37 +1390,36 @@ const char *str;
     html_write_tags(fp, win, attr, FALSE);
 }
 
-#endif
-
 /** HTML Map and status bar (collectively, the 'screendump') **/
 
 void
-dump_start_screendump()
+dump_start_screendump(void)
 {
-#ifdef DUMPHTML
-    if (!dumphtml_file) return;
+    if (!dumphtml_file)
+        return;
     html_init_sym();
     fprintf(dumphtml_file, "<pre class=\"nh_screen\">\n");
-#endif
 }
 
 void
-dump_end_screendump()
+dump_end_screendump(void)
 {
-#ifdef DUMPHTML
     if (dumphtml_file)
         fprintf(dumphtml_file, "%s\n", PREF_E);
-#endif
 }
 
+#endif /* DUMPHTML */
+
 /* Status and map highlighting */
-static void
-dump_set_color_attr(coloridx, attrmask, onoff)
-int coloridx, attrmask;
-boolean onoff;
+void
+dump_set_color_attr(
+    int coloridx,
+    int  attrmask,
+    boolean onoff)
 {
 #ifdef DUMPHTML
-    if (!dumphtml_file) return;
+    if (!dumphtml_file)
+        return;
     if (onoff) {
         if (attrmask & HL_BOLD)
             fprintf(dumphtml_file, BOLD_S);
@@ -1433,7 +1447,7 @@ boolean onoff;
     nhUse(coloridx);
     nhUse(attrmask);
     nhUse(onoff);
-#endif
+#endif /* DUMPHTML */
 }
 
 #ifdef DUMPHTML
@@ -1445,8 +1459,8 @@ boolean onoff;
 
 static int htmlsym[SYM_MAX] = DUMMY;
 
-static void
-html_init_sym()
+void
+html_init_sym(void)
 {
     /* see https://html-css-js.com/html/character-codes/drawing/ */
 
@@ -1477,9 +1491,8 @@ html_init_sym()
 
 /* convert 'special' flags returned from mapglyph to
   highlight attrs (currently just inverse) */
-static unsigned
-mg_hl_attr(special)
-unsigned special;
+unsigned
+mg_hl_attr(unsigned special)
 {
     unsigned hl = 0;
     if ((special & MG_PET) && iflags.hilite_pet)
@@ -1494,11 +1507,12 @@ unsigned special;
 }
 
 void
-html_print_glyph(win, x, y, glyphinfo, bkglyphinfo)
-winid win UNUSED;
-coordxy x, y;
-const glyph_info *glyphinfo;
-const glyph_info *bkglyphinfo UNUSED;
+html_print_glyph(
+    winid win UNUSED,
+    coordxy x,
+    coordxy y,
+    const glyph_info *glyphinfo,
+    const glyph_info *bkglyphinfo UNUSED)
 {
     char buf[BUFSZ]; /* do_screen_description requires this :( */
     const char *firstmatch = "unknown"; /* and this */
@@ -1506,7 +1520,8 @@ const glyph_info *bkglyphinfo UNUSED;
     int desc_found = 0;
     unsigned attr;
 
-    if (!dumphtml_file) return;
+    if (!dumphtml_file)
+        return;
 
     if (x == 1) /* start row - 2 space left margin: */
         fprintf(dumphtml_file, "<span class=\"nh_screen\">  ");
@@ -1569,6 +1584,7 @@ static long dump_condition_bits;
 static struct dump_status_fields dump_status[MAXBLSTATS];
 static int hpbar_percent, hpbar_color;
 
+#ifdef DUMPHTML
 /* condcolor and condattr are needed to render the HTML status bar.
    These static routines exist verbatim in at least two other window
    ports. They should be promoted to the core (maybe botl.c).
@@ -1576,10 +1592,10 @@ static int hpbar_percent, hpbar_color;
    or ignored.
  */
 
-static int
-condcolor(bm, bmarray)
-long bm;
-unsigned long *bmarray;
+int
+condcolor(
+    long bm,
+    unsigned long *bmarray)
 {
 #if defined(STATUS_HILITES) && defined(TEXTCOLOR)
     int i;
@@ -1593,10 +1609,10 @@ unsigned long *bmarray;
     return NO_COLOR;
 }
 
-static int
-condattr(bm, bmarray)
-long bm;
-unsigned long *bmarray;
+int
+condattr(
+    long bm,
+    unsigned long *bmarray)
 {
     int attr = 0;
 #ifdef STATUS_HILITES
@@ -1635,8 +1651,8 @@ unsigned long *bmarray;
    No truncation is done as we'd prefer to see all info in the dumplog
    and allow the lines to be a little longer if necessary */
 
-static void
-dump_render_status()
+void
+dump_render_status(void)
 {
     long mask, bits;
     int i, idx, c, row, num_rows, coloridx = 0, attrmask = 0;
@@ -1644,7 +1660,7 @@ dump_render_status()
     struct condition_t { /* auto, since this only gets called once */
         long mask;
         const char *text;
-    } conditions[] = {
+    } cond[] = {
         /* The sequence order of these matters */
         { BL_MASK_STONE,     "Stone"    },
         { BL_MASK_SLIME,     "Slime"    },
@@ -1677,8 +1693,8 @@ dump_render_status()
             if (idx == BL_CONDITION) {
                 /* | Condition Codes | */
                 bits = dump_condition_bits;
-                for (c = 0; c < SIZE(conditions) && bits != 0L; ++c) {
-                    mask = conditions[c].mask;
+                for (c = 0; c < SIZE(cond) && bits != 0L; ++c) {
+                    mask = cond[c].mask;
                     if (bits & mask) {
                         putstr(NHW_STATUS, 0, " ");
                         pad--;
@@ -1689,8 +1705,8 @@ dump_render_status()
                             dump_set_color_attr(coloridx, attrmask, TRUE);
                         }
 #endif
-                        putstr(NHW_STATUS, 0, conditions[c].text);
-                        pad -= strlen(conditions[c].text);
+                        putstr(NHW_STATUS, 0, cond[c].text);
+                        pad -= strlen(cond[c].text);
 #ifdef STATUS_HILITES
                         if (iflags.hilite_delta) {
                             dump_set_color_attr(coloridx, attrmask, FALSE);
@@ -1775,10 +1791,13 @@ dump_render_status()
 }
 
 void
-dump_status_update(fldidx, ptr, chg, percent, color, colormasks)
-int fldidx, chg UNUSED, percent, color;
-genericptr_t ptr;
-unsigned long *colormasks;
+dump_status_update(
+    int fldidx,
+    genericptr_t ptr,
+    int chg UNUSED,
+    int percent,
+    int color,
+    unsigned long *colormasks)
 {
     int attrmask;
     long *condptr = (long *) ptr;
@@ -1867,10 +1886,9 @@ unsigned long *colormasks;
 
 /** HTML Headers and footers **/
 
-static void
-dump_headers()
+void
+dump_headers(void)
 {
-#ifdef DUMPHTML
     char vers[16]; /* buffer for short version string */
 
     /* TODO: make portable routine for getting iso8601 datetime */
@@ -1894,23 +1912,19 @@ dump_headers()
     dump_css();
     fprintf(dumphtml_file, "</style>\n</head>\n<body>\n");
 
-#endif
 }
 
-static void
-dump_footers()
+void
+dump_footers(void)
 {
-#ifdef DUMPHTML
     if (dumphtml_file) {
         html_write_tags(dumphtml_file, 0, 0, TRUE); /* close </ul> and </pre> if open */
         fprintf(dumphtml_file, "</body>\n</html>\n");
     }
-#endif
 }
 
-#ifdef DUMPHTML
-static void
-dump_css()
+void
+dump_css(void)
 {
     int c = 0;
     FILE *css;
@@ -1928,11 +1942,11 @@ dump_css()
     fclose(css);
 }
 
-static void
-dump_outrip(win, how, when)
-winid win;
-int how;
-time_t when;
+void
+dump_outrip(
+    winid win,
+    int how,
+    time_t when)
 {
    if (dumphtml_file) {
        html_write_tags(dumphtml_file, 0, 0, TRUE); /* </ul>, </pre> if needed */
@@ -1944,7 +1958,7 @@ time_t when;
 
 }
 
-#endif
+#endif /* DUMPHTML */
 
 /** Dump file handling **/
 
@@ -2180,7 +2194,7 @@ has_color(int color)
  * uses dump_fmtstr() which is static here.
  */
 void
-mk_dgl_extrainfo()
+mk_dgl_extrainfo(void)
 {
     FILE *extrai = (FILE *) 0;
 #ifdef UNIX
@@ -2192,6 +2206,7 @@ mk_dgl_extrainfo()
 
     extrai = fopen(new_fn, "w");
     if (!extrai) {
+        ;
     } else {
         int sortval = 0;
         char tmpdng[16];
@@ -2227,8 +2242,7 @@ mk_dgl_extrainfo()
 }
 #endif /* EXTRAINFO_FN */
 void
-livelog_dump_url(llflags)
-unsigned int llflags;
+livelog_dump_url(unsigned int llflags)
 {
 #ifdef DUMPLOG
     char buf[BUFSZ];
