@@ -1145,8 +1145,11 @@ dodown(void)
     }
     if (trap && Is_stronghold(&u.uz)) {
         goto_hell(FALSE, TRUE);
-    } else if (trap) {
-        goto_level(&(trap->dst), FALSE, FALSE, FALSE);
+    } else if (trap && trap->dst.dlevel != -1) {
+        d_level tdst;
+        assign_level(&tdst, &(trap->dst));
+        (void) clamp_hole_destination(&tdst);
+        goto_level(&tdst, FALSE, FALSE, FALSE);
     } else {
         g.at_ladder = (boolean) (levl[u.ux][u.uy].typ == LADDER);
         next_level(!trap);
@@ -1823,7 +1826,7 @@ goto_level(
 
     /* fall damage? */
     if (do_fall_dmg) {
-        int dmg = d(dist, 6);
+        int dmg = d(max(dist, 1), 6);
 
         dmg = Maybe_Half_Phys(dmg);
         losehp(dmg, "falling down a mine shaft", KILLED_BY);

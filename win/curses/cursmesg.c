@@ -233,8 +233,12 @@ curses_block(boolean noscroll) /* noscroll - blocking because of msgtype
 
     oldcrsr = curs_set(1);
     do {
-        if (iflags.msg_is_alert) break;
-        ret = wgetch(win);
+        if (iflags.msg_is_alert)
+            break;
+        if (iflags.debug_fuzzer)
+            ret = '\n';
+        else
+            ret = curses_read_char();
         if (ret == ERR || ret == '\0')
             ret = '\n';
         /* msgtype=stop should require space/enter rather than any key,
@@ -637,7 +641,7 @@ curses_message_win_getline(const char *prompt, char *answer, int buffer)
 #ifdef PDCURSES
         ch = wgetch(win);
 #else
-        ch = getch();
+        ch = curses_read_char();
 #endif
         curs_set(0);
 

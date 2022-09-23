@@ -8,7 +8,7 @@
 extern const char *const destroy_strings[][3]; /* from zap.c */
 
 static void mk_trap_statue(coordxy, coordxy);
-static int dng_bottom(void);
+static int dng_bottom(d_level *lev);
 static void hole_destination(d_level *);
 static boolean keep_saddle_with_steedcorpse(unsigned, struct obj *,
                                             struct obj *);
@@ -375,19 +375,19 @@ mk_trap_statue(coordxy x, coordxy y)
     mongone(mtmp);
 }
 
-/* find "bottom" level of current dungeon, stopping at quest locate */
+/* find "bottom" level of specified dungeon, stopping at quest locate */
 static int
-dng_bottom(void)
+dng_bottom(d_level *lev)
 {
-    int bottom = dunlevs_in_dungeon(&u.uz);
+    int bottom = dunlevs_in_dungeon(lev);
 
     /* when in the upper half of the quest, don't fall past the
        middle "quest locate" level if hero hasn't been there yet */
-    if (In_quest(&u.uz)) {
+    if (In_quest(lev)) {
         int qlocate_depth = qlocate_level.dlevel;
 
         /* deepest reached < qlocate implies current < qlocate */
-        if (dunlev_reached(&u.uz) < qlocate_depth)
+        if (dunlev_reached(lev) < qlocate_depth)
             bottom = qlocate_depth; /* early cut-off */
     }
     return bottom;
@@ -397,7 +397,7 @@ dng_bottom(void)
 static void
 hole_destination(d_level *dst)
 {
-    int bottom = dng_bottom();
+    int bottom = dng_bottom(&u.uz);
 
     dst->dnum = u.uz.dnum;
     dst->dlevel = dunlev(&u.uz);
@@ -512,6 +512,20 @@ maketrap(coordxy x, coordxy y, int typ)
     return ttmp;
 }
 
+/* limit the destination of a hole or trapdoor to the furthest level you
+   should be able to fall to */
+d_level *
+clamp_hole_destination(d_level *dlev)
+{
+    int bottom = dng_bottom(dlev);
+    dlev->dlevel = min(dlev->dlevel, bottom);
+    if (In_hell(dlev) && !u.uevent.invoked
+        && dlev->dlevel == bottom)
+        dlev->dlevel--;
+
+    return dlev;
+}
+
 void
 fall_through(
     boolean td, /* td == TRUE : trap door or hole */
@@ -520,7 +534,7 @@ fall_through(
     d_level dtmp;
     char msgbuf[BUFSZ];
     const char *dont_fall = 0;
-    int newlevel, bottom = dng_bottom();
+    int newlevel, bottom = dng_bottom(&u.uz);
     struct trap *t = (struct trap *) 0;
 
     /* we'll fall even while levitating in Sokoban; otherwise, if we
@@ -550,6 +564,8 @@ fall_through(
              || ((Flying || is_clinger(g.youmonst.data)
                   || (ceiling_hider(g.youmonst.data) && u.uundetected))
                  && !(ftflags & TOOKPLUNGE))
+             /* this is no longer a very useful test because newlevel isn't
+                the real destination we're aiming for, if t != 0 */
              || (Inhell && !u.uevent.invoked && newlevel == bottom)) {
         dont_fall = "don't fall in.";
     } else if (g.youmonst.data->msize >= MZ_HUGE) {
@@ -580,16 +596,18 @@ fall_through(
     if (Is_stronghold(&u.uz)) {
         find_hell(&dtmp);
     } else {
-        int dist = newlevel - dunlev(&u.uz);
+        int dist;
 
         if (t) {
-            dtmp.dnum = t->dst.dnum;
-            dtmp.dlevel = t->dst.dlevel;
-            dist = dtmp.dlevel - dunlev(&u.uz);
+            assign_level(&dtmp, &t->dst);
+            /* don't fall beyond the bottom, in case this came from a bones
+               file with different dungeon size  */
+            (void) clamp_hole_destination(&dtmp);
         } else {
             dtmp.dnum = u.uz.dnum;
             dtmp.dlevel = newlevel;
         }
+        dist = depth(&dtmp) - depth(&u.uz);
         if (dist > 1)
             You("fall down a %s%sshaft!", dist > 3 ? "very " : "",
                 dist > 2 ? "deep " : "");

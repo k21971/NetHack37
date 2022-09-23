@@ -1387,18 +1387,19 @@ root_plselection_prompt(
 
     if (alignnum != ROLE_NONE && alignnum != ROLE_RANDOM
         && ok_align(rolenum, racenum, gendnum, alignnum)) {
+#if 0   /* 'if' and 'else' had duplicate code here; probably a copy+parse
+         * oversight; if a problem with filtering of random role selection
+         * crops up, this is probably the place to start looking */
+
         /* if race specified, and multiple choice of alignments for it */
         if ((racenum >= 0) && (aligncount > 1)) {
-            if (donefirst)
-                Strcat(buf, " ");
-            Strcat(buf, aligns[alignnum].adj);
-            donefirst = TRUE;
         } else {
-            if (donefirst)
-                Strcat(buf, " ");
-            Strcat(buf, aligns[alignnum].adj);
-            donefirst = TRUE;
         }
+#endif  /* the four lines of code below were in both 'if' and 'else' above */
+        if (donefirst)
+            Strcat(buf, " ");
+        Strcat(buf, aligns[alignnum].adj);
+        donefirst = TRUE;
     } else {
         /* in case we got here by failing the ok_align() test */
         if (alignnum != ROLE_RANDOM)
