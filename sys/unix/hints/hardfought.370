@@ -296,12 +296,12 @@ endif  # WANT_LIBNH
 PREFIX=/opt/nethack/chroot
 
 # this is the dir where NetHack is inside the chroot
-HACKDIR=/nh370.64-hdf
+HACKDIR=/nh370.65-hdf
+INSTDIR=$(PREFIX)$(HACKDIR)
+VARDIR =$(INSTDIR)/var
 
 # DGL does not use the shell script launcher
-SHELLDIR = $(PREFIX)/games
-INSTDIR=$(PREFIX)$(HACKDIR)
-VARDIR = $(INSTDIR)/var
+SHELLDIR=/tmp
 
 POSTINSTALL+= cp -n sys/unix/sysconf $(INSTDIR)/sysconf; \
 	$(CHOWN) $(GAMEUID) $(INSTDIR)/sysconf; \
