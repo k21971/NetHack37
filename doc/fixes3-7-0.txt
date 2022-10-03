@@ -1,4 +1,4 @@
-HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1023 $ $NHDT-Date: 1661295667 2022/08/23 23:01:07 $
+HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1048 $ $NHDT-Date: 1664739714 2022/10/02 19:41:54 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -1035,6 +1035,14 @@ if a bones file contains a doppelganger imitating a unique monster, a game
 	for that arrives (the doppelganger will change its shape normally,
 	not be stuck in the unique monster's form)
 when mounted hero got hit by an explosion, hero and steed shared resistances
+removing an engraving from frost (ie, written with fingers on ice) reported
+	"you wipe out the message that was written in the _dust_"
+orc hero starts with poison resistance but orc monsters lacked that
+orc hero has maximum 18/50 strength but hero poly'd into an orc got 18/100
+hero with exceptional strength (18/01..18/100) retained that when polymorphed
+	into any monster lacking the strongmonst attribute
+give hero poly'd into a giant 19 strength instead of 18/100
+wait for a response after displaying wishing help; affects X11
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1420,6 +1428,10 @@ curses: clipped map crashed due to uninitialized memory
 curses: changes for tty's TTY_PERM_INVENT resulted in viewing inventory under
 	curses while carrying only gold to crash; didn't matter if perm_invent
 	was On or if TTY_PERM_INVENT was enabled
+curses: for screen refresh, don't attempt to refresh windows that haven't been
+	set up yet or have already been shut down
+curses: for raw_print() in #if PDCURSES config, don't attempt to write to
+	message window if it isn't set up yet or has already been shut down
 Qt: at Xp levels above 20 with 'showexp' On, the combined status field
 	"Level:NN/nnnnnnnn" was too big and truncated by a char at each end
 Qt: searching a text window for something that wasn't found and then searching
@@ -1643,6 +1655,8 @@ X11: (possibly X11+OSX): if persistent inventory was displayed at time of
 	end-of-game prompting, prompting would stall until that window was
 	manually dismissed
 X11: set all selectable menu lines to the same length, left justified
+X11: initializing the get-extended-command widget modified memory beyond what
+	it dynamically allocated
 
 
 General New Features

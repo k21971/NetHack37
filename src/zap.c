@@ -1,4 +1,4 @@
-/* NetHack 3.7	zap.c	$NHDT-Date: 1654886101 2022/06/10 18:35:01 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.426 $ */
+/* NetHack 3.7	zap.c	$NHDT-Date: 1664739715 2022/10/02 19:41:55 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.440 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1873,7 +1873,7 @@ stone_to_flesh_obj(struct obj *obj)
     case ROCK_CLASS: /* boulders and statues */
     case TOOL_CLASS: /* figurines */
         if (obj->otyp == BOULDER) {
-            obj = poly_obj(obj, HUGE_CHUNK_OF_MEAT);
+            obj = poly_obj(obj, ENORMOUS_MEATBALL);
             smell = TRUE;
         } else if (obj->otyp == STATUE || obj->otyp == FIGURINE) {
             ptr = &mons[obj->corpsenm];
@@ -5626,7 +5626,7 @@ wishcmdassist(int triesleft)
     putstr(win, 0, "");
     if (iflags.cmdassist)
         putstr(win, 0, suppress_cmdassist);
-    display_nhwindow(win, FALSE);
+    display_nhwindow(win, TRUE);
     destroy_nhwindow(win);
 }
 

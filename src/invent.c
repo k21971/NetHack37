@@ -726,7 +726,7 @@ merged(struct obj **potmp, struct obj **pobj)
         else if (!Is_pudding(otmp))
             otmp->owt += obj->owt;
         if (!has_oname(otmp) && has_oname(obj))
-            otmp = *potmp = oname(otmp, ONAME(obj), ONAME_NO_FLAGS);
+            otmp = *potmp = oname(otmp, ONAME(obj), ONAME_SKIP_INVUPD);
         obj_extract_self(obj);
 
         if (obj->pickup_prev && otmp->where == OBJ_INVENT)
@@ -3378,9 +3378,11 @@ display_pickinv(
                 continue;
             if (doing_perm_invent) {
                 /* when showing equipment in use, gold shouldn't be excluded
-                   just because !show_gold is set; it might be quivered */
+                   just because !show_gold is set; it might be quivered;
+                   tool_being_used() matches lit lamps/candles and active
+                   leashes, neither of which set owornmask */
                 if (inuse_only) {
-                    if (!otmp->owornmask) {
+                    if (!otmp->owornmask && !tool_being_used(otmp)) {
                         skipped_noninuse = TRUE;
                         continue;
                     }
@@ -5437,7 +5439,7 @@ prepare_perminvent(winid window)
 
     if (!done_setting_perminv_flags) {
         /*TEMPORARY*/
-        char *envtmp = nh_getenv("TTYINV");
+        char *envtmp = !g.program_state.gameover ? nh_getenv("TTYINV") : 0;
         /* default for non-tty includes gold, for tty excludes gold;
            if non-tty specifies any value, gold will be excluded unless
            that value includes the show-gold bit (1) */
