@@ -1,4 +1,4 @@
-HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1048 $ $NHDT-Date: 1664739714 2022/10/02 19:41:54 $
+HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1051 $ $NHDT-Date: 1665130022 2022/10/07 08:07:02 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -1043,6 +1043,8 @@ hero with exceptional strength (18/01..18/100) retained that when polymorphed
 	into any monster lacking the strongmonst attribute
 give hero poly'd into a giant 19 strength instead of 18/100
 wait for a response after displaying wishing help; affects X11
+guardian nagas' constriction attack could never hit because the two preceding
+	attacks must both hit and those were mutually exclusive: bite and spit
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1406,6 +1408,8 @@ tipping contents of one container directly into another allowed transferring
 	wands of cancellation and bags of holding or tricks that were inside
 	a sack, box, or chest into a bag of holding without blowing it up
 prevent random traps from being created inside the shops in the tourist quest
+if hero's steed got hit by knockback effect, impossible "no monster to remove"
+	would occur (plus more warnings if 'sanity_check' was On)
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -2020,6 +2024,7 @@ split cleaning-up on gd_move() into separate function (pr #791 by argrath)
 from xNetHack:  better handling for monsters putting on equipment; fixes
 	issue #843:  "Mon dies.  Mon puts on <armor>.  The seemingly dead Mon
 	rises as a vampire."
+provide Unicode support to DOS Curses port (pr #889 by chasonr)
 
 
 Code Cleanup and Reorganization

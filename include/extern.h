@@ -1321,6 +1321,9 @@ extern void release_runtime_info(void);
 #ifdef ENHANCED_SYMBOLS
 extern void dump_glyphids(void);
 #endif
+#if (NH_DEVEL_STATUS != NH_STATUS_RELEASED) || defined(DEBUG)
+extern int mstrength(struct permonst *);
+#endif
 
 /* ### mhitm.c ### */
 
@@ -3044,9 +3047,9 @@ extern boolean glyphid_cache_status(void);
 extern int glyphrep_to_custom_map_entries(const char *op, int *glyph);
 void free_all_glyphmap_u(void);
 int add_custom_urep_entry(const char *symset_name, int glyphidx,
-                          const uint8 *utf8str, long ucolor,
+                          uint32 utf32ch, const uint8 *utf8str, long ucolor,
                           enum graphics_sets which_set);
-int set_map_u(glyph_map *gm, const uint8 *utf8str, long ucolor);
+int set_map_u(glyph_map *gm, uint32 utf32ch, const uint8 *utf8str, long ucolor);
 #endif /* ENHANCED_SYMBOLS */
 
 /* ### vault.c ### */

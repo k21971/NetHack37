@@ -69,7 +69,7 @@ extern void msmsg(const char *, ...);
 #define AVTC_SOUND_PLAY    4
 #endif
 
-#ifdef HANGUP_HANDLING
+#ifdef HANGUPHANDLING
 /*
  * NetHack's core switches to a dummy windowing interface when it
  * detects SIGHUP, but that's no help for any interface routine which
@@ -91,10 +91,10 @@ extern void msmsg(const char *, ...);
         if (g.program_state.done_hup)           \
             return (RES);                       \
     } while (0)
-#else /* !HANGUP_HANDLING */
+#else /* !HANGUPHANDLING */
 #define HUPSKIP() /*empty*/
 #define HUPSKIP_RESULT(RES) /*empty*/
-#endif /* ?HANGUP_HANDLING */
+#endif /* ?HANGUPHANDLING */
 
 /* Interface definition, for windows.c */
 struct window_procs tty_procs = {
@@ -3421,7 +3421,7 @@ tty_select_menu(winid window, int how, menu_item **menu_list)
 char
 tty_message_menu(char let, int how, const char *mesg)
 {
-    HUPSKIP();
+    HUPSKIP_RESULT('\033');
     /* "menu" without selection; use ordinary pline, no more() */
     if (how == PICK_NONE) {
         pline("%s", mesg);
