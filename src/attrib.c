@@ -192,6 +192,7 @@ adjattrib(
     return TRUE;
 }
 
+/* strength gain */
 void
 gainstr(struct obj *otmp, int incr, boolean givemsg)
 {
@@ -209,31 +210,49 @@ gainstr(struct obj *otmp, int incr, boolean givemsg)
                      givemsg ? -1 : 1);
 }
 
-/* may kill you; cause may be poison or monster like 'a' */
+/* strength loss, may kill you; cause may be poison or monster like 'a' */
 void
-losestr(int num)
+losestr(int num, const char *knam, schar k_format)
 {
     int uhpmin = minuhpmax(1), olduhpmax = u.uhpmax;
-    int ustr = ABASE(A_STR) - num;
+    int ustr = ABASE(A_STR) - num, amt, dmg;
 
-    while (ustr < 3) {
+    dmg = 0;
+    while (ustr < ATTRMIN(A_STR)) {
         ++ustr;
         --num;
+        amt = rn1(4, 3); /* (0..(4-1))+3 => 3..6; used to use flat 6 here */
+        dmg += amt;
         if (Upolyd) {
-            u.mh -= 6;
-            u.mhmax -= 6;
+            u.mhmax -= min(amt, u.mhmax - 1);
         } else {
-            u.uhp -= 6;
-            setuhpmax(u.uhpmax - 6);
+            setuhpmax(u.uhpmax - amt);
         }
         g.context.botl = TRUE;
     }
+    if (dmg) {
+        /* in case damage is fatal and caller didn't supply killer reason */
+        if (!knam || !*knam) {
+            knam = "terminal frailty";
+            k_format = KILLED_BY;
+        }
+        losehp(dmg, knam, k_format);
+    }
+
     if (u.uhpmax < uhpmin) {
         setuhpmax(min(olduhpmax, uhpmin));
         if (!Drain_resistance)
             losexp(NULL); /* won't be fatal when no 'drainer' is supplied */
     }
     (void) adjattrib(A_STR, -num, 1);
+}
+
+/* combined strength loss and damage from some poisons */
+void
+poison_strdmg(int strloss, int dmg, const char *knam, schar k_format)
+{
+    losestr(strloss, knam, k_format);
+    losehp(dmg, knam, k_format);
 }
 
 static const struct poison_effect_message {

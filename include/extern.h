@@ -114,7 +114,8 @@ extern struct obj *has_magic_key(struct monst *);
 
 extern boolean adjattrib(int, int, int);
 extern void gainstr(struct obj *, int, boolean);
-extern void losestr(int);
+extern void losestr(int, const char *, schar);
+extern void poison_strdmg(int, int, const char *, schar);
 extern void poisontell(int, boolean);
 extern void poisoned(const char *, int, const char *, int, boolean);
 extern void change_luck(schar);
@@ -776,6 +777,7 @@ extern void set_tin_variety(struct obj *, int);
 extern int tin_variety_txt(char *, int *);
 extern void tin_details(struct obj *, int, char *);
 extern boolean Popeye(int);
+extern int Finish_digestion(void);
 
 /* ### end.c ### */
 
@@ -985,7 +987,7 @@ extern int monster_nearby(void);
 extern void end_running(boolean);
 extern void nomul(int);
 extern void unmul(const char *);
-extern void losehp(int, const char *, boolean);
+extern void losehp(int, const char *, schar);
 extern int weight_cap(void);
 extern int inv_weight(void);
 extern int near_capacity(void);
