@@ -193,7 +193,6 @@ static NEARDATA const char *msgwind[][3] = { /* 'msg_window' settings */
 #endif
 /* autounlock settings */
 static NEARDATA const char *unlocktypes[][2] = {
-    { "none",      "" },
     { "untrap",    "(might fail)" },
     { "apply-key", "" },
     { "kick",      "(doors only)" },
@@ -776,22 +775,23 @@ optfn_autounlock(
         newflags = 0;
         sep = index(op, '+') ? '+' : ' ';
         while (op) {
+            boolean matched = FALSE;
             op = trimspaces(op); /* might have leading space */
             if ((nxt = index(op, sep)) != 0) {
                 *nxt++ = '\0';
                 op = trimspaces(op); /* might have trailing space after
                                       * plus sign removal */
             }
-            for (i = 0; i < SIZE(unlocktypes); ++i)
-                if (!strncmpi(op, unlocktypes[i][0], Strlen(op))
+            if (str_start_is("none", op, TRUE))
+                negated = TRUE, matched = TRUE;
+            for (i = 0; i < SIZE(unlocktypes) && !matched; ++i) {
+                if (str_start_is(unlocktypes[i][0], op, TRUE)
                     /* fuzzymatch() doesn't match leading substrings but
                        this allows "apply_key" and "applykey" to match
                        "apply-key"; "apply key" too if part of foo+bar */
                     || fuzzymatch(op, unlocktypes[i][0], " -_", TRUE)) {
+                    matched = TRUE;
                     switch (*op) {
-                    case 'n':
-                        negated = TRUE;
-                        break;
                     case 'u':
                         newflags |= AUTOUNLOCK_UNTRAP;
                         break;
@@ -805,11 +805,16 @@ optfn_autounlock(
                         newflags |= AUTOUNLOCK_FORCE;
                         break;
                     default:
-                        config_error_add("Invalid value for \"%s\": \"%s\"",
-                                         allopt[optidx].name, op);
-                        return optn_silenterr;
+                        matched = FALSE;
+                        break;
                     }
                 }
+            }
+            if (!matched) {
+                config_error_add("Invalid value for \"%s\": \"%s\"",
+                                 allopt[optidx].name, op);
+                return optn_silenterr;
+            }
             op = nxt;
         }
         if (negated && newflags != 0) {
@@ -832,13 +837,13 @@ optfn_autounlock(
 
             *opts = '\0';
             if (flags.autounlock & AUTOUNLOCK_UNTRAP)
-                Sprintf(eos(opts), "%s%s", p, unlocktypes[1][0]), p = plus;
+                Sprintf(eos(opts), "%s%s", p, unlocktypes[0][0]), p = plus;
             if (flags.autounlock & AUTOUNLOCK_APPLY_KEY)
-                Sprintf(eos(opts), "%s%s", p, unlocktypes[2][0]), p = plus;
+                Sprintf(eos(opts), "%s%s", p, unlocktypes[1][0]), p = plus;
             if (flags.autounlock & AUTOUNLOCK_KICK)
-                Sprintf(eos(opts), "%s%s", p, unlocktypes[3][0]), p = plus;
+                Sprintf(eos(opts), "%s%s", p, unlocktypes[2][0]), p = plus;
             if (flags.autounlock & AUTOUNLOCK_FORCE)
-                Sprintf(eos(opts), "%s%s", p, unlocktypes[4][0]); /*no more p*/
+                Sprintf(eos(opts), "%s%s", p, unlocktypes[3][0]); /*no more p*/
         }
         return optn_ok;
     }
@@ -4856,43 +4861,26 @@ handler_autounlock(int optidx)
     for (i = 0; i < SIZE(unlocktypes); ++i) {
         Sprintf(buf, "%-10.10s%c%.40s",
                 unlocktypes[i][0], sep, unlocktypes[i][1]);
-        presel = !i ? !flags.autounlock : (flags.autounlock & (1 << (i - 1)));
+        presel = (flags.autounlock & (1 << i));
         any.a_int = i + 1;
         add_menu(tmpwin, &nul_glyphinfo, &any, *unlocktypes[i][0], 0,
                  ATR_NONE, clr, buf,
-                 ((presel ? MENU_ITEMFLAGS_SELECTED : MENU_ITEMFLAGS_NONE)
-                  | (!i ? MENU_ITEMFLAGS_SKIPINVERT : 0)));
+                 (presel ? MENU_ITEMFLAGS_SELECTED : MENU_ITEMFLAGS_NONE));
     }
     Sprintf(buf, "Select '%.20s' actions:", optname);
     end_menu(tmpwin, buf);
     n = select_menu(tmpwin, PICK_ANY, &window_pick);
     if (n > 0) {
-        int k;
-        boolean wasnone = !flags.autounlock;
-        unsigned newflags = 0, noflags = 0;
+        unsigned newflags = 0;
 
-        for (i = 0; i < n; ++i) {
-            k = window_pick[i].item.a_int - 1;
-            if (k)
-                newflags |= (1 << (k - 1));
-            else
-                noflags = 1;
-        }
-        /* wasnone: 'none' is preselected;
-           !wasnone: don't force it to be unselected */
-        if (newflags && noflags && !wasnone) {
-            config_error_add(
-                     "Invalid value combination for \"%s\": 'none' with some",
-                             optname);
-            res = optn_silenterr;
-        } else {
-            flags.autounlock = newflags;
-        }
+        for (i = 0; i < n; ++i)
+            newflags |= (1 << (window_pick[i].item.a_int - 1));
+        flags.autounlock = newflags;
         free((genericptr_t) window_pick);
     } else if (n == 0) { /* nothing was picked but menu wasn't cancelled */
         /* something that was preselected got unselected, leaving nothing;
-           treat that as picking 'none' (even though 'none' might be what
-           got unselected) */
+           treat that as picking 'none' (even though 'none' is no longer
+           among the choices) */
         flags.autounlock = 0;
     }
     destroy_nhwindow(tmpwin);
@@ -5715,8 +5703,8 @@ handler_verbose(int optidx)
                 flags.verbose = !flags.verbose;
             } else {
                 Sprintf(buf,
-                    "Set verbose_suppressor[%d] (%ld) to what new decimal value ?",
-                    j, verbosity_suppressions[j]);
+               "Set verbose_suppressor[%d] (%ld) to what new decimal value ?",
+                        j, verbosity_suppressions[j]);
                 abuf[0] = '\0';
                 getlin(buf, abuf);
                 if (abuf[0] == '\033')
@@ -8254,23 +8242,11 @@ doset(void) /* changing options via menu by Per Liboriussen */
              "Compounds (selecting will prompt for new value):",
              MENU_ITEMFLAGS_NONE);
 
-    /* deliberately put playmode, name, role+race+gender+align first */
-    doset_add_menu(tmpwin, "playmode", fmtstr_doset, opt_playmode, 0);
-    doset_add_menu(tmpwin, "name", fmtstr_doset, opt_name, 0);
-    doset_add_menu(tmpwin, "role", fmtstr_doset, opt_role, 0);
-    doset_add_menu(tmpwin, "race", fmtstr_doset, opt_race, 0);
-    doset_add_menu(tmpwin, "gender", fmtstr_doset, opt_gender, 0);
-    doset_add_menu(tmpwin, "align", fmtstr_doset, opt_align, 0);
-
     for (pass = startpass; pass <= endpass; pass++)
         for (i = 0; (name = allopt[i].name) != 0; i++) {
             if (allopt[i].opttyp != CompOpt)
                 continue;
             if ((int) allopt[i].setwhere == pass) {
-                if (!strcmp(name, "playmode")  || !strcmp(name, "name")
-                    || !strcmp(name, "role")   || !strcmp(name, "race")
-                    || !strcmp(name, "gender") || !strcmp(name, "align"))
-                    continue;
                 if ((is_wc_option(name) && !wc_supported(name))
                     || (is_wc2_option(name) && !wc2_supported(name)))
                     continue;
@@ -8344,6 +8320,9 @@ doset(void) /* changing options via menu by Per Liboriussen */
                     reslt = (*allopt[k].optfn)(allopt[k].idx, do_handler,
                                                FALSE, empty_optstr,
                                                empty_optstr);
+                    /* if player eventually saves options, include this one */
+                    if (reslt == optn_ok)
+                        opt_set_in_config[k] = TRUE;
                 } else {
                     char abuf[BUFSZ];
 
@@ -9006,7 +8985,8 @@ all_options_strbuf(strbuf_t *sbuf)
                - verbose */
             buf2 = get_option_value(name, TRUE);
             if (buf2) {
-                Sprintf(tmp, "OPTIONS=%s:%s\n", name, buf2);
+                Snprintf(tmp, sizeof tmp - 1, "OPTIONS=%s:%s", name, buf2);
+                Strcat(tmp, "\n"); /* guaranteed to fit */
                 strbuf_append(sbuf, tmp);
             }
             break;

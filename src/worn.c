@@ -258,10 +258,10 @@ mon_set_minvis(struct monst *mon)
 }
 
 void
-mon_adjust_speed(struct monst *mon,
-                 int adjust,      /* positive => increase speed, negative =>
-                                     decrease */
-                 struct obj *obj) /* item to make known if effect can be seen */
+mon_adjust_speed(
+    struct monst *mon,
+    int adjust,        /* positive => increase speed, negative => decrease */
+    struct obj *obj)   /* item to make known if effect can be seen */
 {
     struct obj *otmp;
     boolean give_msg = !g.in_mklev, petrify = FALSE;
@@ -345,10 +345,9 @@ mon_adjust_speed(struct monst *mon,
      ? (POISON_RES + ACID_RES - objects[(o)->otyp].oc_oprop)    \
      : 0)
 
-/* armor put on or taken off; might be magical variety
-   [TODO: rename to 'update_mon_extrinsics()' and change all callers...] */
+/* armor put on or taken off; might be magical variety */
 void
-update_mon_intrinsics(
+update_mon_extrinsics(
     struct monst *mon,
     struct obj *obj,   /* armor being worn or taken off */
     boolean on,
@@ -533,6 +532,8 @@ find_mac(struct monst *mon)
 void
 m_dowear(struct monst *mon, boolean creation)
 {
+    boolean can_wear_armor;
+
 #define RACE_EXCEPTION TRUE
     /* Note the restrictions here are the same as in dowear in do_wear.c
      * except for the additional restriction on intelligence.  (Players
@@ -548,12 +549,15 @@ m_dowear(struct monst *mon, boolean creation)
         return;
 
     m_dowear_type(mon, W_AMUL, creation, FALSE);
+    can_wear_armor = !cantweararm(mon->data); /* for suit, cloak, shirt */
     /* can't put on shirt if already wearing suit */
-    if (!cantweararm(mon->data) && !(mon->misc_worn_check & W_ARM))
+    if (can_wear_armor && !(mon->misc_worn_check & W_ARM))
         m_dowear_type(mon, W_ARMU, creation, FALSE);
-    /* treating small as a special case allows
-       hobbits, gnomes, and kobolds to wear cloaks */
-    if (!cantweararm(mon->data) || mon->data->msize == MZ_SMALL)
+    /* WrappingAllowed() makes any size between small and huge eligible;
+       treating small as a special case allows hobbits, gnomes, and
+       kobolds to wear all cloaks; large and huge allows giants and such
+       to wear mummy wrappings but not other cloaks */
+    if (can_wear_armor || WrappingAllowed(mon->data))
         m_dowear_type(mon, W_ARMC, creation, FALSE);
     m_dowear_type(mon, W_ARMH, creation, FALSE);
     if (!MON_WEP(mon) || !bimanual(MON_WEP(mon)))
@@ -561,15 +565,19 @@ m_dowear(struct monst *mon, boolean creation)
     m_dowear_type(mon, W_ARMG, creation, FALSE);
     if (!slithy(mon->data) && mon->data->mlet != S_CENTAUR)
         m_dowear_type(mon, W_ARMF, creation, FALSE);
-    if (!cantweararm(mon->data))
+    if (can_wear_armor)
         m_dowear_type(mon, W_ARM, creation, FALSE);
     else
         m_dowear_type(mon, W_ARM, creation, RACE_EXCEPTION);
 }
 
 static void
-m_dowear_type(struct monst *mon, long flag, boolean creation,
-              boolean racialexception)
+m_dowear_type(
+    struct monst *mon,
+    long flag,               /* wornmask value */
+    boolean creation,
+    boolean racialexception) /* small monsters that are allowed for player
+                              * races (gnomes) can wear suits */
 {
     struct obj *old, *best, *obj;
     long oldmask = 0L;
@@ -614,6 +622,14 @@ m_dowear_type(struct monst *mon, long flag, boolean creation,
             break;
         case W_ARMC:
             if (!is_cloak(obj))
+                continue;
+            /* mummy wrapping is only cloak allowed when bigger than human */
+            if (mon->data->msize > MZ_HUMAN && obj->otyp != MUMMY_WRAPPING)
+                continue;
+            /* avoid mummy wrapping if it will allow hero to see mon (unless
+               this is a new mummy; an invisible one is feasible via ^G) */
+            if (mon->minvis && w_blocks(obj, W_ARMC) == INVIS
+                && !See_invisible && !creation)
                 continue;
             break;
         case W_ARMH:
@@ -702,7 +718,7 @@ m_dowear_type(struct monst *mon, long flag, boolean creation,
             mon->mcanmove = 0;
     }
     if (old) {
-        update_mon_intrinsics(mon, old, FALSE, creation);
+        update_mon_extrinsics(mon, old, FALSE, creation);
 
         /* owornmask was cleared above but artifact_light() expects it */
         old->owornmask = oldmask;
@@ -732,14 +748,15 @@ m_dowear_type(struct monst *mon, long flag, boolean creation,
                 pline("%s is shining %s.", Something, adesc);
         }
     }
-    update_mon_intrinsics(mon, best, TRUE, creation);
+    update_mon_extrinsics(mon, best, TRUE, creation);
     /* if couldn't see it but now can, or vice versa, */
     if (!creation && (sawmon ^ canseemon(mon))) {
         if (mon->minvis && !See_invisible) {
             pline("Suddenly you cannot see %s.", nambuf);
             makeknown(best->otyp);
-        } /* else if (!mon->minvis)
-           *     pline("%s suddenly appears!", Amonnam(mon)); */
+        /* } else if (!mon->minvis) {
+         *     pline("%s suddenly appears!", Amonnam(mon)); */
+        }
     }
 }
 #undef RACE_EXCEPTION
@@ -931,7 +948,9 @@ mon_break_armor(struct monst *mon, boolean polyspot)
                 You_hear("a cracking sound.");
             m_useup(mon, otmp);
         }
-        if ((otmp = which_armor(mon, W_ARMC)) != 0) {
+        if ((otmp = which_armor(mon, W_ARMC)) != 0
+            /* mummy wrapping adapts to small and very big sizes */
+            && (otmp->otyp != MUMMY_WRAPPING || !WrappingAllowed(mdat))) {
             if (otmp->oartifact) {
                 if (vis)
                     pline("%s %s falls off!", s_suffix(Monnam(mon)),
@@ -969,7 +988,9 @@ mon_break_armor(struct monst *mon, boolean polyspot)
                 bypass_obj(otmp);
             m_lose_armor(mon, otmp);
         }
-        if ((otmp = which_armor(mon, W_ARMC)) != 0) {
+        if ((otmp = which_armor(mon, W_ARMC)) != 0
+            /* mummy wrapping adapts to small and very big sizes */
+            && (otmp->otyp != MUMMY_WRAPPING || !WrappingAllowed(mdat))) {
             if (vis) {
                 if (is_whirly(mon->data))
                     pline("%s %s falls, unsupported!", s_suffix(Monnam(mon)),
@@ -1114,9 +1135,9 @@ void
 extract_from_minvent(
     struct monst *mon,
     struct obj *obj,
-    boolean do_intrinsics,  /* whether to call update_mon_intrinsics */
+    boolean do_extrinsics,  /* whether to call update_mon_extrinsics */
     boolean silently)       /* doesn't affect all possible messages,
-                             * just update_mon_intrinsics's */
+                             * just update_mon_extrinsics's */
 {
     long unwornmask = obj->owornmask;
 
@@ -1139,8 +1160,8 @@ extract_from_minvent(
     obj_extract_self(obj);
     obj->owornmask = 0L;
     if (unwornmask) {
-        if (!DEADMONSTER(mon) && do_intrinsics) {
-            update_mon_intrinsics(mon, obj, FALSE, silently);
+        if (!DEADMONSTER(mon) && do_extrinsics) {
+            update_mon_extrinsics(mon, obj, FALSE, silently);
         }
         mon->misc_worn_check &= ~unwornmask;
         /* give monster a chance to wear other equipment on its next

@@ -810,7 +810,7 @@ extern void cant_reach_floor(coordxy, coordxy, boolean, boolean);
 extern const char *surface(coordxy, coordxy);
 extern const char *ceiling(coordxy, coordxy);
 extern struct engr *engr_at(coordxy, coordxy);
-extern boolean sengr_at(const char *, coordxy, coordxy, boolean);
+extern struct engr *sengr_at(const char *, coordxy, coordxy, boolean);
 extern void u_wipe_engr(int);
 extern void wipe_engr_at(coordxy, coordxy, xint16, boolean);
 extern void read_engr_at(coordxy, coordxy);
@@ -2161,6 +2161,7 @@ extern void change_sex(void);
 extern void livelog_newform(boolean, int, int);
 extern void polyself(int);
 extern int polymon(int);
+extern schar uasmon_maxStr(void);
 extern void rehumanize(void);
 extern int dobreathe(void);
 extern int dospit(void);
@@ -2407,14 +2408,15 @@ extern void rigid_role_checks(void);
 extern boolean setrolefilter(const char *);
 extern boolean gotrolefilter(void);
 extern void clearrolefilter(void);
-extern char *build_plselection_prompt(char *, int, int, int, int, int);
 extern char *root_plselection_prompt(char *, int, int, int, int, int);
+extern char *build_plselection_prompt(char *, int, int, int, int, int);
 extern void plnamesuffix(void);
 extern void role_selection_prolog(int, winid);
 extern void role_menu_extra(int, winid, boolean);
 extern void role_init(void);
 extern const char *Hello(struct monst *);
 extern const char *Goodbye(void);
+extern const struct Race *character_race(short);
 
 /* ### rumors.c ### */
 
@@ -3376,7 +3378,7 @@ extern struct obj *wearmask_to_obj(long);
 extern long wearslot(struct obj *);
 extern void mon_set_minvis(struct monst *);
 extern void mon_adjust_speed(struct monst *, int, struct obj *);
-extern void update_mon_intrinsics(struct monst *, struct obj *, boolean,
+extern void update_mon_extrinsics(struct monst *, struct obj *, boolean,
                                   boolean);
 extern int find_mac(struct monst *);
 extern void m_dowear(struct monst *, boolean);

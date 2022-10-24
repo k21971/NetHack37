@@ -266,14 +266,16 @@ cause_known(
 
 /* format a characteristic value, accommodating Strength's strangeness */
 static char *
-attrval(int attrindx, int attrvalue,
-        char resultbuf[]) /* should be at least [7] to hold "18/100\0" */
+attrval(
+    int attrindx,
+    int attrvalue,
+    char resultbuf[]) /* should be at least [7] to hold "18/100\0" */
 {
     if (attrindx != A_STR || attrvalue <= 18)
         Sprintf(resultbuf, "%d", attrvalue);
     else if (attrvalue > STR18(100)) /* 19 to 25 */
         Sprintf(resultbuf, "%d", attrvalue - 100);
-    else /* simplify "18/ **" to be "18/100" */
+    else /* simplify "18/\**" to be "18/100" */
         Sprintf(resultbuf, "18/%02d", attrvalue - 18);
     return resultbuf;
 }
@@ -722,17 +724,28 @@ basics_enlightenment(int mode UNUSED, int final)
                 (u.uac < 0) ? "best" : "worst");
     enl_msg("Your armor class ", "is ", "was ", buf, "");
 
-    /* gold; similar to doprgold(#seegold) but without shop billing info;
-       same amount as shown on status line which ignores container contents */
+    /* gold; similar to doprgold (#showgold) but without shop billing info;
+       includes container contents, unlike status line but like doprgold */
     {
-        static const char Your_wallet[] = "Your wallet ";
-        long umoney = money_cnt(g.invent);
+        long umoney = money_cnt(g.invent), hmoney = hidden_gold(final);
 
         if (!umoney) {
-            enl_msg(Your_wallet, "is ", "was ", "empty", "");
+            Sprintf(buf, " Your wallet %s empty", !final ? "is" : "was");
         } else {
-            Sprintf(buf, "%ld %s", umoney, currency(umoney));
-            enl_msg(Your_wallet, "contains ", "contained ", buf, "");
+            Sprintf(buf, " Your wallet contain%s %ld %s", !final ? "s" : "ed",
+                    umoney, currency(umoney));
+        }
+        /* terminate the wallet line if appropriate, otherwise add an
+           introduction to subsequent continuation; output now either way */
+        Strcat(buf, !hmoney ? "." : !umoney ? ", but" : ", and");
+        enlght_out(buf);
+
+        /* put contained gold on its own line to avoid excessive width; it's
+           phrased as a continuation of the wallet line so not capitalized */
+        if (hmoney) {
+            Sprintf(buf, "%ld %s stashed away in your pack",
+                    hmoney, umoney ? "more" : currency(hmoney));
+            enl_msg("you ", "have ", "had ", buf, "");
         }
     }
 

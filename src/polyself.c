@@ -683,7 +683,7 @@ polymon(int mntmp)
     char buf[BUFSZ];
     boolean sticky = sticks(g.youmonst.data) && u.ustuck && !u.uswallow,
             was_blind = !!Blind, dochange = FALSE;
-    int mlvl;
+    int mlvl, newMaxStr;
 
     if (g.mvitals[mntmp].mvflags & G_GENOD) { /* allow G_EXTINCT */
         You_feel("rather %s-ish.",
@@ -760,33 +760,16 @@ polymon(int mntmp)
     /* New stats for monster, to last only as long as polymorphed.
      * Currently only strength gets changed.
      */
-    if (strongmonst(&mons[mntmp]) && !is_elf(&mons[mntmp])) {
-        /* ettins, titans and minotaurs don't pass the is_giant() test;
-           giant mummies and giant zombies do but we throttle those;
-           Lord Surtur and Cyclops pass the test but can't be poly'd into */
-        boolean live_H = is_giant(&mons[mntmp]) && !is_undead(&mons[mntmp]);
-        int newStr = live_H ? STR19(19) : STR18(100);
-
-        /* hero orcs are limited to 18/50 for maximum strength, so treat
-           hero poly'd into an orc the same; goblins, orc shamans, and orc
-           zombies don't have strongmonst() attribute so won't get here;
-           hobgoblins and orc mummies do get here and are limited to 18/50
-           like normal orcs; however, Uruk-hai retain 18/100 strength;
-           hero gnomes are also limited to 18/50; hero elves are limited to
-           18/00 so we treat strongmonst elves (elf-noble, elven monarch)
-           as if they're not (in 'if' above, so they don't get here) */
-        if ((is_orc(&mons[mntmp])
-             && !strstri(pmname(&mons[mntmp], NEUTRAL), "Uruk"))
-            || is_gnome(&mons[mntmp]))
-            newStr = STR18(50);
-
-        ABASE(A_STR) = AMAX(A_STR) = newStr;
+    newMaxStr = uasmon_maxStr();
+    if (strongmonst(&mons[mntmp])) {
+        ABASE(A_STR) = AMAX(A_STR) = (schar) newMaxStr;
     } else {
         /* not a strongmonst(); if hero has exceptional strength, remove it
            (note: removal is temporary until returning to original form);
            we don't attempt to enforce lower maximum for wimpy forms;
-           we do avoid boosting current strength to 18 if presently less */
-        AMAX(A_STR) = 18; /* same as STR18(0) */
+           unlike for strongmonst, current strength does not get set to max */
+        AMAX(A_STR) = (schar) newMaxStr;
+        /* make sure current is not higher than max (strip exceptional Str) */
         if (ABASE(A_STR) > AMAX(A_STR))
             ABASE(A_STR) = AMAX(A_STR);
     }
@@ -981,6 +964,54 @@ polymon(int mntmp)
     return 1;
 }
 
+/* determine hero's temporary strength value used while polymorphed;
+   hero poly'd into M2_STRONG monster usually gets 18/100 strength but
+   there are exceptions; non-M2_STRONG get maximum strength set to 18 */
+schar
+uasmon_maxStr(void)
+{
+    const struct Race *R;
+    int newMaxStr;
+    int mndx = u.umonnum;
+    struct permonst *ptr = &mons[mndx];
+
+    if (is_orc(ptr)) {
+        if (mndx != PM_URUK_HAI)
+            mndx = PM_ORC;
+    } else if (is_elf(ptr)) {
+        mndx = PM_ELF;
+    } else if (is_dwarf(ptr)) {
+        mndx = PM_DWARF;
+    } else if (is_gnome(ptr)) {
+        mndx = PM_GNOME;
+#if 0   /* use the mons[] value for humans */
+    } else if (is_human(ptr)) {
+        mndx = PM_HUMAN;
+#endif
+    }
+    R = character_race(mndx);
+
+    if (strongmonst(ptr)) {
+        /* ettins, titans and minotaurs don't pass the is_giant() test;
+           giant mummies and giant zombies do but we throttle those */
+        boolean live_H = is_giant(ptr) && !is_undead(ptr);
+
+        /* hero orcs are limited to 18/50 for maximum strength, so treat
+           hero poly'd into an orc the same; goblins, orc shamans, and orc
+           zombies don't have strongmonst() attribute so won't get here;
+           hobgoblins and orc mummies do get here and are limited to 18/50
+           like normal orcs; however, Uruk-hai retain 18/100 strength;
+           hero gnomes are also limited to 18/50; hero elves are limited
+           to 18/00 regardless of whether they're strongmonst, but the two
+           strongmonst types (monarchs and nobles) have current strength
+           set to 18 [by polymon()], the others don't */
+        newMaxStr = R ? R->attrmax[A_STR] : live_H ? STR19(19) : STR18(100);
+    } else {
+        newMaxStr = R ? R->attrmax[A_STR] : 18; /* 18 is same as STR18(0) */
+    }
+    return (schar) newMaxStr;
+}
+
 /* dropx() jacket for break_armor() */
 static void
 dropp(struct obj *obj)
@@ -1011,8 +1042,9 @@ static void
 break_armor(void)
 {
     register struct obj *otmp;
+    struct permonst *uptr = g.youmonst.data;
 
-    if (breakarm(g.youmonst.data)) {
+    if (breakarm(uptr)) {
         if ((otmp = uarm) != 0) {
             if (donning(otmp))
                 cancel_don();
@@ -1026,7 +1058,9 @@ break_armor(void)
             (void) Armor_gone();
             useup(otmp);
         }
-        if ((otmp = uarmc) != 0) {
+        if ((otmp = uarmc) != 0
+            /* mummy wrapping adapts to small and very big sizes */
+            && (otmp->otyp != MUMMY_WRAPPING || !WrappingAllowed(uptr))) {
             if (otmp->oartifact) {
                 Your("%s falls off!", cloak_simple_name(otmp));
                 (void) Cloak_off();
@@ -1041,7 +1075,7 @@ break_armor(void)
             Your("shirt rips to shreds!");
             useup(uarmu);
         }
-    } else if (sliparm(g.youmonst.data)) {
+    } else if (sliparm(uptr)) {
         if ((otmp = uarm) != 0 && racial_exception(&g.youmonst, otmp) < 1) {
             if (donning(otmp))
                 cancel_don();
@@ -1053,8 +1087,10 @@ break_armor(void)
             (void) Armor_gone();
             dropp(otmp);
         }
-        if ((otmp = uarmc) != 0) {
-            if (is_whirly(g.youmonst.data))
+        if ((otmp = uarmc) != 0
+            /* mummy wrapping adapts to small and very big sizes */
+            && (otmp->otyp != MUMMY_WRAPPING || !WrappingAllowed(uptr))) {
+            if (is_whirly(uptr))
                 Your("%s falls, unsupported!", cloak_simple_name(otmp));
             else
                 You("shrink out of your %s!", cloak_simple_name(otmp));
@@ -1062,7 +1098,7 @@ break_armor(void)
             dropp(otmp);
         }
         if ((otmp = uarmu) != 0) {
-            if (is_whirly(g.youmonst.data))
+            if (is_whirly(uptr))
                 You("seep right through your shirt!");
             else
                 You("become much too small for your shirt!");
@@ -1070,13 +1106,13 @@ break_armor(void)
             dropp(otmp);
         }
     }
-    if (has_horns(g.youmonst.data)) {
+    if (has_horns(uptr)) {
         if ((otmp = uarmh) != 0) {
             if (is_flimsy(otmp) && !donning(otmp)) {
                 char hornbuf[BUFSZ];
 
                 /* Future possibilities: This could damage/destroy helmet */
-                Sprintf(hornbuf, "horn%s", plur(num_horns(g.youmonst.data)));
+                Sprintf(hornbuf, "horn%s", plur(num_horns(uptr)));
                 Your("%s %s through %s.", hornbuf, vtense(hornbuf, "pierce"),
                      yname(otmp));
             } else {
@@ -1089,7 +1125,7 @@ break_armor(void)
             }
         }
     }
-    if (nohands(g.youmonst.data) || verysmall(g.youmonst.data)) {
+    if (nohands(uptr) || verysmall(uptr)) {
         if ((otmp = uarmg) != 0) {
             if (donning(otmp))
                 cancel_don();
@@ -1114,16 +1150,16 @@ break_armor(void)
             dropp(otmp);
         }
     }
-    if (nohands(g.youmonst.data) || verysmall(g.youmonst.data)
-        || slithy(g.youmonst.data) || g.youmonst.data->mlet == S_CENTAUR) {
+    if (nohands(uptr) || verysmall(uptr)
+        || slithy(uptr) || uptr->mlet == S_CENTAUR) {
         if ((otmp = uarmf) != 0) {
             if (donning(otmp))
                 cancel_don();
-            if (is_whirly(g.youmonst.data))
+            if (is_whirly(uptr))
                 Your("boots fall away!");
             else
                 Your("boots %s off your feet!",
-                     verysmall(g.youmonst.data) ? "slide" : "are pushed");
+                     verysmall(uptr) ? "slide" : "are pushed");
             (void) Boots_off();
             dropp(otmp);
         }
@@ -1132,7 +1168,7 @@ break_armor(void)
        it/them on (should also come off if head is too tiny or too huge,
        but putting accessories on doesn't reject those cases [yet?]);
        amulet stays worn */
-    if ((otmp = ublindf) != 0 && !has_head(g.youmonst.data)) {
+    if ((otmp = ublindf) != 0 && !has_head(uptr)) {
         int l;
         const char *eyewear = simpleonames(otmp); /* blindfold|towel|lenses */
 
