@@ -84,7 +84,7 @@ ENTRYMAX=2000
 #PERS_IS_UID=1
 
 # Maximum number of score file entries to use for random statue names
-#MAX_STATUENAME_RANK=10
+MAX_STATUENAME_RANK=50
 
 # Use "Live logging" for important events (achievements, wishes, etc)
 # Only available if NetHack was compiled with LIVELOG.
