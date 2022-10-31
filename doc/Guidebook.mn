@@ -36,7 +36,7 @@
 .ds f0 "\*(vr
 .ds f1
 .\"DO NOT REMOVE NH_DATESUB .ds f2 "DATE(%B %-d, %Y)
-.ds f2 "September 08, 2022
+.ds f2 "October 27, 2022
 .
 .\" A note on some special characters:
 .\" \(lq = left double quote
@@ -1560,9 +1560,9 @@ configuration file.
 Use the shell command \(oq\f(CRexit\fP\(cq to return to the game.
 Default key is \(oq!\(cq.
 .lp "#showgold"
-Report the gold in your inventory and if you are inside a shop,
-report any credit or debt you have in that shop.
-Does not report on any gold inside containers you're carrying.
+Report the gold in your inventory, including gold you know about in
+containers you're carrying.  If you are inside a shop, report any credit
+or debt you have in that shop.
 Default key is \(oq$\(cq.
 .lp #showspells
 List and reorder known spells.
@@ -1812,7 +1812,7 @@ On other systems, if typing \(lqAlt\(rq plus another key transmits a
 two character sequence consisting of an \fBEscape\fP
 followed by the other key, you may set the
 .op altmeta
-option to have NetHack combine them into meta+key.
+option to have NetHack combine them into meta+<key>.
 (This combining action only takes place when NetHack is expecting a
 command to execute, not when accepting input to name something or to
 make a wish.)
@@ -1821,7 +1821,7 @@ Unlike control characters, where \(hax and \(haX denote the same thing,
 meta characters are case-sensitive:  M-x and M-X represent different things.
 Some commands which can be run via a meta character require that the
 letter be capitalized because the lower-case equivalent is used for
-another command, so the three key combination meta+shift+letter is needed.
+another command, so the three key combination meta+Shift+<letter> is needed.
 .BR 1
 .
 .lp M-?
@@ -2003,18 +2003,21 @@ Other traps can send you to different locations.
 Teleporters send you elsewhere on the same dungeon level.
 Level teleporters send you to a random dungeon level, the destination
 chosen from a few levels lower all the way to the top.
+These traps choose a new destination each time they're activated.
 Trap doors and holes also send you to another level, but one which is
 always below the current level.
 Usually that will be the next level down but it can be farther.
-All of these traps choose a new destination each time they're activated.
-Magic portals also send you to a different level but behave differently.
+Unlike (level) teleporters, the destination level of a particular trap door
+or hole is persistent, so falling into one will bring you to the same level
+each time\(emthough not necessarily the same spot on the level.
+Magic portals behave similarly, but with some additional variation.
 Some portals are two-way and their remote destination is always the same:
 another portal which can take you back.
 Others are one-way and send you to a specific destination level but not
 necessarily to a specific location there.
 .pg
 There is a special multi-level branch of the dungeon with pre-mapped levels
-based on the classic computer game \(lqSokoban.\(rq
+based on the classic computer game \(lq\fISokoban\fP.\(rq
 In that game, you operate as a warehouse worker who pushes crates around
 obstacles to position them at designated locations.
 In NetHack, the goal is to push boulders into pits or holes until those
@@ -2109,9 +2112,8 @@ where it was obtained; other shopkeepers won't honor it.
 find a \(lqcredit card\(rq in the dungeon, don't bother trying to use it in
 shops; shopkeepers will not accept it.)
 .pg
-The \(oq$\(cq command, which reports the amount of gold you are carrying
-(in inventory, not inside bags or boxes), will also show current shop
-debt or credit, if any.
+The \(oq$\(cq command, which reports the amount of gold you are carrying,
+will also show current shop debt or credit, if any.
 The \(lqIu\(rq command lists unpaid items
 (those which still belong to the shop) if you are carrying any.
 The \(lqIx\(rq command shows an inventory-like display of any unpaid
@@ -4418,7 +4420,7 @@ When pausing momentarily for display effect, such as with explosions and
 moving objects, use a timer rather than sending extra characters to the
 screen.
 (Applies to \(lqtty\(rq and \(lqcurses\(rq interfaces only; \(lqX11\(rq interface always
-uses a timer based delay.
+uses a timer-based delay.
 The default is on if configured into the program.)
 Persistent.
 .lp tombstone
@@ -5613,7 +5615,8 @@ display of the customizations, such as the Enhanced symset.
 Configuring NetHack for Play by the Blind
 .pg
 NetHack can be set up to use only standard ASCII characters for making
-maps of the dungeons. This makes the MS-DOS versions of NetHack completely
+maps of the dungeons. This makes even the MS-DOS versions of NetHack
+(which use special line-drawing characters by default) completely
 accessible to the blind who use speech and/or Braille access technologies.
 Players will require a good working knowledge of their screen-reader's
 review features, and will have to know how to navigate horizontally and

@@ -160,7 +160,7 @@ attack_checks(
 
     /* cache the shown glyph;
        cases which might change it (by placing or removing
-       'rembered, unseen monster' glyph or revealing a mimic)
+       'remembered, unseen monster' glyph or revealing a mimic)
        always return without further reference to this */
     glyph = glyph_at(g.bhitpos.x, g.bhitpos.y);
 
@@ -4611,24 +4611,31 @@ missum(
         wakeup(mdef, TRUE);
 }
 
+/* check whether equipment protects against knockback */
 static boolean
 m_is_steadfast(struct monst *mtmp)
 {
     boolean is_u = (mtmp == &g.youmonst);
     struct obj *otmp = is_u ? uwep : MON_WEP(mtmp);
 
-    /* must be on the ground */
-    if (is_u ? (Flying || Levitation)
-             : (is_flyer(mtmp->data) || is_floater(mtmp->data)))
+    /* must be on the ground (or in water) */
+    if ((is_u ? (Flying || Levitation)
+              : (is_flyer(mtmp->data) || is_floater(mtmp->data)))
+        || Is_airlevel(&u.uz) /* air or cloud */
+        || (Is_waterlevel(&u.uz) && !is_pool(u.ux, u.uy))) /* air bubble */
         return FALSE;
 
     if (is_art(otmp, ART_GIANTSLAYER))
         return TRUE;
 
-    /* steadfast if carrying any loadstone (and not floating or flying) */
-    for (otmp = is_u ? g.invent : mtmp->minvent; otmp; otmp = otmp->nobj)
-        if (otmp->otyp == LOADSTONE)
-            return TRUE;
+    /* steadfast if carrying any loadstone (and not floating or flying);
+       'is_u' test not needed here; m_carrying() is 'youmonst' aware */
+    if (m_carrying(mtmp, LOADSTONE))
+        return TRUE;
+    /* when mounted and steed is target of knockback, check the rider for
+       a loadstone too (Giantslayer's protection doesn't extend to steed) */
+    if (u.usteed && mtmp == u.usteed && carrying(LOADSTONE))
+        return TRUE;
 
     return FALSE;
 }
@@ -4642,6 +4649,7 @@ mhitm_knockback(
     int *hitflags,        /* modified if magr or mdef dies */
     boolean weapon_used)  /* True: via weapon hit */
 {
+    char magrbuf[BUFSZ], mdefbuf[BUFSZ];
     struct obj *otmp;
     boolean u_agr = (magr == &g.youmonst);
     boolean u_def = (mdef == &g.youmonst);
@@ -4686,12 +4694,21 @@ mhitm_knockback(
         return FALSE;
 
     /* steadfast defender cannot be pushed around */
-    if (m_is_steadfast(mdef))
+    if (m_is_steadfast(mdef)) {
+        if (u_def || (u.usteed && mdef == u.usteed)) {
+            mdefbuf[0] = '\0';
+            if (u.usteed)
+                Snprintf(mdefbuf, sizeof mdefbuf, "and %s ",
+                         y_monnam(u.usteed));
+            You("%sdon't budge.", mdefbuf);
+        } else if (canseemon(mdef)) {
+            pline("%s doesn't budge.", Monnam(mdef));
+        }
         return FALSE;
+    }
 
     /* give the message */
     if (u_def || canseemon(mdef)) {
-        char magrbuf[BUFSZ], mdefbuf[BUFSZ];
         boolean dosteed = u_def && u.usteed;
 
         Strcpy(magrbuf, u_agr ? "You" : Monnam(magr));
@@ -4715,10 +4732,15 @@ mhitm_knockback(
 
     /* do the actual knockback effect */
     if (u_def) {
+        /* normally dx,dy indicates direction hero is throwing, zapping, &c
+           but here it is used to pass the preferred direction for dismount
+           to dismount_steed (used for DISMOUNT_KNOCKED only) */
+        u.dx = sgn(u.ux - magr->mx); /* [sgn() is superfluous here] */
+        u.dy = sgn(u.uy - magr->my); /* [ditto] */
         if (u.usteed)
             dismount_steed(DISMOUNT_KNOCKED);
         else
-            hurtle(u.ux - magr->mx, u.uy - magr->my, rnd(2), FALSE);
+            hurtle(u.dx, u.dy, rnd(2), FALSE);
 
         set_apparxy(magr); /* update magr's idea of where you are */
         if (!rn2(4))

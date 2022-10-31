@@ -1,5 +1,5 @@
 /* NetHack 3.7	mondata.h	$NHDT-Date: 1606473485 2020/11/27 10:38:05 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.45 $ */
-/* Copyright (c) 1989 Mike Threepoint				  */
+/* Copyright (c) 1989 Mike Threepoint                             */
 /* NetHack may be freely redistributed.  See license for details. */
 
 #ifndef MONDATA_H
@@ -112,21 +112,11 @@
 #define is_shapeshifter(ptr) (((ptr)->mflags2 & M2_SHAPESHIFTER) != 0L)
 #define is_undead(ptr) (((ptr)->mflags2 & M2_UNDEAD) != 0L)
 #define is_were(ptr) (((ptr)->mflags2 & M2_WERE) != 0L)
-#define is_elf(ptr) ((((ptr)->mflags2 & M2_ELF) != 0L)     \
-                     || ((ptr) == g.youmonst.data &&       \
-                         !Upolyd && Race_if(PM_ELF)))
-#define is_dwarf(ptr) ((((ptr)->mflags2 & M2_DWARF) != 0L) \
-                     || ((ptr) == g.youmonst.data &&       \
-                         !Upolyd && Race_if(PM_DWARF)))
-#define is_gnome(ptr) ((((ptr)->mflags2 & M2_GNOME) != 0L) \
-                     || ((ptr) == g.youmonst.data &&       \
-                         !Upolyd && Race_if(PM_GNOME)))
-#define is_orc(ptr) ((((ptr)->mflags2 & M2_ORC) != 0L)     \
-                     || ((ptr) == g.youmonst.data &&       \
-                         !Upolyd && Race_if(PM_ORC)))
-#define is_human(ptr) ((((ptr)->mflags2 & M2_HUMAN) != 0L) \
-                     || ((ptr) == g.youmonst.data &&       \
-                         !Upolyd && Race_if(PM_HUMAN)))
+#define is_elf(ptr) (((ptr)->mflags2 & M2_ELF) != 0L)
+#define is_dwarf(ptr) (((ptr)->mflags2 & M2_DWARF) != 0L)
+#define is_gnome(ptr) (((ptr)->mflags2 & M2_GNOME) != 0L)
+#define is_orc(ptr) (((ptr)->mflags2 & M2_ORC) != 0L)
+#define is_human(ptr) (((ptr)->mflags2 & M2_HUMAN) != 0L)
 #define your_race(ptr) (((ptr)->mflags2 & g.urace.selfmask) != 0L)
 #define is_bat(ptr)                                         \
     ((ptr) == &mons[PM_BAT] || (ptr) == &mons[PM_GIANT_BAT] \

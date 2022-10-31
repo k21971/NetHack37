@@ -275,7 +275,7 @@ okay(coordxy x, coordxy y, coordxy dir)
 
 /* find random starting point for maze generation */
 static void
-maze0xy(coord * cc)
+maze0xy(coord *cc)
 {
     cc->x = 3 + 2 * rn2((g.x_maze_max >> 1) - 1);
     cc->y = 3 + 2 * rn2((g.y_maze_max >> 1) - 1);
@@ -285,15 +285,18 @@ maze0xy(coord * cc)
 /*
  * Bad if:
  *      pos is occupied OR
- *      pos is inside restricted region (lx,ly,hx,hy) OR
+ *      pos is inside restricted region (nlx,nly,nhx,nhy) OR
  *      NOT (pos is corridor and a maze level OR pos is a room OR pos is air)
  */
 boolean
-bad_location(coordxy x, coordxy y, coordxy lx, coordxy ly, coordxy hx, coordxy hy)
+bad_location(
+    coordxy x, coordxy y,
+    coordxy nlx, coordxy nly, coordxy nhx, coordxy nhy)
 {
     return (boolean) (occupied(x, y)
-                      || within_bounded_area(x, y, lx, ly, hx, hy)
-                      || !((levl[x][y].typ == CORR && g.level.flags.is_maze_lev)
+                      || within_bounded_area(x, y, nlx, nly, nhx, nhy)
+                      || !((levl[x][y].typ == CORR
+                            && g.level.flags.is_maze_lev)
                            || levl[x][y].typ == ROOM
                            || levl[x][y].typ == AIR));
 }
@@ -303,7 +306,7 @@ bad_location(coordxy x, coordxy y, coordxy lx, coordxy ly, coordxy hx, coordxy h
 void
 place_lregion(
     coordxy lx, coordxy ly, coordxy hx, coordxy hy,
-    coordxy nlx, coordxy nly, coordxy nhx,coordxy nhy,
+    coordxy nlx, coordxy nly, coordxy nhx, coordxy nhy,
     xint16 rtype,
     d_level *lev)
 {
@@ -1006,8 +1009,8 @@ makemaz(const char *s)
     if (wizard && *protofile && sp && sp->rndlevs) {
         char *ep = getenv("SPLEVTYPE"); /* not nh_getenv */
         if (ep) {
-            /* rindex always succeeds due to code in prior block */
-            int len = (int) ((rindex(protofile, '-') - protofile) + 1);
+            /* strrchr always succeeds due to code in prior block */
+            int len = (int) ((strrchr(protofile, '-') - protofile) + 1);
 
             while (ep && *ep) {
                 if (!strncmp(ep, protofile, len)) {
@@ -1017,7 +1020,7 @@ makemaz(const char *s)
                         Sprintf(protofile + len, "%d", pick);
                     break;
                 } else {
-                    ep = index(ep, ',');
+                    ep = strchr(ep, ',');
                     if (ep)
                         ++ep;
                 }

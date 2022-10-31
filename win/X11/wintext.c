@@ -1,11 +1,11 @@
 /* NetHack 3.7	wintext.c	$NHDT-Date: 1597967808 2020/08/20 23:56:48 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.22 $ */
-/* Copyright (c) Dean Luick, 1992				  */
+/* Copyright (c) Dean Luick, 1992                                 */
 /* NetHack may be freely redistributed.  See license for details. */
 
 /*
  * File for dealing with text windows.
  *
- *	+ No global functions.
+ *      + No global functions.
  */
 
 #ifndef SYSV
@@ -194,7 +194,7 @@ display_text_window(struct xwindow *wp, boolean blocking)
 
     if (width > (Dimension) XtScreen(wp->w)->width) { /* too wide for screen */
         /* Back off some amount - we really need to back off the scrollbar */
-        /* width plus some extra.					   */
+        /* width plus some extra.                                          */
         width = XtScreen(wp->w)->width - 20;
     }
     XtSetArg(args[num_args], XtNstring, text_info->text.text);
@@ -384,7 +384,7 @@ append_text_buffer(struct text_buffer *tb, const char *str, boolean concat)
     if (tb->num_lines) { /* not first --- append a newline */
         char appchar = '\n';
 
-        if (concat && !index("!.?'\")", tb->text[tb->text_last - 1])) {
+        if (concat && !strchr("!.?'\")", tb->text[tb->text_last - 1])) {
             appchar = ' ';
             tb->num_lines--; /* offset increment at end of function */
         }
@@ -398,7 +398,7 @@ append_text_buffer(struct text_buffer *tb, const char *str, boolean concat)
         if (length) {
             /* Remove all newlines. Otherwise we have a confused line count. */
             copy = (tb->text + tb->text_last);
-            while ((copy = index(copy, '\n')) != (char *) 0)
+            while ((copy = strchr(copy, '\n')) != (char *) 0)
                 *copy = ' ';
         }
 

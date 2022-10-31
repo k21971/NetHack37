@@ -703,7 +703,7 @@ char NetHackQtBind::qt_yn_function(const char *question_,
     int result = -1;
 
     if (choices) {
-        QString choicebuf((int) strlen(choices) + 1, QChar('\0'));
+        QString choicebuf;
         for (const char *p = choices; *p; ++p) {
             if (*p == '\033') // <esc> and anything beyond is hidden
                 break;
@@ -1039,6 +1039,9 @@ struct window_procs Qt_procs = {
     (WC2_HITPOINTBAR
 #ifdef SELECTSAVED
      | WC2_SELECTSAVED
+#endif
+#ifdef ENHANCED_SYMBOLS
+     | WC2_U_UTF8STR | WC2_U_24BITCOLOR
 #endif
      | WC2_STATUSLINES),
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, /* color availability */

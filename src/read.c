@@ -405,7 +405,7 @@ doread(void)
             int ln = (int) strlen(mesg);
 
             /* we will be displaying a sentence; need ending punctuation */
-            if (ln > 0 && !index(".!?", mesg[ln - 1]))
+            if (ln > 0 && !strchr(".!?", mesg[ln - 1]))
                 endpunct = ".";
             pline("It reads:");
         }
@@ -2463,9 +2463,10 @@ do_class_genocide(void)
 {
     int i, j, immunecnt, gonecnt, goodcnt, class, feel_dead = 0;
     int ll_done = 0;
-    char buf[BUFSZ] = DUMMY, promptbuf[QBUFSZ];
+    char buf[BUFSZ], promptbuf[QBUFSZ];
     boolean gameover = FALSE; /* true iff killed self */
 
+    buf[0] = '\0'; /* for EDIT_GETLIN */
     for (j = 0;; j++) {
         if (j >= 5) {
             pline1(thats_enough_tries);
@@ -2474,12 +2475,22 @@ do_class_genocide(void)
         Strcpy(promptbuf, "What class of monsters do you want to genocide?");
         if (iflags.cmdassist && j > 0)
             Strcat(promptbuf,
-                   " [type the symbol or name representing a class]");
+                   " [enter the symbol or name representing a class]");
         getlin(promptbuf, buf);
         (void) mungspaces(buf);
+        /* avoid 'that does not represent any monster' for empty input */
+        if (!*buf) {
+            pline("%s.", (j + 1 < 5)
+                         ? "Type letter (or punctuation)"
+                           " or name used for a class of monsters or 'none'"
+                         /* next iteration gives "that's enough tries"
+                            so don't suggest typing anything this time */
+                         : "No class of monsters specified");
+            continue; /* try again */
+        }
         /* choosing "none" preserves genocideless conduct */
         if (*buf == '\033' || !strcmpi(buf, "none")
-            || !strcmpi(buf, "nothing")) {
+            || !strcmpi(buf, "'none'") || !strcmpi(buf, "nothing")) {
             livelog_printf(LL_GENOCIDE,
                            "declined to perform class genocide");
             return;
@@ -2554,7 +2565,7 @@ do_class_genocide(void)
                     if (Upolyd && vampshifted(&g.youmonst)
                         /* current shifted form or base vampire form */
                         && (i == u.umonnum || i == g.youmonst.cham))
-                        polyself(POLY_REVERT); /* vampshifter back to vampire */
+                        polyself(POLY_REVERT); /* vampshifter to vampire */
                     if (Upolyd && i == u.umonnum) {
                         u.mh = -1;
                         if (Unchanging) {
@@ -2625,17 +2636,16 @@ do_class_genocide(void)
 #define PLAYER 2
 #define ONTHRONE 4
 void
-do_genocide(int how)
-/* how: */
-/* 0 = no genocide; create monsters (cursed scroll) */
-/* 1 = normal genocide */
-/* 3 = forced genocide of player */
-/* 5 (4 | 1) = normal genocide from throne */
+do_genocide(
+    int how) /* 0 = no genocide; create monsters (cursed scroll)
+              * 1 = normal genocide
+              * 3 = forced genocide of player
+              * 5 (4 | 1) = normal genocide from throne */
 {
-    char buf[BUFSZ] = DUMMY, promptbuf[QBUFSZ];
-    register int i, killplayer = 0;
-    register int mndx;
-    register struct permonst *ptr;
+    char buf[BUFSZ], promptbuf[QBUFSZ];
+    int i, killplayer = 0;
+    int mndx;
+    struct permonst *ptr;
     const char *which;
 
     if (how & PLAYER) {
@@ -2644,7 +2654,8 @@ do_genocide(int how)
         Strcpy(buf, pmname(ptr, Ugender));
         killplayer++;
     } else {
-        for (i = 0;; i++) {
+        buf[0] = '\0'; /* init for EDIT_GETLIN */
+        for (i = 0; ; i++) {
             if (i >= 5) {
                 /* cursed effect => no free pass (unless rndmonst() fails) */
                 if (!(how & REALLY) && (ptr = rndmonst()) != 0)
@@ -2658,9 +2669,18 @@ do_genocide(int how)
                 Strcat(promptbuf, " [enter the name of a type of monster]");
             getlin(promptbuf, buf);
             (void) mungspaces(buf);
+            /* avoid 'such creatures do not exist' for empty input */
+            if (!*buf) {
+                pline("%s.", (i + 1 < 5)
+                             ? "Type the name of a type of monster or 'none'"
+                             /* next iteration gives "that's enough tries"
+                                so don't suggest typing anything this time */
+                             : "No type of monster specified");
+                continue; /* try again */
+            }
             /* choosing "none" preserves genocideless conduct */
             if (*buf == '\033' || !strcmpi(buf, "none")
-                || !strcmpi(buf, "nothing")) {
+                || !strcmpi(buf, "'none'") || !strcmpi(buf, "nothing")) {
                 /* ... but no free pass if cursed */
                 if (!(how & REALLY) && (ptr = rndmonst()) != 0)
                     break; /* remaining checks don't apply */
@@ -2679,7 +2699,7 @@ do_genocide(int how)
             /* first revert if current shifted form or base vampire form */
             if (Upolyd && vampshifted(&g.youmonst)
                 && (mndx == u.umonnum || mndx == g.youmonst.cham))
-                polyself(POLY_REVERT); /* vampshifter (bat, &c) back to vampire */
+                polyself(POLY_REVERT); /* vampshifter (bat, &c) to vampire */
             /* Although "genus" is Latin for race, the hero benefits
              * from both race and role; thus genocide affects either.
              */
@@ -2722,7 +2742,7 @@ do_genocide(int how)
             buf[0] = lowc(buf[0]);
         }
     } else {
-        Strcpy(buf, ptr->pmnames[NEUTRAL]); /* make sure we have standard singular */
+        Strcpy(buf, ptr->pmnames[NEUTRAL]); /* standard singular */
         if ((ptr->geno & G_UNIQ) && ptr != &mons[PM_HIGH_CLERIC])
             which = !type_is_pname(ptr) ? "the " : "";
     }

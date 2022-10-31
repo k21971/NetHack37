@@ -339,7 +339,7 @@ newman(void)
 
     /*
      * New hit points:
-     *  remove level-gain based HP from any extra HP accumulated
+     *  remove "level gain"-based HP from any extra HP accumulated
      *  (the "extra" might actually be negative);
      *  modify the extra, retaining {80%, 90%, 100%, or 110%};
      *  add in newly generated set of level-gain HP.
@@ -1947,7 +1947,7 @@ mbodypart(struct monst *mon, int part)
     }
     if ((part == HAND || part == HANDED)
         && (humanoid(mptr) && attacktype(mptr, AT_CLAW)
-            && !index(not_claws, mptr->mlet) && mptr != &mons[PM_STONE_GOLEM]
+            && !strchr(not_claws, mptr->mlet) && mptr != &mons[PM_STONE_GOLEM]
             && mptr != &mons[PM_AMOROUS_DEMON]))
         return (part == HAND) ? "claw" : "clawed";
     if ((mptr == &mons[PM_MUMAK] || mptr == &mons[PM_MASTODON])

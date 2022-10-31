@@ -5,11 +5,11 @@
 /* tty.c - (Windows console) version */
 
 /*
- * Initial Creation 				M. Allison	1993/01/31
- * Switch to low level console output routines	M. Allison	2003/10/01
- * Restrict cursor movement until input pending	M. Lehotay	2003/10/02
- * Call Unicode version of output API on NT     R. Chason	2005/10/28
- * Use of back buffer to improve performance    B. House	2018/05/06
+ * Initial Creation                             M. Allison      1993/01/31
+ * Switch to low level console output routines  M. Allison      2003/10/01
+ * Restrict cursor movement until input pending M. Lehotay      2003/10/02
+ * Call Unicode version of output API on NT     R. Chason       2005/10/28
+ * Use of back buffer to improve performance    B. House        2018/05/06
  *
  */
 
@@ -1013,7 +1013,7 @@ static BOOL
 CtrlHandler(DWORD ctrltype)
 {
     switch (ctrltype) {
-    /*	case CTRL_C_EVENT: */
+    /* case CTRL_C_EVENT: */
     case CTRL_BREAK_EVENT:
         clear_screen();
     case CTRL_CLOSE_EVENT:
@@ -1962,7 +1962,7 @@ map_subkeyvalue(char* op)
 
     idx = -1;
     val = -1;
-    kp = index(op, '/');
+    kp = strchr(op, '/');
     if (kp) {
         *kp = '\0';
         kp++;
@@ -1970,14 +1970,14 @@ map_subkeyvalue(char* op)
         if (length < 1 || length > 3)
             return;
         for (i = 0; i < length; i++)
-            if (!index(digits, kp[i]))
+            if (!strchr(digits, kp[i]))
                 return;
         val = atoi(kp);
         length = strlen(op);
         if (length < 1 || length > 3)
             return;
         for (i = 0; i < length; i++)
-            if (!index(digits, op[i]))
+            if (!strchr(digits, op[i]))
                 return;
         idx = atoi(op);
     }
@@ -3519,7 +3519,7 @@ ray_checkinput(
                             else if (ir->Event.MouseEvent.dwButtonState
                                      & RIGHTBUTTON)
                                 *mod = CLICK_2;
-#if 0 /* middle button */			       
+#if 0 /* middle button */       
                             else if (ir->Event.MouseEvent.dwButtonState & MIDBUTTON)
                                 *mod = CLICK_3;
 #endif

@@ -237,7 +237,7 @@ mapfrag_fromstr(char *str)
     mf->hei = 0;
     tmps = mf->data;
     while (tmps && *tmps) {
-        char *s1 = index(tmps, '\n');
+        char *s1 = strchr(tmps, '\n');
 
         if (mf->hei > MAP_Y_LIM) {
             free(mf->data);
@@ -3443,18 +3443,18 @@ int
 lspo_object(lua_State *L)
 {
     static object zeroobject = {
-	    { 0 },   /* Str_or_len name */
-	    0,       /* corpsenm */
-	    0, 0,    /* id, spe */
-	    0,       /* coord */
-	    0, 0,    /* coordxy x,y */
-	    0, 0,    /* class, containment */
-	    0,       /* curse_state */
-	    0,       /* quan */
-	    0,       /* buried */
-	    0,       /* lit */
-	    0, 0, 0, 0, 0, 0, 0, 0, /* eroded, locked, trapped, recharged,
-				       invis, greased, broken, achievment */
+            { 0 },   /* Str_or_len name */
+            0,       /* corpsenm */
+            0, 0,    /* id, spe */
+            0,       /* coord */
+            0, 0,    /* coordxy x,y */
+            0, 0,    /* class, containment */
+            0,       /* curse_state */
+            0,       /* quan */
+            0,       /* buried */
+            0,       /* lit */
+            0, 0, 0, 0, 0, 0, 0, 0, /* eroded, locked, trapped, recharged,
+                                       invis, greased, broken, achievment */
     };
 #if 0
     int nparams = 0;

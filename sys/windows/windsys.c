@@ -5,7 +5,7 @@
 /*
  *  WIN32 system functions.
  * 
- *  Included in both console and window based clients on the windows platform.
+ *  Included in both console-based and window-based clients on the windows platform.
  *
  *  Initial Creation: Michael Allison - January 31/93
  *
@@ -135,7 +135,7 @@ chdrive(char* str)
 {
     char *ptr;
     char drive;
-    if ((ptr = index(str, ':')) != (char *) 0) {
+    if ((ptr = strchr(str, ':')) != (char *) 0) {
         drive = toupper((uchar) *(ptr - 1));
         _chdrive((drive - 'A') + 1);
     }
@@ -180,7 +180,7 @@ void nt_regularize(char* s) /* normalize file name */
 char *getxxx(void)
 {
 char     szFullPath[MAX_PATH] = "";
-HMODULE  hInst = NULL;  	/* NULL gets the filename of this module */
+HMODULE  hInst = NULL;  /* NULL gets the filename of this module */
 
 GetModuleFileName(hInst, szFullPath, sizeof(szFullPath));
 return &szFullPath[0];
@@ -621,7 +621,7 @@ windows_early_options(const char *window_opt)
 }
 
 /*
- * Add a backslash to any name not ending in /, \ or :	 There must
+ * Add a backslash to any name not ending in /, \ or : There must
  * be room for the \
  */
 void

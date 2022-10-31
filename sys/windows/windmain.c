@@ -163,7 +163,7 @@ build_environment_path(
 
     strcpy_s(path, path_size, root_path);
 
-    char * colon = index(path, ';');
+    char * colon = strchr(path, ';');
     if (colon != NULL) path[0] = '\0';
 
     if (strlen(path) == 0) return;
@@ -679,7 +679,7 @@ attempt_restore:
             You("are in non-scoring discovery mode.");
     }
 
-        //	iflags.debug_fuzzer = TRUE;
+        // iflags.debug_fuzzer = TRUE;
 
         moveloop(resuming);
     nethack_exit(EXIT_SUCCESS);
@@ -970,7 +970,7 @@ fakeconsole(void)
             /* Bool rval; */
             AllocConsole();
             AttachConsole(GetCurrentProcessId());
-            /* 	rval = SetStdHandle(STD_OUTPUT_HANDLE, hWrite); */
+            /*  rval = SetStdHandle(STD_OUTPUT_HANDLE, hWrite); */
             freopen("CON", "w", stdout);
             freopen("CON", "r", stdin);
         }

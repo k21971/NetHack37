@@ -2296,7 +2296,7 @@ decode_glyph(const char *str, int *glyph_ptr)
     const char *dp;
 
     for (; *str && ++dcount <= 4; ++str) {
-        if ((dp = index(hex, *str)) != 0) {
+        if ((dp = strchr(hex, *str)) != 0) {
             retval++;
             rndchk = (rndchk * 16) + ((int) (dp - hex) / 2);
         } else
@@ -2305,7 +2305,7 @@ decode_glyph(const char *str, int *glyph_ptr)
     if (rndchk == g.context.rndencode) {
         *glyph_ptr = dcount = 0;
         for (; *str && ++dcount <= 4; ++str) {
-            if ((dp = index(hex, *str)) != 0) {
+            if ((dp = strchr(hex, *str)) != 0) {
                 retval++;
                 *glyph_ptr = (*glyph_ptr * 16) + ((int) (dp - hex) / 2);
             } else

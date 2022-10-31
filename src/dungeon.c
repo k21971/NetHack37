@@ -753,7 +753,7 @@ init_dungeons(void)
     (void) memset(&pd, 0, sizeof (struct proto_dungeon));
     pd.n_levs = pd.n_brs = 0;
 
-    L = nhl_init(&sbi);	/* private Lua state for this function */
+    L = nhl_init(&sbi); /* private Lua state for this function */
     if (!L) {
         panic1("'nhl_init' failed; can't continue.");
         /*NOTREACHED*/
@@ -3153,7 +3153,7 @@ seen_string(xint16 x, const char *obj)
         return "no";
     /* an() returns too much.  index is ok in this case */
     case 1:
-        return index(vowels, *obj) ? "an" : "a";
+        return strchr(vowels, *obj) ? "an" : "a";
     case 2:
         return "some";
     case 3:

@@ -2562,9 +2562,9 @@ vanqsort_cmp(const genericptr vptr1, const genericptr vptr2)
                 S_LIZARD, S_EEL, S_GOLEM, S_GHOST, S_DEMON, S_HUMAN, '\0'
             };
 
-            if ((punct = index(punctclasses, mcls1)) != 0)
+            if ((punct = strchr(punctclasses, mcls1)) != 0)
                 mcls1 = (schar) (S_ZOMBIE + 1 + (int) (punct - punctclasses));
-            if ((punct = index(punctclasses, mcls2)) != 0)
+            if ((punct = strchr(punctclasses, mcls2)) != 0)
                 mcls2 = (schar) (S_ZOMBIE + 1 + (int) (punct - punctclasses));
         }
         res = mcls1 - mcls2; /* class */
@@ -2649,11 +2649,13 @@ doborn(void)
     putstr(datawin, 0, "died born");
     for (i = LOW_PM; i < NUMMONS; i++)
         if (g.mvitals[i].born || g.mvitals[i].died
-            || (g.mvitals[i].mvflags & G_GONE)) {
+            || (g.mvitals[i].mvflags & G_GONE) != 0) {
             Sprintf(buf, fmt,
                     g.mvitals[i].died, g.mvitals[i].born,
-                    ((g.mvitals[i].mvflags & G_GONE) == G_EXTINCT) ? 'E' :
-                    ((g.mvitals[i].mvflags & G_GONE) == G_GENOD) ? 'G' : ' ',
+                    ((g.mvitals[i].mvflags & G_GONE) == G_EXTINCT) ? 'E'
+                    : ((g.mvitals[i].mvflags & G_GONE) == G_GENOD) ? 'G'
+                      : ((g.mvitals[i].mvflags & G_GONE) != 0) ? 'X'
+                        : ' ',
                     mons[i].pmnames[NEUTRAL]);
             putstr(datawin, 0, buf);
             nborn += g.mvitals[i].born;
@@ -2690,8 +2692,10 @@ list_vanquished(char defquery, boolean ask)
     boolean dumping; /* for DUMPLOG; doesn't need to be conditional */
 
     dumping = (defquery == 'd');
-    if (dumping)
+    if (dumping) {
         defquery = 'y';
+        ask = FALSE; /* redundant; caller passes False with defquery=='d' */
+    }
 
     /* get totals first */
     ntypes = 0;

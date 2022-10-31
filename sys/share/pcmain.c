@@ -198,7 +198,7 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
             /* sysconf should be searched for in this location */
             envp = nh_getenv("COMMONPROGRAMFILES");
             if (envp) {
-                if ((sptr = index(envp, ';')) != 0)
+                if ((sptr = strchr(envp, ';')) != 0)
                     *sptr = '\0';
                 if (strlen(envp) > 0) {
                     g.fqn_prefix[SYSCONFPREFIX] =
@@ -241,7 +241,7 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
              * overridden */
             envp = nh_getenv("USERPROFILE");
             if (envp) {
-                if ((sptr = index(envp, ';')) != 0)
+                if ((sptr = strchr(envp, ';')) != 0)
                     *sptr = '\0';
                 if (strlen(envp) > 0) {
                     g.fqn_prefix[CONFIGPREFIX] =
@@ -296,7 +296,7 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
         if (argcheck(argc, argv, ARG_DEBUG) == 1) {
             argc--;
             argv++;
-	}
+        }
 
         if (argc > 1 && !strncmp(argv[1], "-d", 2) && argv[1][2] != 'e') {
             /* avoid matching "-dec" for DECgraphics; since the man page
@@ -566,7 +566,7 @@ process_options(int argc, char *argv[])
                 switch_symbols(TRUE);
             }
             break;
-        /*	case 'D': */
+        /* case 'D': */
         case 'd':
             if (!strncmpi(argv[0] + 1, "DEC", 3)) {
                 load_symset("DECGraphics", PRIMARYSET);
