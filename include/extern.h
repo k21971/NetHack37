@@ -28,9 +28,6 @@ extern void welcome(boolean);
 extern int argcheck(int, char **, enum earlyarg);
 extern long timet_to_seconds(time_t);
 extern long timet_delta(time_t, time_t);
-#ifndef NODUMPENUMS
-extern void dump_enums(void);
-#endif
 
 /* ### apply.c ### */
 
@@ -198,6 +195,7 @@ extern const char *bl_idx_to_fldname(int);
 extern void condopt(int, boolean *, boolean);
 extern int parse_cond_option(boolean, char *);
 extern void cond_menu(void);
+extern boolean opt_next_cond(int, char *);
 #ifdef STATUS_HILITES
 extern void status_eval_next_unhilite(void);
 extern void reset_status_hilites(void);
@@ -1323,9 +1321,6 @@ extern void release_runtime_info(void);
 #ifdef ENHANCED_SYMBOLS
 extern void dump_glyphids(void);
 #endif
-#if (NH_DEVEL_STATUS != NH_STATUS_RELEASED) || defined(DEBUG)
-extern int mstrength(struct permonst *);
-#endif
 
 /* ### mhitm.c ### */
 
@@ -1674,6 +1669,9 @@ extern boolean mon_knows_traps(struct monst *, int);
 extern void mon_learns_traps(struct monst *, int);
 extern void mons_see_trap(struct trap *);
 extern int get_atkdam_type(int);
+#if (NH_DEVEL_STATUS != NH_STATUS_RELEASED) || defined(DEBUG)
+extern int mstrength(struct permonst *);
+#endif
 
 /* ### monmove.c ### */
 

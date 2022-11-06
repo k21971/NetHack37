@@ -1,8 +1,7 @@
 .\" $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.464 $ $NHDT-Date: 1655461129 2022/06/17 10:18:49 $
 .\"
 .\" This is an excerpt from the 'roff' man page from the 'groff' package.
-.\" Guidebook.mn currently does *not* fully adhere to these guidelines.
-.\"|||
+.\"+--
 .\"| o Never include empty or blank lines in a roff document.  Instead,  use
 .\"|   the empty request (a line consisting of a dot only) or a line comment
 .\"|   .\" if a structuring element is needed.
@@ -13,7 +12,9 @@
 .\"|   is handled differently depending on whether it terminates an abbrevi-
 .\"|   ation or a sentence.  To distinguish both cases, do a line break  af-
 .\"|   ter each sentence.
-.\"|||
+.\"+--
+.\" Guidebook.mn has been updated to adhere to the first two guidelines
+.\" but does not yet fully honor the third.  New changes should do so.
 .\"
 .
 .\" Usage:
@@ -1671,9 +1672,22 @@ In some circumstances it can also be used to rescue trapped monsters.
 Go up a staircase.
 Default key is \(oq<\(cq.
 .lp #vanquished
-List vanquished monsters.
+List vanquished monsters by type and count.
+.lp ""
+Note that the vanquished monsters list includes all monsters killed by
+traps and each other as well as by you, and omits any which got removed
+from the game without being killed (perhaps by genocide, or by a mollified
+shopkeeper dismissing summoned Kops).
+.lp ""
+Using the \(lqrequest menu\(rq prefix prior to #vanquished brings up
+a menu of sorting orders available.
+Whichever one is picked is remembered for subsequent #vanquished commands
+during the current play session but not saved and restored across sessions.
+During end-of-game disclosure, when asked whether to show vanquished
+monsters answering \(oq\f(CRa\fP\(cq will let you choose from the sort menu.
+.lp ""
 Autocompletes.
-Debug mode only.
+Default key is \(oqM-V\(cq.
 .lp "#version "
 Print compile time options for this version of NetHack.
 .lp ""
@@ -1874,6 +1888,8 @@ option is enabled)
 #untrap
 .lp M-v
 #version
+.lp M-V
+#vanquished
 .lp M-w
 #wipe
 .lp M-X
