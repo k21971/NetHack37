@@ -83,7 +83,9 @@ static const char *cad(boolean);
                     obj->quan <= bp->bquan
  */
 
-static const char *const angrytexts[] = { "quite upset", "ticked off", "furious" };
+static const char *const angrytexts[] = {
+    "quite upset", "ticked off", "furious"
+};
 
 /*
  *  Transfer money from inventory to monster when paying
@@ -867,8 +869,8 @@ tended_shop(struct mkroom* sroom)
     return !mtmp ? FALSE : (boolean) inhishop(mtmp);
 }
 
-static struct bill_x *
-onbill(struct obj* obj, struct monst* shkp, boolean silent)
+struct bill_x *
+onbill(struct obj *obj, struct monst *shkp, boolean silent)
 {
     if (shkp) {
         register struct bill_x *bp = ESHK(shkp)->bill_p;
@@ -879,12 +881,21 @@ onbill(struct obj* obj, struct monst* shkp, boolean silent)
                 if (!obj->unpaid)
                     pline("onbill: paid obj on bill?");
                 return bp;
-            } else
+            } else {
                 bp++;
+            }
     }
     if (obj->unpaid && !silent)
         pline("onbill: unpaid obj not on bill?");
     return (struct bill_x *) 0;
+}
+
+/* used outside of shk.c when caller wants to know whether item is on bill
+   but doesn't need to know any details about the bill itself */
+boolean
+onshopbill(struct obj *obj, struct monst *shkp, boolean silent)
+{
+    return onbill(obj, shkp, silent) ? TRUE : FALSE;
 }
 
 /* check whether an object or any of its contents belongs to a shop */
@@ -3649,8 +3660,7 @@ shk_fixes_damage(struct monst *shkp)
     if (!dam)
         return;
 
-    shk_closeby = (distu(shkp->mx, shkp->my)
-                   <= (BOLT_LIM / 2) * (BOLT_LIM / 2));
+    shk_closeby = (mdistu(shkp) <= (BOLT_LIM / 2) * (BOLT_LIM / 2));
 
     if (canseemon(shkp))
         pline("%s whispers %s.", Shknam(shkp),
@@ -4220,7 +4230,7 @@ pay_for_damage(const char* dmgstr, boolean cant_mollify)
             }
             if (!inhishop(tmp_shk))
                 continue;
-            shk_distance = distu(tmp_shk->mx, tmp_shk->my);
+            shk_distance = mdistu(tmp_shk);
             if (shk_distance > nearest_shk)
                 continue;
             if ((shk_distance == nearest_shk) && picks) {

@@ -150,7 +150,7 @@ CFLAGS += -DCROSSCOMPILE
 TOOLTOP1 = ../lib/djgpp/bin
 TOOLTOP2 = ../lib/djgpp/i586-pc-msdosdjgpp/bin
 override TARGET_CC = $(TOOLTOP1)/i586-pc-msdosdjgpp-gcc
-override TARGET_CXX = $(TOOLTOP2)/g++
+override TARGET_CXX = $(TOOLTOP1)/i586-pc-msdosdjgpp-g++
 override TARGET_AR = $(TOOLTOP1)/i586-pc-msdosdjgpp-gcc-ar
 override TARGET_STUBEDIT = ../lib/djgpp/i586-pc-msdosdjgpp/bin/stubedit
 MSDOS_TARGET_CFLAGS = -c -O -I../include -I../sys/msdos -I../win/share \
@@ -159,8 +159,12 @@ MSDOS_TARGET_CFLAGS = -c -O -I../include -I../sys/msdos -I../win/share \
         -Wall -Wextra -Wno-missing-field-initializers -Wreturn-type -Wunused \
         -Wformat -Wswitch -Wshadow -Wwrite-strings \
 	-Wimplicit -Wimplicit-function-declaration -Wimplicit-int \
-	-Wmissing-parameter-type -Wold-style-definition -Wstrict-prototypes \
-	-DGCC_WARN
+	-Wmissing-parameter-type -Wold-style-definition -Wstrict-prototypes
+MSDOS_TARGET_CXXFLAGS = -c -O -I../include -I../sys/msdos -I../win/share \
+        $(LUAINCL) -DDLB $(PDCURSESDEF) \
+        -DUSE_TILES -DCROSSCOMPILE -DCROSSCOMPILE_TARGET -DCROSS_TO_MSDOS \
+        -Wall -Wextra -Wno-missing-field-initializers -Wreturn-type -Wunused \
+        -Wformat -Wswitch -Wshadow -Wwrite-strings -Wno-maybe-uninitialized
 PDCINCL += -I$(PDCPORT)
 PDC_TARGET_CFLAGS = $(MSDOS_TARGET_CFLAGS) -Wno-unused-parameter \
 			-Wno-missing-prototypes
@@ -176,8 +180,12 @@ LUA_TARGET_CFLAGS = $(MSDOS_TARGET_CFLAGS)
 override TARGET_CFLAGS = $(MSDOS_TARGET_CFLAGS) -Wmissing-declarations \
 			-Wmissing-prototypes -pedantic -Wmissing-declarations \
 			-Wformat-nonliteral
-override TARGET_CXXFLAGS = $(TARGET_CFLAGS)
+override TARGET_CXXFLAGS = $(MSDOS_TARGET_CXXFLAGS)
+ifdef CPLUSPLUS_NEEDED
+override TARGET_LINK = $(TOOLTOP1)/i586-pc-msdosdjgpp-g++
+else
 override TARGET_LINK = $(TOOLTOP1)/i586-pc-msdosdjgpp-gcc
+endif
 override TARGET_LFLAGS=
 override TARGET_LIBS += -lpc
 override SYSSRC = ../sys/share/pcmain.c ../sys/msdos/msdos.c \
@@ -285,7 +293,6 @@ WASM_CFLAGS += -Wshadow
 WASM_CFLAGS += $(WINCFLAGS)   #WINCFLAGS set from multiw-2.370
 WASM_CFLAGS += -DSYSCF -DSYSCF_FILE=\"/sysconf\" -DSECURE
 WASM_CFLAGS += -g -I../include -DNOTPARMDECL
-WASM_CFLAGS += -DGCC_WARN
 # NetHack sources control
 WASM_CFLAGS += -DDLB
 WASM_CFLAGS += -DHACKDIR=\"$(HACKDIR)\"

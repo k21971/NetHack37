@@ -1053,6 +1053,7 @@ some attack damage which shouldn't affect shades operated as intended when
 phrasing of the "you can't" message when attempting to name any monster
 	defined with a unique name or title sounded strange when rejecting
 	<space> to remove the existing name without assigning a new one
+some instances of using up or stealing shop-owned boulder didn't charge for it
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1420,6 +1421,7 @@ if hero's steed got hit by knockback effect, impossible "no monster to remove"
 	would occur (plus more warnings if 'sanity_check' was On)
 the #saveoptions command included options changed via doset_simple() but not
 	ones changed via full doset()
+fix 'nethack --scores' as alias for 'nethack -s'
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -2171,4 +2173,5 @@ switch to a flags arg on newcham() in place of the pair of boolean args
 replace some old 'time_t' hackery in system.h and hacklib.c with something
 	less obtrusive in unixconf.h
 remove the per dungeon level door limit
+remove various '#if LINT' hacks used to suppress warnings from pre-ANSI 'lint'
 

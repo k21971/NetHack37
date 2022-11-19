@@ -2193,7 +2193,7 @@ doturn(void)
            #turn operating through walls, not to require that the hero be
            able to see the target location */
         if (!couldsee(mtmp->mx, mtmp->my)
-            || distu(mtmp->mx, mtmp->my) > range)
+            || mdistu(mtmp) > range)
             continue;
 
         if (!mtmp->mpeaceful

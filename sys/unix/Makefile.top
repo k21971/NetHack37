@@ -94,7 +94,7 @@ LUA_VERSION = 5.4.4
 # The CSS file is required for HTML end-of-game dump logs.
 CSS = NHdump.css
 
-DATHELP = help hh cmdhelp keyhelp history opthelp optmenu wizhelp
+DATHELP = help hh cmdhelp keyhelp history opthelp optmenu usagehlp wizhelp
 
 SPEC_LEVS = asmodeus.lua baalz.lua bigrm-*.lua castle.lua fakewiz?.lua \
 	juiblex.lua knox.lua medusa-?.lua minend-?.lua minefill.lua \

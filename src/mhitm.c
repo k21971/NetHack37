@@ -26,7 +26,7 @@ static int passivemm(struct monst *, struct monst *, boolean, int,
 static void
 noises(register struct monst *magr, register struct attack *mattk)
 {
-    boolean farq = (distu(magr->mx, magr->my) > 15);
+    boolean farq = (mdistu(magr) > 15);
 
     if (!Deaf && (farq != g.far_noise || g.moves - g.noisetime > 10)) {
         g.far_noise = farq;
@@ -112,9 +112,6 @@ fightm(register struct monst *mtmp)
 {
     register struct monst *mon, *nmon;
     int result, has_u_swallowed;
-#ifdef LINT
-    nmon = 0;
-#endif
     /* perhaps the monster will resist Conflict */
     if (resist_conflict(mtmp))
         return 0;

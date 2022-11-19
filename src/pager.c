@@ -32,6 +32,7 @@ static void dispfile_optionfile(void);
 static void dispfile_optmenu(void);
 static void dispfile_license(void);
 static void dispfile_debughelp(void);
+static void dispfile_usagehelp(void);
 static void hmenu_doextversion(void);
 static void hmenu_dohistory(void);
 static void hmenu_dowhatis(void);
@@ -2356,6 +2357,12 @@ dispfile_debughelp(void)
 }
 
 static void
+dispfile_usagehelp(void)
+{
+    display_file(USAGEHELP, TRUE);
+}
+
+static void
 hmenu_doextversion(void)
 {
     (void) doextversion();
@@ -2389,6 +2396,7 @@ static void
 domenucontrols(void)
 {
     winid cwin = create_nhwindow(NHW_TEXT);
+
     show_menu_controls(cwin, FALSE);
     display_nhwindow(cwin, FALSE);
     destroy_nhwindow(cwin);
@@ -2411,6 +2419,7 @@ static const struct {
     { dokeylist, "Full list of keyboard commands." },
     { hmenu_doextlist, "List of extended commands." },
     { domenucontrols, "List menu control keys." },
+    { dispfile_usagehelp, "Description of NetHack's command line." },
     { dispfile_license, "The NetHack license." },
     { docontact, "Support information." },
 #ifdef PORT_HELP
@@ -2440,6 +2449,9 @@ dohelp(void)
     for (i = 0; help_menu_items[i].text; i++) {
         if (!wizard && help_menu_items[i].f == dispfile_debughelp)
             continue;
+        if (sysopt.hideusage && help_menu_items[i].f == dispfile_usagehelp)
+            continue;
+
         if (help_menu_items[i].text[0] == '%') {
             Sprintf(helpbuf, help_menu_items[i].text, PORT_ID);
         } else if (help_menu_items[i].f == dispfile_optmenu) {
