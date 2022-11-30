@@ -481,10 +481,10 @@ static unsigned long
 vesa_MakeColor(struct Pixel p)
 {
     unsigned long r = p.r >> vesa_red_shift;
-    unsigned long gr = p.g >> vesa_green_shift;
+    unsigned long g = p.g >> vesa_green_shift;
     unsigned long b = p.b >> vesa_blue_shift;
     return (r << vesa_red_pos)
-         | (gr << vesa_green_pos)
+         | (g << vesa_green_pos)
          | (b << vesa_blue_pos);
 }
 
@@ -772,7 +772,7 @@ vesa_cliparound(int x, int y)
         clipymax = ROWNO - 1;
     }
     if (clipx != oldx || clipy != oldy) {
-        if (on_level(&u.uz0, &u.uz) && !g.program_state.restoring)
+        if (on_level(&u.uz0, &u.uz) && !gp.program_state.restoring)
             /* (void) doredraw(); */
             vesa_redrawmap();
     }

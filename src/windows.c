@@ -275,11 +275,11 @@ choose_windows(const char *s)
         if (!strcmpi(s, winchoices[i].procs->name)) {
             windowprocs = *winchoices[i].procs;
 
-            if (g.last_winchoice && g.last_winchoice->ini_routine)
-                (*g.last_winchoice->ini_routine)(WININIT_UNDO);
+            if (gl.last_winchoice && gl.last_winchoice->ini_routine)
+                (*gl.last_winchoice->ini_routine)(WININIT_UNDO);
             if (winchoices[i].ini_routine)
                 (*winchoices[i].ini_routine)(WININIT);
-            g.last_winchoice = &winchoices[i];
+            gl.last_winchoice = &winchoices[i];
             return;
         }
     }
@@ -409,7 +409,7 @@ commit_windowchain(void)
                                               p->nextlink->linkdata);
         } else {
             (void) (*p->wincp->chain_routine)(WINCHAIN_INIT, n, p->linkdata,
-                                              g.last_winchoice->procs, 0);
+                                              gl.last_winchoice->procs, 0);
         }
     }
 
@@ -1197,13 +1197,13 @@ dump_fmtstr(
                 break;
             case 'n': /* player name */
                 if (fullsubs)
-                    Sprintf(tmpbuf, "%s", *g.plname ? g.plname : "unknown");
+                    Sprintf(tmpbuf, "%s", *gp.plname ? gp.plname : "unknown");
                 else
                     Strcpy(tmpbuf, "{hero name}");
                 break;
             case 'N': /* first character of player name */
                 if (fullsubs)
-                    Sprintf(tmpbuf, "%c", *g.plname ? *g.plname : 'u');
+                    Sprintf(tmpbuf, "%c", *gp.plname ? *gp.plname : 'u');
                 else
                     Strcpy(tmpbuf, "{hero initial}");
                 break;
@@ -1911,9 +1911,9 @@ dump_headers(void)
 
     fprintf(dumphtml_file, "<!DOCTYPE html>\n");
     fprintf(dumphtml_file, "<head>\n");
-    fprintf(dumphtml_file, "<title>NetHack %s (%s)</title>\n",  version_string(vers, sizeof vers), g.plname);
+    fprintf(dumphtml_file, "<title>NetHack %s (%s)</title>\n",  version_string(vers, sizeof vers), gp.plname);
     fprintf(dumphtml_file, "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />\n");
-    fprintf(dumphtml_file, "<meta name=\"generator\" content=\"NetHack %s (%s)\" />\n", vers, g.plname);
+    fprintf(dumphtml_file, "<meta name=\"generator\" content=\"NetHack %s (%s)\" />\n", vers, gp.plname);
     fprintf(dumphtml_file, "<meta name=\"date\" content=\"%s\" />\n", iso8601);
     fprintf(dumphtml_file, "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n");
     fprintf(dumphtml_file, "<link href=\"https://cdn.jsdelivr.net/gh/maxwell-k/dejavu-sans-mono-web-font@2.37/index.css\" title=\"Default\" rel=\"stylesheet\" type=\"text/css\" media=\"all\" />\n");
@@ -2293,7 +2293,7 @@ encglyph(int glyph)
 {
     static char encbuf[20]; /* 10+1 would suffice */
 
-    Sprintf(encbuf, "\\G%04X%04X", g.context.rndencode, glyph);
+    Sprintf(encbuf, "\\G%04X%04X", gc.context.rndencode, glyph);
     return encbuf;
 }
 
@@ -2311,7 +2311,7 @@ decode_glyph(const char *str, int *glyph_ptr)
         } else
             break;
     }
-    if (rndchk == g.context.rndencode) {
+    if (rndchk == gc.context.rndencode) {
         *glyph_ptr = dcount = 0;
         for (; *str && ++dcount <= 4; ++str) {
             if ((dp = strchr(hex, *str)) != 0) {
@@ -2336,17 +2336,17 @@ decode_mixed(char *buf, const char *str)
 
     while (*str) {
         if (*str == '\\') {
-            int dcount, so, gv;
+            int dcount, so, ggv;
             const char *save_str;
 
             save_str = str++;
             switch (*str) {
             case 'G': /* glyph value \GXXXXNNNN*/
-                if ((dcount = decode_glyph(str + 1, &gv))) {
+                if ((dcount = decode_glyph(str + 1, &ggv))) {
                     str += (dcount + 1);
-                    map_glyphinfo(0, 0, gv, 0, &glyphinfo);
+                    map_glyphinfo(0, 0, ggv, 0, &glyphinfo);
                     so = glyphinfo.gm.sym.symidx;
-                    *put++ = g.showsyms[so];
+                    *put++ = gs.showsyms[so];
                     /* 'str' is ready for the next loop iteration and '*str'
                        should not be copied at the end of this iteration */
                     continue;

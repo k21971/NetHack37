@@ -87,8 +87,10 @@ struct obj {
     Bitfield(cursed, 1);    /* uncursed when neither cursed nor blessed */
     Bitfield(blessed, 1);
     Bitfield(unpaid, 1);    /* owned by shop; valid for objects in hero's
-                             * inventory or inside containers there;
-                             * not used for items on the floor */
+                             * inventory or inside containers there; also,
+                             * used for items on the floor only on the shop
+                             * boundary (including "free spot") or if moved
+                             * from there to inside by wall repairs */
     Bitfield(no_charge, 1); /* if shk shouldn't charge for this; valid for
                              * items on shop floor or in containers there;
                              * implicit for items at any other location
@@ -296,7 +298,7 @@ struct obj {
 /* Eggs and other food */
 #define MAX_EGG_HATCH_TIME 200 /* longest an egg can remain unhatched */
 #define stale_egg(egg) \
-    ((g.moves - (egg)->age) > (2 * MAX_EGG_HATCH_TIME))
+    ((gm.moves - (egg)->age) > (2 * MAX_EGG_HATCH_TIME))
 #define ofood(o) ((o)->otyp == CORPSE || (o)->otyp == EGG || (o)->otyp == TIN)
     /* note: sometimes eggs and tins have special corpsenm values that
        shouldn't be used as an index into mons[]                       */
@@ -413,8 +415,8 @@ struct obj {
                        || (o)->otyp == POT_POLYMORPH)
 
 /* achievement tracking; 3.6.x did this differently */
-#define is_mines_prize(o) ((o)->o_id == g.context.achieveo.mines_prize_oid)
-#define is_soko_prize(o) ((o)->o_id == g.context.achieveo.soko_prize_oid)
+#define is_mines_prize(o) ((o)->o_id == gc.context.achieveo.mines_prize_oid)
+#define is_soko_prize(o) ((o)->o_id == gc.context.achieveo.soko_prize_oid)
 
 #define is_art(o,art) ((o) && (o)->oartifact == (art))
 #define u_wield_art(art) is_art(uwep, art)
