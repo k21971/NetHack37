@@ -3043,6 +3043,7 @@ xkilled(
 {
     int tmp, mndx;
     coordxy x = mtmp->mx, y = mtmp->my;
+    struct monst museum = cg.zeromonst;
     struct permonst *mdat;
     struct obj *otmp;
     struct trap *t;
@@ -3182,8 +3183,16 @@ xkilled(
             }
         }
     }
-    if (wasinside)
+
+    if (wasinside) {
+        /* spoteffects() can end up clearing the level of monsters; grab a copy */
+        museum = *mtmp;
+        museum.nmon = 0;
+        museum.minvent = 0;
+        museum.mextra = 0;
         spoteffects(TRUE); /* poor man's expels() */
+        mtmp = &museum; /* use the reference copy now */
+    }
     /* monster is gone, corpse or other object might now be visible */
     newsym(x, y);
 
