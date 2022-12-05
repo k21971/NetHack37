@@ -1799,6 +1799,8 @@ dump_render_status(void)
     return;
 }
 
+DISABLE_WARNING_FORMAT_NONLITERAL
+
 void
 dump_status_update(
     int fldidx,
@@ -1892,6 +1894,8 @@ dump_status_update(
     /* 3.6.2 we only render on BL_FLUSH (or BL_RESET) */
     return;
 }
+
+RESTORE_WARNING_FORMAT_NONLITERAL
 
 /** HTML Headers and footers **/
 
