@@ -32,7 +32,9 @@ extern void nethack_exit(int) NORETURN;
 extern void mswin_destroy_reg(void);
 #endif
 #ifdef TTY_GRAPHICS
+#ifdef WIN32CON
 extern void backsp(void);
+#endif
 #endif
 extern void clear_screen(void);
 
@@ -49,11 +51,13 @@ extern void (*cursesgraphics_mode_callback)(void);
 extern void (*utf8graphics_mode_callback)(void);
 #endif
 
+#ifdef WIN32CON
 #ifdef _MSC_VER
 #ifdef kbhit
 #undef kbhit
 #endif
 #include <conio.h.>
+#endif
 #endif
 
 #ifdef PC_LOCKING
@@ -65,9 +69,13 @@ int windows_nh_poskey(int *, int *, int *);
 void windows_raw_print(const char *);
 char windows_yn_function(const char *, const char *, char);
 static void windows_getlin(const char *, char *);
+
+#ifdef WIN32CON
 extern int windows_console_custom_nhgetch(void);
 void safe_routines(void);
 int tty_self_recover_prompt(void);
+#endif
+
 int other_self_recover_prompt(void);
 
 char orgdir[PATHLEN];
@@ -78,8 +86,11 @@ int windows_startup_state = 0;    /* we flag whether to continue with this */
 extern int redirect_stdout;       /* from sys/share/pcsys.c */
 extern int GUILaunched;
 HANDLE hStdOut;
+char default_window_sys[] =
 #if defined(MSWIN_GRAPHICS)
-char default_window_sys[] = "mswin";
+            "mswin";
+#elif defined(TTY_GRAPHICS)
+            "tty";
 #endif
 #ifdef WANT_GETHDATE
 static struct stat hbuf;
@@ -88,6 +99,28 @@ static struct stat hbuf;
 
 
 extern char orgdir[];
+
+int get_known_folder_path(const KNOWNFOLDERID * folder_id,
+                      char * path, size_t path_size);
+void create_directory(const char * path);
+int build_known_folder_path(const KNOWNFOLDERID * folder_id,
+                      char * path, size_t path_size, boolean versioned);
+void build_environment_path(const char * env_str, const char * folder,
+                      char * path, size_t path_size);
+boolean folder_file_exists(const char * folder, const char * file_name);
+boolean test_portable_config(const char *executable_path,
+             char *portable_device_path, size_t portable_device_path_size);
+void set_default_prefix_locations(const char *programPath);
+void copy_sysconf_content(void);
+void copy_config_content(void);
+void copy_hack_content(void);
+#ifdef PORT_HELP
+void port_help(void);
+#endif
+void windows_raw_print(const char* str);
+
+
+
 
 DISABLE_WARNING_UNREACHABLE_CODE
 
@@ -114,7 +147,8 @@ get_known_folder_path(
         // silently handle this problem
         return FALSE;
     } else if (err != 0) {
-        error("Failed folder (%u) path string conversion, unexpected err = %d", folder_id->Data1, err);
+        error("Failed folder (%lu) path string conversion, unexpected err = %d",
+              folder_id->Data1, err);
         return FALSE;
     }
 
@@ -145,7 +179,7 @@ build_known_folder_path(
     strcat(path, "\\NetHack\\");
     create_directory(path);
     if (versioned) {
-        Sprintf(eos(path), "%d.%d\\", 
+        Sprintf(eos(path), "%d.%d\\",
                     VERSION_MAJOR, VERSION_MINOR);
         create_directory(path);
     }
@@ -215,7 +249,7 @@ test_portable_config(
          */
 
         *portable_device_path = '\0';
-        lth = sizeof tmppath - strlen(sysconf); 
+        lth = sizeof tmppath - strlen(sysconf);
         (void) strncpy(tmppath, executable_path, lth - 1);
         tmppath[lth - 1] = '\0';
         (void) strcat(tmppath, sysconf);
@@ -249,14 +283,14 @@ const char *get_portable_device(void)
 }
 
 void
-set_default_prefix_locations(const char *programPath)
+set_default_prefix_locations(const char *programPath UNUSED)
 {
     static char executable_path[MAX_PATH];
     static char profile_path[MAX_PATH];
     static char versioned_profile_path[MAX_PATH];
     static char versioned_user_data_path[MAX_PATH];
     static char versioned_global_data_path[MAX_PATH];
-    static char versioninfo[20];
+/*    static char versioninfo[20] UNUSED; */
 
     strcpy(executable_path, get_executable_path());
     append_slash(executable_path);
@@ -419,12 +453,15 @@ extern const char *known_restrictions[]; /* symbols.c */
  * to help MinGW decide which entry point to choose. If both main and
  * WinMain exist, the resulting executable won't work correctly.
  */
-int
-#ifndef __MINGW32__ 
-main(int argc, char *argv[])
+
+#if defined(__MINGW32__) && defined(MSWIN_GRAPHICS)
+#define MAIN mingw_main
 #else
-mingw_main(int argc, char *argv[])
+#define MAIN main
 #endif
+
+int
+MAIN(int argc, char *argv[])
 {
     boolean resuming = FALSE; /* assume new game */
     NHFILE *nhfp;
@@ -437,11 +474,14 @@ mingw_main(int argc, char *argv[])
     _CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
 #endif
 
+#ifdef WIN32CON
     /*
      * Get a set of valid safe windowport function
      * pointers during early startup initialization.
      */
     safe_routines();
+#endif /* WIN32CON */
+
     early_init();
 #ifdef _MSC_VER
 #ifdef DEBUG
@@ -556,13 +596,17 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
     iflags.use_background_glyph = FALSE;
     if (WINDOWPORT(mswin))
         iflags.use_background_glyph = TRUE;
+#ifdef WIN32CON
     if (WINDOWPORT(tty))
         consoletty_open(1);
+#endif
 
     init_nhwindows(&argc, argv);
 
+#ifdef WIN32CON
     if (WINDOWPORT(tty))
         toggle_mouse_support();
+#endif
 
     if (gs.symset[PRIMARYSET].handling
         && !symset_is_compatible(gs.symset[PRIMARYSET].handling,
@@ -573,7 +617,7 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
             load_symset("RogueEpyx", ROGUESET);
     }
     /* Has the callback for the symset been invoked? Config file processing to
-       load a symset runs too early to accomplish that because 
+       load a symset runs too early to accomplish that because
        the various *graphics_mode_callback pointers don't get set until
        term_start_screen, unfortunately */
 #if defined(TERMLIB) || defined(CURSES_GRAPHICS)
@@ -760,12 +804,14 @@ process_options(int argc, char * argv[])
 
                 nethack_exit(EXIT_SUCCESS);
             }
+#ifdef MSWIN_GRAPHICS
             if (GUILaunched) {
                 if (!strncmpi(argv[1], "-clearreg", 6)) { /* clear registry */
                     mswin_destroy_reg();
                     nethack_exit(EXIT_SUCCESS);
                 }
             }
+#endif
             /* Don't initialize the full window system just to print usage */
             if (!strncmp(argv[1], "-?", 2) || !strncmp(argv[1], "/?", 2)) {
                 nhusage();
@@ -902,6 +948,7 @@ nhusage(void)
 #undef ADD_USAGE
 }
 
+#ifdef WIN32CON
 void
 safe_routines(void)
 {
@@ -914,6 +961,7 @@ safe_routines(void)
     if (!GUILaunched)
         windowprocs.win_nhgetch = windows_console_custom_nhgetch;
 }
+#endif
 
 #ifdef PORT_HELP
 void
@@ -937,8 +985,8 @@ authorize_wizard_mode(void)
 
 #if defined(WIN32) && !defined(WIN32CON)
 static char exenamebuf[PATHLEN];
-extern HANDLE hConIn;
-extern HANDLE hConOut;
+HANDLE hConIn;
+HANDLE hConOut;
 boolean has_fakeconsole;
 
 char *
@@ -980,7 +1028,7 @@ fakeconsole(void)
         }
         has_fakeconsole = TRUE;
     }
-    
+
     /* Obtain handles for the standard Console I/O devices */
     hConIn = GetStdHandle(STD_INPUT_HANDLE);
     hConOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -1110,14 +1158,15 @@ windows_nhbell(void)
 
 /*ARGSUSED*/
 int
-windows_nh_poskey(int *x, int *y, int *mod)
+windows_nh_poskey(int *x UNUSED, int *y UNUSED, int *mod UNUSED)
 {
     return '\033';
 }
 
 /*ARGSUSED*/
 char
-windows_yn_function(const char* query, const char* resp, char def)
+windows_yn_function(const char* query UNUSED, const char* resp UNUSED,
+                    char def UNUSED)
 {
     return '\033';
 }
@@ -1166,7 +1215,9 @@ getlock(void)
     const char *fq_lock;
 #define OOPS_BUFSZ 512
     char oops[OOPS_BUFSZ];
+#ifdef WIN32CON
     boolean istty = WINDOWPORT(tty);
+#endif
 
     /* we ignore QUIT and INT at this point */
     if (!lock_file(HLOCK, LOCKPREFIX, 10)) {
@@ -1197,9 +1248,11 @@ getlock(void)
 
     (void) nhclose(fd);
 
+#ifdef WIN32CON
     if (WINDOWPORT(tty))
         prompt_result = tty_self_recover_prompt();
     else
+#endif
         prompt_result = other_self_recover_prompt();
     /*
      * prompt_result == 1  means recover old game.
@@ -1212,8 +1265,10 @@ getlock(void)
                     : (prompt_result == 1)
                         ? "recover the old game"
                         : "not start a new game");
+#ifdef WIN32CON
     if (istty)
         clear_screen();
+#endif
     raw_printf("%s", oops);
     if (prompt_result == 1) {          /* recover */
         if (recover_savefile()) {
@@ -1231,8 +1286,10 @@ getlock(void)
         }
     } else if (prompt_result < 0) {    /* destroy old game */
         if (eraseoldlocks()) {
+#ifdef WIN32CON
             if (istty)
                 clear_screen(); /* display gets fouled up otherwise */
+#endif
             goto gotlock;
         } else {
             unlock_file(HLOCK);
@@ -1296,7 +1353,7 @@ file_exists(const char* path)
 
 RESTORE_WARNING_UNREACHABLE_CODE
 
-/* 
+/*
   file_newer returns TRUE if the file at a_path is newer then the file
   at b_path.  If a_path does not exist, it returns FALSE.  If b_path
   does not exist, it returns TRUE.
@@ -1320,6 +1377,7 @@ file_newer(const char* a_path, const char* b_path)
     return FALSE;
 }
 
+#ifdef WIN32CON
 /*
  * returns:
  *     1 if game should be recovered
@@ -1391,6 +1449,7 @@ tty_self_recover_prompt(void)
     }
     return retval;
 }
+#endif
 
 int
 other_self_recover_prompt(void)

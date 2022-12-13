@@ -29,7 +29,7 @@
 #define DUMPLOG_MSG_COUNT 50
 
 #define USER_SOUNDS
-#define TTY_SOUND_ESCCODES
+/* #define TTY_SOUND_ESCCODES */
 
 /*#define CHANGE_COLOR*/ /* allow palette changes */
 
@@ -103,16 +103,27 @@ extern void interject(int);
  */
 
 #ifdef __MINGW32__
+#define MD_USE_TMPFILE_S
+#if !defined(__cplusplus)
+extern errno_t tmpfile_s(FILE * restrict * restrict streamptr);
+#endif
+#
 #ifdef strncasecmp
 #undef strncasecmp
 #endif
 #ifdef strcasecmp
 #undef strcasecmp
+/* https://sourceforge.net/p/mingw-w64/wiki2/gnu%20printf/ */
+#ifdef __USE_MINGW_ANSI_STDIO
+#undef __USE_MINGW_ANSI_STDIO
+#endif
+#define __USE_MINGW_ANSI_STDIO 1
 #endif
 /* extern int getlock(void); */
 #endif
 
 #ifdef _MSC_VER
+#define MD_USE_TMPFILE_S
 #define HAS_STDINT
 #if (_MSC_VER > 1000)
 /* Visual C 8 warning elimination */

@@ -2131,10 +2131,7 @@ place_object(struct obj *otmp, coordxy x, coordxy y)
        here without display code needing to traverse pile chain to find one */
     if (otmp2 && otmp2->otyp == BOULDER && otmp->otyp != BOULDER) {
         /* 3.6.3: put otmp under last consecutive boulder rather than under
-           just the first one; multiple boulders at same spot in new games
-           will be consecutive due to this, ones in old games saved before
-           this change might not be; can affect the map display if the top
-           boulder is moved/removed by some means other than pushing */
+           just the first one */
         while (otmp2->nexthere && otmp2->nexthere->otyp == BOULDER)
             otmp2 = otmp2->nexthere;
         otmp->nexthere = otmp2->nexthere;
@@ -2145,16 +2142,44 @@ place_object(struct obj *otmp, coordxy x, coordxy y)
         gl.level.objects[x][y] = otmp;
     }
 
-    /* set the new object's location */
+    /* set the object's new location */
     otmp->ox = x;
     otmp->oy = y;
     otmp->where = OBJ_FLOOR;
+
+    /* if placed outside of shop, no_charge is no longer applicable */
+    if (otmp->no_charge && !costly_spot(x, y)
+        && !costly_adjacent(find_objowner(otmp, x, y), x, y))
+        otmp->no_charge = 0;
 
     /* add to floor chain */
     otmp->nobj = fobj;
     fobj = otmp;
     if (otmp->timed)
         obj_timer_checks(otmp, x, y, 0);
+}
+
+/* tear down the object pile at <x,y> and create it again, so that any
+   boulders which are present get forced to the top */
+void
+recreate_pile_at(coordxy x, coordxy y)
+{
+    struct obj *otmp, *next_obj, *reversed = 0;
+
+    /* remove all objects at <x,y>, saving a reversed temporary list */
+    for (otmp = gl.level.objects[x][y]; otmp; otmp = next_obj) {
+        next_obj = otmp->nexthere;
+        remove_object(otmp); /* obj_extract_self() for floor */
+        otmp->nobj = reversed;
+        reversed = otmp;
+    }
+    /* pile at <tx,ty> is now empty; create new one, re-reversing to restore
+       original order; place_object() handles making boulders be on top */
+    for (otmp = reversed; otmp; otmp = next_obj) {
+        next_obj = otmp->nobj;
+        otmp->nobj = 0; /* obj->where is OBJ_FREE */
+        place_object(otmp, x, y);
+    }
 }
 
 #define ROT_ICE_ADJUSTMENT 2 /* rotting on ice takes 2 times as long */
@@ -2462,6 +2487,11 @@ add_to_migration(struct obj *obj)
 {
     if (obj->where != OBJ_FREE)
         panic("add_to_migration: obj not free");
+
+    if (obj->unpaid) /* caller should have changed unpaid item to stolen */
+        impossible("unpaid object migrating to another level? [%s]",
+                   simpleonames(obj));
+    obj->no_charge = 0; /* was only relevant while inside a shop */
 
     /* lock picking context becomes stale if it's for this object */
     if (Is_container(obj))
@@ -2814,10 +2844,11 @@ shop_obj_sanity(struct obj *obj, const char *mesg)
            billobjs list, and for floor items outside the shop proper
            but within the shop boundary (walls, door, "free spot") and
            for objects moved from such spots into the shop proper by
-           repair of shop walls */
+           repair of shop walls or items buried while on boundary */
         if (otop->where != OBJ_INVENT
             && obj->where != OBJ_ONBILL /* when on bill, obj==otop */
-            && (otop->where != OBJ_FLOOR || (!costly && !costlytoo)))
+            && ((otop->where != OBJ_FLOOR && obj->where != OBJ_BURIED)
+                || !(costly || costlytoo)))
             why = "%s unpaid obj not carried! %s %s: %s";
         else if (!costly && !costlytoo)
             why = "%s unpaid obj not inside tended shop! %s %s: %s";
@@ -2826,11 +2857,14 @@ shop_obj_sanity(struct obj *obj, const char *mesg)
         else if (!onshopbill(obj, shkp, TRUE))
             why = "%s unpaid obj not on shop bill! %s %s: %s";
     } else if (obj->no_charge) {
-        /* no_charge is only applicable for floor objects in shops
-           and for objects inside floor containers in shops */
-        if (otop->where != OBJ_FLOOR)
+        /* no_charge is only applicable for floor objects in shops, for
+           objects inside floor containers in shops, and for objects buried
+           beneath the shop floor or carried by a monster (usually pet) */
+        if (otop->where != OBJ_FLOOR
+            && otop->where != OBJ_BURIED
+            && otop->where != OBJ_MINVENT)
             why = "%s no_charge obj not on floor! %s %s: %s";
-        else if (!costly)
+        else if (!costly && !costlytoo)
             why = "%s no_charge obj not inside tended shop! %s %s: %s";
         else if (!shkp)
             why = "%s no_charge obj inside untended shop! %s %s: %s";
@@ -2838,7 +2872,8 @@ shop_obj_sanity(struct obj *obj, const char *mesg)
             why = "%s no_charge obj on shop bill! %s %s: %s";
     }
     if (why)
-        insane_object(obj, why, mesg, (struct monst *) 0);
+        insane_object(obj, why, mesg,
+                      mcarried(otop) ? otop->ocarry : (struct monst *) 0);
     return;
 }
 
@@ -2867,6 +2902,8 @@ mon_obj_sanity(struct monst *monlist, const char *mesg)
             if (obj->globby)
                 check_glob(obj, mesg);
             check_contained(obj, mesg);
+            if (obj->unpaid || obj->no_charge)
+                shop_obj_sanity(obj, mesg);
             if (obj->in_use || obj->bypass || obj->nomerge
                 || (obj->otyp == BOULDER && obj->next_boulder))
                 insane_obj_bits(obj, mon);

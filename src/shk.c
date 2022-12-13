@@ -36,6 +36,8 @@ static char *shk_owns(char *, struct obj *);
 static char *mon_owns(char *, struct obj *);
 static void clear_unpaid_obj(struct monst *, struct obj *);
 static void clear_unpaid(struct monst *, struct obj *);
+static void clear_no_charge_obj(struct monst *, struct obj *);
+static void clear_no_charge(struct monst *, struct obj *);
 static long check_credit(long, struct monst *);
 static void pay(long, struct monst *);
 static long get_cost(struct obj *, struct monst *);
@@ -63,9 +65,9 @@ static struct damage *find_damage(struct monst *);
 static void discard_damage_struct(struct damage *);
 static void discard_damage_owned_by(struct monst *);
 static void shk_fixes_damage(struct monst *);
-static xint16 *litter_getpos(int *, coordxy, coordxy, struct monst *);
-static void litter_scatter(xint16 *, int, coordxy, coordxy, struct monst *);
-static void litter_newsyms(xint16 *, coordxy, coordxy);
+static uint8 litter_getpos(uint8 *, coordxy, coordxy, struct monst *);
+static void litter_scatter(uint8 *, coordxy, coordxy, struct monst *);
+static void litter_newsyms(uint8 *, coordxy, coordxy);
 static int repair_damage(struct monst *, struct damage *, boolean);
 static void sub_one_frombill(struct obj *, struct monst *);
 static void add_one_tobill(struct obj *, boolean, struct monst *);
@@ -250,7 +252,7 @@ restshk(struct monst *shkp, boolean ghostly)
     }
 }
 
-/* Clear the unpaid and no_charge bits on a single object and its contents. */
+/* clear the unpaid bit on a single object and its contents */
 static void
 clear_unpaid_obj(struct monst *shkp, struct obj *otmp)
 {
@@ -258,7 +260,26 @@ clear_unpaid_obj(struct monst *shkp, struct obj *otmp)
         clear_unpaid(shkp, otmp->cobj);
     if (onbill(otmp, shkp, TRUE))
         otmp->unpaid = 0;
+}
 
+/* clear the unpaid bit on all of the objects in the list */
+static void
+clear_unpaid(struct monst *shkp, struct obj *list)
+{
+    while (list) {
+        clear_unpaid_obj(shkp, list);
+        list = list->nobj;
+    }
+}
+
+/* clear the no_charge bit on a single object and its contents */
+static void
+clear_no_charge_obj(
+    struct monst *shkp, /* if null, clear regardless of shop */
+    struct obj *otmp)
+{
+    if (Has_contents(otmp))
+        clear_no_charge(shkp, otmp->cobj);
     if (otmp->no_charge) {
         struct monst *rm_shkp;
         int rno;
@@ -266,7 +287,8 @@ clear_unpaid_obj(struct monst *shkp, struct obj *otmp)
 
         /*
          * Clear no_charge if
-         *  not located somewhere that we expect no_charge (which is
+         *  shkp is Null (clear all items on specified list)
+         *  or not located somewhere that we expect no_charge (which is
          *    floor [of shop] or inside container [on shop floor])
          *  or can't find object's map coordinates (should never happen
          *    for floor or contained; conceivable if on shop bill somehow
@@ -284,7 +306,8 @@ clear_unpaid_obj(struct monst *shkp, struct obj *otmp)
          * become owned by the shop now and will be for-sale once the shk
          * returns.
          */
-        if ((otmp->where != OBJ_FLOOR && otmp->where != OBJ_CONTAINED)
+        if (!shkp
+            || (otmp->where != OBJ_FLOOR && otmp->where != OBJ_CONTAINED)
             || !get_obj_location(otmp, &x, &y, OBJ_CONTAINED | OBJ_BURIED)
             || !isok(x, y)
             || (rno = levl[x][y].roomno) < ROOMOFFSET
@@ -295,12 +318,14 @@ clear_unpaid_obj(struct monst *shkp, struct obj *otmp)
     }
 }
 
-/* Clear the unpaid bit on all of the objects in the list. */
+/* clear the no_charge bit on all of the objects in the list */
 static void
-clear_unpaid(struct monst *shkp, struct obj *list)
+clear_no_charge(struct monst *shkp, struct obj *list)
 {
     while (list) {
-        clear_unpaid_obj(shkp, list);
+        /* handle first element of list and any contents it may have */
+        clear_no_charge_obj(shkp, list);
+        /* move on to next element of list */
         list = list->nobj;
     }
 }
@@ -314,15 +339,21 @@ setpaid(register struct monst *shkp)
 
     clear_unpaid(shkp, gi.invent);
     clear_unpaid(shkp, fobj);
-    clear_unpaid(shkp, gl.level.buriedobjlist);
+    if (gl.level.buriedobjlist)
+        clear_unpaid(shkp, gl.level.buriedobjlist);
     if (gt.thrownobj)
         clear_unpaid_obj(shkp, gt.thrownobj);
     if (gk.kickedobj)
         clear_unpaid_obj(shkp, gk.kickedobj);
     for (mtmp = fmon; mtmp; mtmp = mtmp->nmon)
-        clear_unpaid(shkp, mtmp->minvent);
+        if (mtmp->minvent)
+            clear_unpaid(shkp, mtmp->minvent);
     for (mtmp = gm.migrating_mons; mtmp; mtmp = mtmp->nmon)
-        clear_unpaid(shkp, mtmp->minvent);
+        if (mtmp->minvent)
+            clear_unpaid(shkp, mtmp->minvent);
+
+    /* clear obj->no_charge for all obj in shkp's shop */
+    clear_no_charge(shkp, fobj);
 
     while ((obj = gb.billobjs) != 0) {
         obj_extract_self(obj);
@@ -902,7 +933,7 @@ find_objowner(
     struct obj *obj,
     coordxy x, coordxy y) /* caller passes obj's location since obj->ox,oy
                            * might be stale; don't update coordinates here
-                           * because if we're called duing sanity checking
+                           * because if we're called during sanity checking
                            * they shouldn't be modified */
 {
     struct monst *shkp, *deflt_shkp = 0;
@@ -1153,7 +1184,7 @@ angry_shk_exists(void)
 
 /* remove previously applied surcharge from all billed items */
 static void
-pacify_shk(register struct monst* shkp, boolean clear_surcharge)
+pacify_shk(struct monst *shkp, boolean clear_surcharge)
 {
     NOTANGRY(shkp) = TRUE; /* make peaceful */
     if (clear_surcharge && ESHK(shkp)->surcharge) {
@@ -1171,16 +1202,17 @@ pacify_shk(register struct monst* shkp, boolean clear_surcharge)
 
 /* add aggravation surcharge to all billed items */
 static void
-rile_shk(register struct monst* shkp)
+rile_shk(struct monst *shkp)
 {
     NOTANGRY(shkp) = FALSE; /* make angry */
     if (!ESHK(shkp)->surcharge) {
+        register long surcharge;
         register struct bill_x *bp = ESHK(shkp)->bill_p;
         register int ct = ESHK(shkp)->billct;
 
         ESHK(shkp)->surcharge = TRUE;
         while (ct-- > 0) {
-            register long surcharge = (bp->price + 2L) / 3L;
+            surcharge = (bp->price + 2L) / 3L;
             bp->price += surcharge;
             bp++;
         }
@@ -1189,7 +1221,7 @@ rile_shk(register struct monst* shkp)
 
 /* wakeup and/or unparalyze shopkeeper */
 static void
-rouse_shk(struct monst* shkp, boolean verbosely)
+rouse_shk(struct monst *shkp, boolean verbosely)
 {
     if (helpless(shkp)) {
         /* greed induced recovery... */
@@ -1203,7 +1235,7 @@ rouse_shk(struct monst* shkp, boolean verbosely)
 }
 
 void
-make_happy_shk(register struct monst* shkp, register boolean silentkops)
+make_happy_shk(struct monst *shkp, boolean silentkops)
 {
     boolean wasmad = ANGRY(shkp);
     struct eshk *eshkp = ESHK(shkp);
@@ -1257,7 +1289,7 @@ make_happy_shoppers(boolean silentkops)
 }
 
 void
-hot_pursuit(register struct monst* shkp)
+hot_pursuit(struct monst *shkp)
 {
     if (!shkp->isshk)
         return;
@@ -1265,6 +1297,11 @@ hot_pursuit(register struct monst* shkp)
     rile_shk(shkp);
     (void) strncpy(ESHK(shkp)->customer, gp.plname, PL_NSIZ);
     ESHK(shkp)->following = 1;
+
+    /* shopkeeper networking:  clear obj->no_charge for all obj on the
+       floor of this level (including inside containers on floor), even
+       those that are in other shopkeepers' shops */
+    clear_no_charge((struct monst *) NULL, fobj);
 }
 
 /* Used when the shkp is teleported or falls (ox == 0) out of his shop, or
@@ -1272,8 +1309,10 @@ hot_pursuit(register struct monst* shkp)
    the shop.  These conditions must be checked by the calling function. */
 /*ARGSUSED*/
 void
-make_angry_shk(struct monst* shkp, coordxy ox UNUSED, coordxy oy UNUSED)
-/* <ox,oy> predate 'noit_Monnam()', let alone Shknam() */
+make_angry_shk(
+    struct monst *shkp,
+    coordxy ox UNUSED, coordxy oy UNUSED)
+    /* <ox,oy> predate 'noit_Monnam()', let alone Shknam() */
 {
     struct eshk *eshkp = ESHK(shkp);
 
@@ -1297,7 +1336,7 @@ static const char
 
 /* delivers the cheapest item on the list */
 static long
-cheapest_item(register struct monst* shkp)
+cheapest_item(struct monst *shkp)
 {
     register int ct = ESHK(shkp)->billct;
     register struct bill_x *bp = ESHK(shkp)->bill_p;
@@ -3744,23 +3783,27 @@ shk_fixes_damage(struct monst *shkp)
     discard_damage_struct(dam);
 }
 
-#define LITTER_UPDATE 0x01
-#define LITTER_OPEN   0x02
-#define LITTER_INSHOP 0x04
+#define LITTER_UPDATE 0x01U
+#define LITTER_OPEN   0x02U
+#define LITTER_INSHOP 0x04U
 #define horiz(i) ((i % 3) - 1)
 #define vert(i) ((i / 3) - 1)
 
-static xint16 *
-litter_getpos(int *k, coordxy x, coordxy y, struct monst *shkp)
+/* find eligible spots to move items from a gap in a shop's wall that is
+   being repaired; this guarantees that items will end up inside shkp's
+   shop (possibly in the "free spot" or even in doorway or an adjacent
+   wall gap), but if they are in a gap in a wall shared by two shops
+   they might have started in the other shop */
+static uint8
+litter_getpos(
+    uint8 *litter, /* array of 9 uint8's */
+    coordxy x, coordxy y,
+    struct monst *shkp)
 {
-    static xint16 litter[9];
     int i, ix, iy;
+    uint8 k = 0; /* number of adjacent shop spots */
 
-    (void) memset((genericptr_t) litter, 0, sizeof litter);
-
-    if (!k) return litter;
-
-    *k = 0; /* number of adjacent shop spots */
+    (void) memset((genericptr_t) litter, 0, 9 * sizeof *litter);
 
     if (gl.level.objects[x][y] && !IS_ROOM(levl[x][y].typ)) {
         for (i = 0; i < 9; i++) {
@@ -3771,30 +3814,33 @@ litter_getpos(int *k, coordxy x, coordxy y, struct monst *shkp)
             litter[i] = LITTER_OPEN;
             if (inside_shop(ix, iy) == ESHK(shkp)->shoproom) {
                 litter[i] |= LITTER_INSHOP;
-                ++(*k);
+                ++k;
             }
         }
     }
-    return litter;
+    return k;
 }
 
+/* move items from a gap in a shop's wall that is being repaired;
+   litter[] guarantees that items will end up inside shkp's shop, but
+   if the wall being repaired is shared by two shops the items might
+   have started in the other shop */
 static void
 litter_scatter(
-    xint16 *litter,
-    int k,
+    uint8 *litter,
     coordxy x, coordxy y,
     struct monst *shkp)
 {
     struct obj *otmp;
 
-    /* placement below assumes there is always at least one adjacent
-       spot; the 'k' check guards against getting stuck in an infinite
-       loop if some irregularly shaped room breaks that assumption */
-    if (k > 0) {
+    /* placement below assumes there is always at least one adjacent spot
+       that's inside the shop; caller guarantees that */
+    {
         /* Scatter objects haphazardly into the shop */
         if (Punished && !u.uswallow
             && ((uchain->ox == x && uchain->oy == y)
-                || (uball->ox == x && uball->oy == y))) {
+                || (uball->where == OBJ_FLOOR
+                    && uball->ox == x && uball->oy == y))) {
             /*
              * Either the ball or chain is in the repair location.
              * Take the easy way out and put ball&chain under hero.
@@ -3810,7 +3856,7 @@ litter_scatter(
             unplacebc(); /* pick 'em up */
             placebc();   /* put 'em down */
         }
-        while ((otmp = gl.level.objects[x][y]) != 0)
+        while ((otmp = gl.level.objects[x][y]) != 0) {
             /* Don't mess w/ boulders -- just merge into wall */
             if (otmp->otyp == BOULDER || otmp->otyp == ROCK) {
                 obj_extract_self(otmp);
@@ -3833,15 +3879,42 @@ litter_scatter(
                     ix = shkp->mx;
                     iy = shkp->my;
                 }
+                /* if the wall being repaired is shared by two adjacent
+                   shops, <ix,iy> might be in a different shop than the
+                   one that is billing for otmp or decided it was free;
+                   control of the item goes to the shk repairing the wall
+                   but otmp->no_charge isn't recalculated for new shop */
+                if (otmp->unpaid) {
+                    struct monst *oshk = shkp;
+
+                    /* !costly_spot() happens if otmp is moved from wall
+                       to shop's "free spot", still costly_adjacent() and
+                       still unpaid/on-bill; otherwise, it is being moved
+                       all the way into the shop so take it off the bill */
+                    if (costly_spot(ix, iy)
+                        && ((onbill(otmp, oshk, TRUE)
+                             || ((oshk = find_objowner(otmp, ix, iy)) != 0
+                                 && onbill(otmp, oshk, FALSE)))))
+                        subfrombill(otmp, oshk);
+                }
+                if (otmp->no_charge) {
+                    /* not strictly necessary; destination is inside a
+                       shop so existing no_charge remains relevant */
+                    if (!costly_spot(ix, iy)
+                        && !costly_adjacent(shkp, ix, iy))
+                        otmp->no_charge = 0;
+                }
+
                 remove_object(otmp);
                 place_object(otmp, ix, iy);
                 litter[i] |= LITTER_UPDATE;
             }
+        } /* while level.objects[x][y] != 0 */
     }
 }
 
 static void
-litter_newsyms(xint16 *litter, coordxy x, coordxy y)
+litter_newsyms(uint8 *litter, coordxy x, coordxy y)
 {
     int i;
 
@@ -3867,10 +3940,10 @@ repair_damage(
     boolean catchup)
 {
     coordxy x, y;
-    xint16 *litter;
+    uint8 litter[9];
     struct obj *otmp;
     struct trap *ttmp;
-    int k, disposition = 1;
+    int disposition = 1;
     boolean seeit, stop_picking = FALSE;
 
     if (!repairable_damage(tmp_dam, shkp))
@@ -3934,8 +4007,8 @@ repair_damage(
     else /* not a door; set rm.wall_info or whatever old flags are relevant */
         levl[x][y].flags = tmp_dam->flags;
 
-    litter = litter_getpos(&k, x, y, shkp);
-    litter_scatter(litter, k, x, y, shkp);
+    if (litter_getpos(litter, x, y, shkp))
+        litter_scatter(litter, x, y, shkp);
 
     /* needed if hero has line-of-sight to the former gap from outside
        the shop but is farther than one step away; once the light inside
@@ -4088,9 +4161,8 @@ shk_move(struct monst *shkp)
         } else {
             uondoor = u_at(eshkp->shd.x, eshkp->shd.y);
             if (uondoor) {
-                badinv =
-                    (carrying(PICK_AXE) || carrying(DWARVISH_MATTOCK)
-                     || (Fast && (sobj_at(PICK_AXE, u.ux, u.uy)
+                badinv = (carrying(PICK_AXE) || carrying(DWARVISH_MATTOCK)
+                          || (Fast && (sobj_at(PICK_AXE, u.ux, u.uy)
                                   || sobj_at(DWARVISH_MATTOCK, u.ux, u.uy))));
                 if (satdoor && badinv)
                     return 0;
@@ -4111,7 +4183,7 @@ shk_move(struct monst *shkp)
     }
 
     z = move_special(shkp, inhishop(shkp), appr, uondoor, avoid, omx, omy,
-		    gtx, gty);
+                     gtx, gty);
     if (z > 0)
         after_shk_move(shkp);
 
@@ -4120,7 +4192,7 @@ shk_move(struct monst *shkp)
 
 /* called after shopkeeper moves, in case themove causes re-entry into shop */
 void
-after_shk_move(struct monst* shkp)
+after_shk_move(struct monst *shkp)
 {
     struct eshk *eshkp = ESHK(shkp);
 
