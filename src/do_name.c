@@ -1489,6 +1489,15 @@ call_ok(struct obj *obj)
     if (!obj || !objtyp_is_callable(obj->otyp))
         return GETOBJ_EXCLUDE;
 
+    /* not a likely candidate if not seen yet since naming will fail,
+       or if it has been discovered and doesn't already have a name;
+       when something has been named and then becomes discovered, it
+       remains a likely candidate until player renames it to <space>
+       to remove that no longer needed name */
+    if (!obj->dknown || (objects[obj->otyp].oc_name_known
+                         && !objects[obj->otyp].oc_uname))
+        return GETOBJ_DOWNPLAY;
+
     return GETOBJ_SUGGEST;
 }
 

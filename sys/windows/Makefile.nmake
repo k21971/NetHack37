@@ -9,8 +9,8 @@
 #
 #       Visual Studio Compilers Tested:
 #            - Microsoft Visual Studio 2017 Community Edition v 15.9.51
-#            - Microsoft Visual Studio 2019 Community Edition v 16.11.21
-#            - Microsoft Visual Studio 2022 Community Edition v 17.4.2
+#            - Microsoft Visual Studio 2019 Community Edition v 16.11.22
+#            - Microsoft Visual Studio 2022 Community Edition v 17.4.3
 #
 #==============================================================================
 #   This is used for building two distinct executables of NetHack:
@@ -721,7 +721,7 @@ rc=Rc.exe
 # Recently tested versions:
 TESTEDVS2017 = 14.16.27048.0
 TESTEDVS2019 = 14.29.30147.0
-TESTEDVS2022 = 14.34.31935.0
+TESTEDVS2022 = 14.34.31937.0
 
 VS2017CUR = $(TESTEDVS2017:.=)
 VS2019CUR = $(TESTEDVS2019:.=)
@@ -851,7 +851,9 @@ scall  =
 #      but variadic argument ‘position’ has type ‘type’
 # 4820 padding in struct
 ctmpflags = $(ctmpflags:-W3=-W4) -wd4100 -wd4244 -wd4245 -wd4310 -wd4706 -w44777 -wd4820
+!IF ($(VSVER) >= 2019)
 ctmpflags = $(ctmpflags) -w44774
+!ENDIF
 !ENDIF
 
 #More verbose warning output options below
