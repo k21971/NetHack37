@@ -1070,11 +1070,20 @@ dump_enums(void)
     static const char *const titles[NUM_ENUM_DUMPS] = {
         "monnums", "objects_nums" , "misc_object_nums"
     };
+#define dump_om(om) { om, #om }
     static const struct enum_dump omdump[] = {
-        { LAST_GEM, "LAST_GEM" },
-        { NUM_GLASS_GEMS, "NUM_GLASS_GEMS" },
-        { MAXSPELL, "MAXSPELL" },
+        dump_om(FIRST_AMULET),
+        dump_om(LAST_AMULET),
+        dump_om(FIRST_SPELL),
+        dump_om(LAST_SPELL),
+        dump_om(MAXSPELL),
+        dump_om(FIRST_REAL_GEM),
+        dump_om(LAST_REAL_GEM),
+        dump_om(FIRST_GLASS_GEM),
+        dump_om(LAST_GLASS_GEM),
+        dump_om(NUM_GLASS_GEMS),
     };
+#undef dump_om
     static const struct enum_dump *const ed[NUM_ENUM_DUMPS] = {
         monsdump, objdump, omdump
     };
