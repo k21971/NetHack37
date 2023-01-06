@@ -546,6 +546,7 @@ extern const char *pmname(struct permonst *, int);
 #endif
 extern const char *mon_pmname(struct monst *);
 extern const char *obj_pmname(struct obj *);
+boolean mapxy_valid(coordxy x, coordxy y);
 
 /* ### do_wear.c ### */
 
@@ -2784,7 +2785,7 @@ extern boolean u_teleport_mon(struct monst *, boolean);
 
 /* ### tile.c ### */
 
-#ifdef USE_TILES
+#ifdef TILES_IN_GLYPHMAP
 extern void substitute_tiles(d_level *);
 #endif
 
