@@ -80,10 +80,10 @@ static void dump_headers(void);
 static void dump_footers(void);
 static void dump_set_color_attr(int, int, boolean);
 #ifdef DUMPHTML
-static void html_write_tags(FILE *, winid, int, boolean);
+static void html_write_tags(FILE *, int, boolean);
 static void html_dump_char(FILE *, char);
 static void html_dump_str(FILE *, const char *);
-static void html_dump_line(FILE *, winid, int, const char *);
+static void html_dump_line(FILE *, int, const char *);
 static void dump_set_color_attr(int, int, boolean);
 static void html_init_sym(void);
 static unsigned mg_hl_attr(unsigned);
@@ -1285,7 +1285,6 @@ dump_fmtstr(
 void
 html_write_tags(
     FILE *fp,
-    winid win,
     int attr,
     boolean before) /* Tags before/after string */
 {
@@ -1307,7 +1306,7 @@ html_write_tags(
             fprintf(fp, PREF_E);
             in_preform = FALSE;
         }
-        if (!(attr & (ATR_HEADING | ATR_SUBHEAD)) && win == NHW_MENU) {
+        if (!(attr & (ATR_HEADING | ATR_SUBHEAD)) && gd.dumping_list) {
             /* This is a bullet point */
             if (!in_list) {
                 fprintf(fp, "%s\n", LIST_S);
@@ -1385,7 +1384,6 @@ html_dump_str(
 void
 html_dump_line(
     FILE *fp,
-    winid win,
     int attr,
     const char *str)
 {
@@ -1394,9 +1392,9 @@ html_dump_line(
        fprintf(fp, "%s\n", LINEBREAK);
        return;
     }
-    html_write_tags(fp, win, attr, TRUE);
+    html_write_tags(fp, attr, TRUE);
     html_dump_str(fp, str);
-    html_write_tags(fp, win, attr, FALSE);
+    html_write_tags(fp, attr, FALSE);
 }
 
 /** HTML Map and status bar (collectively, the 'screendump') **/
@@ -1931,7 +1929,7 @@ void
 dump_footers(void)
 {
     if (dumphtml_file) {
-        html_write_tags(dumphtml_file, 0, 0, TRUE); /* close </ul> and </pre> if open */
+        html_write_tags(dumphtml_file, 0, TRUE); /* close </ul> and </pre> if open */
         fprintf(dumphtml_file, "</body>\n</html>\n");
     }
 }
@@ -1962,7 +1960,7 @@ dump_outrip(
     time_t when)
 {
    if (dumphtml_file) {
-       html_write_tags(dumphtml_file, 0, 0, TRUE); /* </ul>, </pre> if needed */
+       html_write_tags(dumphtml_file, 0, TRUE); /* </ul>, </pre> if needed */
        fprintf(dumphtml_file, "%s\n", PREF_S);
    }
    genl_outrip(win, how, when);
@@ -2047,14 +2045,17 @@ dump_putstr(winid win, int attr, const char *str)
         if (win == NHW_STATUS)
             html_dump_str(dumphtml_file, str);
         else
-            html_dump_line(dumphtml_file, win, attr, str);
+            html_dump_line(dumphtml_file, attr, str);
     }
 #endif
 }
 
 static winid
-dump_create_nhwindow(int type UNUSED)
+dump_create_nhwindow(int type)
 {
+#ifdef DUMPHTML
+    gd.dumping_list = (boolean) (type == NHW_MENU);
+#endif
     return WIN_ERR;
 }
 
@@ -2076,6 +2077,9 @@ dump_display_nhwindow(winid win UNUSED, boolean p UNUSED)
 static void
 dump_destroy_nhwindow(winid win UNUSED)
 {
+#ifdef DUMPHTML
+    gd.dumping_list = FALSE;
+#endif
     return;
 }
 
@@ -2111,7 +2115,7 @@ dump_add_menu(winid win UNUSED,
         /* Don't use NHW_MENU for inv items as this makes bullet points */
         if (!attr && glyphinfo->glyph != NO_GLYPH)
             win = (winid)0;
-        html_write_tags(dumphtml_file, win, attr, TRUE);
+        html_write_tags(dumphtml_file, attr, TRUE);
         if (iflags.use_menu_color && get_menu_coloring(str, &color, &attr)) {
             iscolor = TRUE;
             fprintf(dumphtml_file, "<span class=\"nh_color_%d\">", color);
@@ -2121,7 +2125,7 @@ dump_add_menu(winid win UNUSED,
         }
         html_dump_str(dumphtml_file, str);
         fprintf(dumphtml_file, "%s", iscolor ? "</span>" : "");
-        html_write_tags(dumphtml_file, win, attr, FALSE);
+        html_write_tags(dumphtml_file, attr, FALSE);
     }
 #endif
 }
@@ -2138,7 +2142,7 @@ dump_end_menu(winid win UNUSED, const char *str)
     }
 #ifdef DUMPHTML
     if (dumphtml_file)
-        html_dump_line(dumphtml_file, 0, 0, str ? str : "");
+        html_dump_line(dumphtml_file, 0, str ? str : "");
 #endif
 }
 

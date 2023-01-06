@@ -382,7 +382,7 @@ enlightenment(
     }
 
     enlght_out(""); /* separator */
-    enlght_out("Miscellaneous:");
+    enlght_out_attr(ATR_SUBHEAD, "Miscellaneous:");
     /* reminder to player and/or information for dumplog */
     if ((mode & BASICENLIGHTENMENT) != 0 && (wizard || discover || final)) {
         if (wizard || discover) {
@@ -776,7 +776,7 @@ characteristics_enlightenment(int mode, int final)
     char buf[BUFSZ];
 
     enlght_out("");
-    Sprintf(buf, "%sCharacteristics:", !final ? "" : "Final");
+    Sprintf(buf, "%sCharacteristics:", !final ? "" : "Final ");
     enlght_out_attr(ATR_SUBHEAD, buf);
 
     /* bottom line order */
