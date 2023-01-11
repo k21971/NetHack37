@@ -431,6 +431,7 @@ extern void under_water(int);
 extern void see_monsters(void);
 extern void set_mimic_blocking(void);
 extern void see_objects(void);
+extern void see_nearby_objects(void);
 extern void see_traps(void);
 extern void curs_on_u(void);
 extern int doredraw(void);
@@ -1824,6 +1825,7 @@ extern int do_play_instrument(struct obj *);
 #if !defined(CROSSCOMPILE) || defined(CROSSCOMPILE_TARGET)
 extern struct selectionvar *l_selection_check(lua_State *, int);
 extern int l_selection_register(lua_State *);
+extern void l_selection_push_copy(lua_State *, struct selectionvar *);
 extern void nhl_push_obj(lua_State *, struct obj *);
 extern int nhl_obj_u_giveobj(lua_State *);
 extern int l_obj_register(lua_State *);

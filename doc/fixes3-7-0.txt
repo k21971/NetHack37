@@ -1078,6 +1078,12 @@ sleeping or unconscious hero attacked by Medusa would meet her gaze
 if a trap killed both the hero's steed and the hero an impossible "dmonsfree:
 	N+1 removed doesn't match N pending" warning could occur
 prevent paralyzed hero from helping nymph or succubus remove worn armor
+when identifying items via menu and more than one pass is needed (so when
+	identifying 3 items and player only picks 1, for instance), issue
+	--More-- because the next menu might cover up the ID message(s)
+slightly more interesting Gehennom filler levels
+don't reveal color of potions, gems, or spellbooks that haven't been seen up
+	close (seeing faraway monster operate on an object counts as up close)
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1545,6 +1551,7 @@ curses: if a menu of objects contains at least one iron ball, and player is
 	group accelerator rather than the start of a count
 curses: obey timed_delay option
 curses: support tty-style extended role/race/&c selection at start of new game
+curses: implement mark_synch() and wait_synch()
 macOS: Xcode project was failing to build if the path to the NetHack source
 	tree contained a space; the issue was within some shell script code
 	contained within the project
@@ -2214,4 +2221,5 @@ replace some old 'time_t' hackery in system.h and hacklib.c with something
 	less obtrusive in unixconf.h
 remove the per dungeon level door limit
 remove various '#if LINT' hacks used to suppress warnings from pre-ANSI 'lint'
+VMS: removed NO_VSNPRINTF conditional code
 

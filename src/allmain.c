@@ -1074,6 +1074,9 @@ dump_enums(void)
     static const struct enum_dump omdump[] = {
         dump_om(FIRST_AMULET),
         dump_om(LAST_AMULET),
+        dump_om(FIRST_POTION),
+        dump_om(LAST_POTION),
+        dump_om(NUM_POTIONS),
         dump_om(FIRST_SPELL),
         dump_om(LAST_SPELL),
         dump_om(MAXSPELL),
@@ -1081,7 +1084,9 @@ dump_enums(void)
         dump_om(LAST_REAL_GEM),
         dump_om(FIRST_GLASS_GEM),
         dump_om(LAST_GLASS_GEM),
+        dump_om(NUM_REAL_GEMS),
         dump_om(NUM_GLASS_GEMS),
+        dump_om(MAX_GLYPH),
     };
 #undef dump_om
     static const struct enum_dump *const ed[NUM_ENUM_DUMPS] = {
@@ -1091,16 +1096,16 @@ dump_enums(void)
     static int szd[NUM_ENUM_DUMPS] = {
         SIZE(monsdump), SIZE(objdump), SIZE(omdump)
     };
-    int i, j;
+    const char *nmprefix;
+    int i, j, nmwidth;
 
     for (i = 0; i < NUM_ENUM_DUMPS; ++ i) {
         raw_printf("enum %s = {", titles[i]);
         for (j = 0; j < szd[i]; ++j) {
-            raw_printf("    %s%s = %i%s",
-                       (j == szd[i] - 1) ? "" : pfx[i],
-                       ed[i][j].nm,
-                       ed[i][j].val,
-                       (j == szd[i] - 1) ? "" : ",");
+            nmprefix = (j == szd[i] - 1) ? "" : pfx[i]; /* "" or "PM_" */
+            nmwidth = 27 - (int) strlen(nmprefix); /* 27 or 24 */
+            raw_printf("    %s%*s = %3d,",
+                       nmprefix, -nmwidth, ed[i][j].nm, ed[i][j].val);
        }
         raw_print("};");
         raw_print("");
