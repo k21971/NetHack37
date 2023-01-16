@@ -51,7 +51,7 @@ int
 dosave(void)
 {
     clear_nhwindow(WIN_MESSAGE);
-    if (yn("Really save?") == 'n') {
+    if (y_n("Really save?") == 'n') {
         clear_nhwindow(WIN_MESSAGE);
         if (gm.multi > 0)
             nomul(0);
@@ -122,7 +122,7 @@ dosave0(void)
             close_nhfile(nhfp);
             clear_nhwindow(WIN_MESSAGE);
             There("seems to be an old save file.");
-            if (yn("Overwrite the old file?") == 'n') {
+            if (y_n("Overwrite the old file?") == 'n') {
                 nh_compress(fq_save);
                 goto done;
             }
@@ -348,6 +348,7 @@ savegamestate(NHFILE *nhfp)
     savenames(nhfp);
     save_msghistory(nhfp);
     save_gamelog(nhfp);
+    save_luadata(nhfp);
     if (nhfp->structlevel)
         bflush(nhfp->fd);
     gp.program_state.saving--;

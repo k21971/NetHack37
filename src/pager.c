@@ -296,8 +296,10 @@ object_from_map(int glyph, coordxy x, coordxy y, struct obj **obj_p)
 }
 
 static void
-look_at_object(char *buf, /* output buffer */
-               coordxy x, coordxy y, int glyph)
+look_at_object(
+    char *buf, /* output buffer */
+    coordxy x, coordxy y,
+    int glyph)
 {
     struct obj *otmp = 0;
     boolean fakeobj = object_from_map(glyph, x, y, &otmp);
@@ -330,10 +332,11 @@ look_at_object(char *buf, /* output buffer */
 }
 
 static void
-look_at_monster(char *buf,
-                char *monbuf, /* buf: output, monbuf: optional output */
-                struct monst *mtmp,
-                coordxy x, coordxy y)
+look_at_monster(
+    char *buf,
+    char *monbuf, /* buf: output, monbuf: optional output */
+    struct monst *mtmp,
+    coordxy x, coordxy y)
 {
     char *name, monnambuf[BUFSZ], healthbuf[BUFSZ];
     boolean accurate = !Hallucination;
@@ -904,7 +907,7 @@ checkfile(char *inp, struct permonst *pm, boolean user_typed_name,
                                (int) (sizeof question - 1
                                       - (strlen(question) + 2)));
                     Strcat(question, "\"?");
-                    if (yn(question) == 'y')
+                    if (y_n(question) == 'y')
                         yes_to_moreinfo = TRUE;
                 }
 
@@ -1868,7 +1871,7 @@ do_supplemental_info(char *name, struct permonst *pm, boolean without_asking)
                 copynchars(eos(question), entrytext,
                     (int) (sizeof question - 1 - (strlen(question) + 2)));
                 Strcat(question, "\"?");
-                if (yn(question) == 'y')
+                if (y_n(question) == 'y')
                 yes_to_moreinfo = TRUE;
             }
             if (yes_to_moreinfo) {

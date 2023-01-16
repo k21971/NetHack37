@@ -542,7 +542,7 @@ study_book(register struct obj* spellbook)
             /* hero has just been told what spell this book is for; it may
                have been undiscovered if spell was learned via divine gift */
             makeknown(booktype);
-            if (yn("Refresh your memory anyway?") == 'n')
+            if (y_n("Refresh your memory anyway?") == 'n')
                 return 0;
         }
 
@@ -564,7 +564,7 @@ study_book(register struct obj* spellbook)
                     Sprintf(qbuf,
                     "This spellbook is %sdifficult to comprehend.  Continue?",
                             (read_ability < 12 ? "very " : ""));
-                    if (yn(qbuf) != 'y') {
+                    if (y_n(qbuf) != 'y') {
                         spellbook->in_use = FALSE;
                         return 1;
                     }
@@ -857,11 +857,11 @@ cast_protection(void)
                 struct permonst *pm = u.ustuck ? u.ustuck->data : 0;
 
                 rmtyp = levl[u.ux][u.uy].typ;
-                atmosphere = u.uswallow
+                atmosphere = (pm && u.uswallow)
                                 ? ((pm == &mons[PM_FOG_CLOUD]) ? "mist"
-                                   : is_whirly(u.ustuck->data) ? "maelstrom"
+                                   : is_whirly(pm) ? "maelstrom"
                                      : enfolds(pm) ? "folds"
-                                       : is_animal(u.ustuck->data) ? "maw"
+                                       : is_animal(pm) ? "maw"
                                          : "ooze")
                                 : (u.uinwater ? hliquid("water")
                                    : (rmtyp == CLOUD) ? "cloud"

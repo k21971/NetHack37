@@ -376,6 +376,19 @@ Example:
  nh.stop_timer_at({x=5,y=6}, "melt-ice");
 
 
+=== variable
+
+Set or get a global variable. These are persistent, saved and restored along with the game.
+Supports only strings, booleans, numbers, or tables.
+
+Example:
+
+ nh.variable("test", 10);
+ local ten = nh.variable("test");
+ nh.variable("tbl", { a = 1, b = "foo" });
+ local tbl = nh.variable("tbl");
+
+
 === verbalize
 
 Show the text in the message area as if someone said it, obeying eg. hero's deafness.
@@ -556,6 +569,7 @@ the map are not relative to it.
 | halign    | Horizontal alignment on a rough 3x3 grid.
 | valign    | Vertical alignment on a rough 3x3 grid.
 | map       | Multi-line string describing the map. See <<_map_characters>>
+| lit       | Boolean. Are the map grids lit? Default is false.
 | contents  | A function called with one parameter, a table with "width" and "height", the map width and height. All coordinates in the function will be relative to the map.
 |===
 

@@ -27,7 +27,7 @@ char *translate_path_variables(const char *, char *);
 char *exename(void);
 boolean fakeconsole(void);
 void freefakeconsole(void);
-extern void nethack_exit(int) NORETURN;
+ATTRNORETURN extern void nethack_exit(int) NORETURN;
 #if defined(MSWIN_GRAPHICS)
 extern void mswin_destroy_reg(void);
 #endif
@@ -454,6 +454,8 @@ extern const char *known_restrictions[]; /* symbols.c */
  * WinMain exist, the resulting executable won't work correctly.
  */
 
+DISABLE_WARNING_UNREACHABLE_CODE
+
 #if defined(__MINGW32__) && defined(MSWIN_GRAPHICS)
 #define MAIN mingw_main
 #else
@@ -695,7 +697,7 @@ attempt_restore:
             if (discover)
                 You("are in non-scoring discovery mode.");
             if (discover || wizard) {
-                if (yn("Do you want to keep the save file?") == 'n')
+                if (y_n("Do you want to keep the save file?") == 'n')
                     (void) delete_savefile();
                 else {
                     nh_compress(fqname(gs.SAVEF, SAVEPREFIX, 0));
@@ -734,6 +736,8 @@ attempt_restore:
     /*NOTREACHED*/
     return 0;
 }
+
+RESTORE_WARNING_UNREACHABLE_CODE
 
 static void
 process_options(int argc, char * argv[])
@@ -1462,7 +1466,7 @@ other_self_recover_prompt(void)
     c = 'n';
     ct = 0;
     if (iflags.window_inited || WINDOWPORT(curses)) {
-        c = yn("There are files from a game in progress under your name. "
+        c = y_n("There are files from a game in progress under your name. "
                "Recover?");
     } else {
         c = 'n';
@@ -1489,7 +1493,7 @@ other_self_recover_prompt(void)
     }
     if (pl == 1 && (c == 'n' || c == 'N')) {
         /* no to recover */
-        c = yn("Are you sure you wish to destroy the old game, rather than try to "
+        c = y_n("Are you sure you wish to destroy the old game, rather than try to "
                   "recover it? [yn] ");
         pl = 2;
         if (!ismswin && !iscurses) {

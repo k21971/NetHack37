@@ -415,7 +415,7 @@ savebones(int how, time_t when, struct obj *corpse)
     if (nhfp) {
         close_nhfile(nhfp);
         if (wizard) {
-            if (yn("Bones file already exists.  Replace it?") == 'y') {
+            if (y_n("Bones file already exists.  Replace it?") == 'y') {
                 if (delete_bonesfile(&u.uz))
                     goto make_bones;
                 else
@@ -621,7 +621,7 @@ getbones(void)
     } else {
         ok = TRUE;
         if (wizard) {
-            if (yn("Get bones?") == 'n') {
+            if (y_n("Get bones?") == 'n') {
                 close_nhfile(nhfp);
                 compress_bonesfile();
                 return 0;
@@ -680,7 +680,7 @@ getbones(void)
     u.uroleplay.numbones++;
 
     if (wizard) {
-        if (yn("Unlink bones?") == 'n') {
+        if (y_n("Unlink bones?") == 'n') {
             compress_bonesfile();
             return ok;
         }
