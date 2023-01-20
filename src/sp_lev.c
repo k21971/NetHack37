@@ -1776,7 +1776,11 @@ create_trap(spltrap* t, struct mkroom* croom)
     coord tm;
     int mktrap_flags = MKTRAP_MAZEFLAG;
 
-    if (croom) {
+    if (t->type == VIBRATING_SQUARE) {
+        pick_vibrasquare_location();
+        maketrap(gi.inv_pos.x, gi.inv_pos.y, VIBRATING_SQUARE);
+        return;
+    } else if (croom) {
         get_free_room_loc(&x, &y, croom, t->coord);
     } else {
         int trycnt = 0;
@@ -3694,6 +3698,12 @@ lspo_level_flags(lua_State *L)
             gc.coder->allow_flips &= ~1;
         else if (!strcmpi(s, "noflip"))
             gc.coder->allow_flips = 0;
+        else if (!strcmpi(s, "temperate"))
+            gl.level.flags.temperature = 0;
+        else if (!strcmpi(s, "hot"))
+            gl.level.flags.temperature = 1;
+        else if (!strcmpi(s, "cold"))
+            gl.level.flags.temperature = -1;
         else {
             char buf[BUFSZ];
             Sprintf(buf, "Unknown level flag %s", s);
@@ -6798,6 +6808,7 @@ sp_level_coder_init(void)
     (void) memset((genericptr_t) SpLev_Map, 0, sizeof SpLev_Map);
 
     gl.level.flags.is_maze_lev = 0;
+    gl.level.flags.temperature = In_hell(&u.uz) ? 1 : 0;
 
     reset_xystart_size();
 

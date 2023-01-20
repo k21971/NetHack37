@@ -17,6 +17,7 @@ static boolean danger_uprops(void);
 static int wipeoff(void);
 static int menu_drop(int);
 static NHFILE *currentlevel_rewrite(void);
+static void familiar_level_msg(void);
 static void final_level(void);
 
 /* static boolean badspot(coordxy,coordxy); */
@@ -1337,7 +1338,36 @@ u_collide_m(struct monst *mtmp)
     }
 }
 
-DISABLE_WARNING_FORMAT_NONLITERAL
+static void
+familiar_level_msg(void)
+{
+    static const char *const fam_msgs[4] = {
+        "You have a sense of deja vu.",
+        "You feel like you've been here before.",
+        "This place %s familiar...", 0 /* no message */
+    };
+    static const char *const halu_fam_msgs[4] = {
+        "Whoa!  Everything %s different.",
+        "You are surrounded by twisty little passages, all alike.",
+        "Gee, this %s like uncle Conan's place...", 0 /* no message */
+    };
+    const char *mesg;
+    char buf[BUFSZ];
+    int which = rn2(4);
+
+    if (Hallucination)
+        mesg = halu_fam_msgs[which];
+    else
+        mesg = fam_msgs[which];
+    if (mesg && strchr(mesg, '%')) {
+        DISABLE_WARNING_FORMAT_NONLITERAL
+        Sprintf(buf, mesg, !Blind ? "looks" : "seems");
+        RESTORE_WARNING_FORMAT_NONLITERAL
+        mesg = buf;
+    }
+    if (mesg)
+        pline1(mesg);
+}
 
 void
 goto_level(
@@ -1360,6 +1390,7 @@ goto_level(
     char *annotation;
     int dist = depth(newlevel) - depth(&u.uz);
     boolean do_fall_dmg = FALSE;
+    schar prev_temperature = gl.level.flags.temperature;
 
     if (dunlev(newlevel) > dunlevs_in_dungeon(newlevel))
         newlevel->dlevel = dunlevs_in_dungeon(newlevel);
@@ -1715,8 +1746,7 @@ goto_level(
             display_nhwindow(WIN_MESSAGE, FALSE);
 #endif
             You_hear("groans and moans everywhere.");
-        } else
-            hellish_smoke_mesg(); /* "It is hot here.  You smell smoke..." */
+        }
 
         record_achievement(ACH_HELL); /* reached Gehennom */
     }
@@ -1724,32 +1754,8 @@ goto_level(
     if (Inhell && !Is_valley(&u.uz))
         u.uevent.gehennom_entered = 1;
 
-    if (familiar) {
-        static const char *const fam_msgs[4] = {
-            "You have a sense of deja vu.",
-            "You feel like you've been here before.",
-            "This place %s familiar...", 0 /* no message */
-        };
-        static const char *const halu_fam_msgs[4] = {
-            "Whoa!  Everything %s different.",
-            "You are surrounded by twisty little passages, all alike.",
-            "Gee, this %s like uncle Conan's place...", 0 /* no message */
-        };
-        const char *mesg;
-        char buf[BUFSZ];
-        int which = rn2(4);
-
-        if (Hallucination)
-            mesg = halu_fam_msgs[which];
-        else
-            mesg = fam_msgs[which];
-        if (mesg && strchr(mesg, '%')) {
-            Sprintf(buf, mesg, !Blind ? "looks" : "seems");
-            mesg = buf;
-        }
-        if (mesg)
-            pline1(mesg);
-    }
+    if (familiar)
+        familiar_level_msg();
 
     /* special location arrival messages/events */
     if (In_endgame(&u.uz)) {
@@ -1763,9 +1769,6 @@ goto_level(
         }
     } else if (In_quest(&u.uz)) {
         onquest(); /* might be reaching locate|goal level */
-    } else if (In_V_tower(&u.uz)) {
-        if (newdungeon && In_hell(&u.uz0))
-            pline_The("heat and smoke are gone.");
     } else if (Is_knox(&u.uz)) {
         /* alarm stops working once Croesus has died */
         if (new || !gm.mvitals[PM_CROESUS].died) {
@@ -1805,6 +1808,17 @@ goto_level(
                                             : "quest_portal_again");
             }
         }
+    }
+
+    if (prev_temperature != gl.level.flags.temperature) {
+        if (gl.level.flags.temperature)
+            hellish_smoke_mesg();
+        else if (prev_temperature > 0)
+            pline_The("heat %s gone.",
+                      In_hell(&u.uz0)
+                      ? "and smoke are" : "is");
+        else if (prev_temperature < 0)
+            You("are out of the cold.");
     }
 
     /* this was originally done earlier; moved here to be logged after
@@ -1855,15 +1869,17 @@ goto_level(
     return;
 }
 
-RESTORE_WARNING_FORMAT_NONLITERAL
-
 /* give a message when entering a Gehennom level other than the Valley;
    also given if restoring a game in that situation */
 void
 hellish_smoke_mesg(void)
 {
-    if (Inhell && !Is_valley(&u.uz))
-        pline("It is hot here.  You %s smoke...",
+    if (gl.level.flags.temperature)
+        pline("It is %s here.",
+              gl.level.flags.temperature > 0 ? "hot" : "cold");
+
+    if (In_hell(&u.uz) && gl.level.flags.temperature > 0)
+        pline("You %s smoke...",
               olfaction(gy.youmonst.data) ? "smell" : "sense");
 }
 
