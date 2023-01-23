@@ -47,9 +47,9 @@ static boolean get_valid_jump_position(coordxy, coordxy);
 static boolean get_valid_polearm_position(coordxy, coordxy);
 static boolean find_poleable_mon(coord *, int, int);
 
-static const char Nothing_seems_to_happen[] = "Nothing seems to happen.";
-static const char no_elbow_room[] =
-    "don't have enough elbow-room to maneuver.";
+static const char
+    Nothing_seems_to_happen[] = "Nothing seems to happen.",
+    no_elbow_room[] = "don't have enough elbow-room to maneuver.";
 
 static int
 use_camera(struct obj *obj)
@@ -343,18 +343,22 @@ use_stethoscope(struct obj *obj)
         mstatusline(u.ustuck);
         return res;
     } else if (u.dz) {
-        if (Underwater)
+        if (Underwater) {
+            Soundeffect(se_faint_splashing, 35);
             You_hear("faint splashing.");
-        else if (u.dz < 0 || !can_reach_floor(TRUE))
+        } else if (u.dz < 0 || !can_reach_floor(TRUE)) {
             cant_reach_floor(u.ux, u.uy, (u.dz < 0), TRUE);
-        else if (its_dead(u.ux, u.uy, &res))
+        } else if (its_dead(u.ux, u.uy, &res)) {
             ; /* message already given */
-        else if (Is_stronghold(&u.uz))
+        } else if (Is_stronghold(&u.uz)) {
+            Soundeffect(se_crackling_of_hellfire, 35);
             You_hear("the crackling of hellfire.");
-        else
+        } else {
             pline_The("%s seems healthy enough.", surface(u.ux, u.uy));
+        }
         return res;
     } else if (obj->cursed && !rn2(2)) {
+        Soundeffect(se_heart_beat, 100);
         You_hear("your heart beat.");
         return res;
     }
@@ -366,6 +370,7 @@ use_stethoscope(struct obj *obj)
     rx = u.ux + u.dx;
     ry = u.uy + u.dy;
     if (!isok(rx, ry)) {
+        Soundeffect(se_typing_noise, 100);
         You_hear("a faint typing noise.");
         return ECMD_OK;
     }
@@ -431,6 +436,7 @@ use_stethoscope(struct obj *obj)
     lev = &levl[rx][ry];
     switch (lev->typ) {
     case SDOOR:
+        Soundeffect(se_hollow_sound, 100);
         You_hear(hollow_str, "door");
         cvt_sdoor_to_door(lev); /* ->typ = DOOR */
         feel_newsym(rx, ry);
@@ -1044,8 +1050,9 @@ use_mirror(struct obj *obj)
     }
     if (Underwater) {
         if (useeit)
-            You(Hallucination ? "give the fish a chance to fix their makeup."
-                              : "reflect the murky water.");
+            You("%s.",
+                Hallucination ? "give the fish a chance to fix their makeup"
+                              : "reflect the murky water");
         return ECMD_TIME;
     }
     if (u.dz) {
@@ -1184,8 +1191,8 @@ use_bell(struct obj **optr)
             && !(gm.mvitals[PM_WOOD_NYMPH].mvflags & G_GONE)
             && !(gm.mvitals[PM_WATER_NYMPH].mvflags & G_GONE)
             && !(gm.mvitals[PM_MOUNTAIN_NYMPH].mvflags & G_GONE)
-            && (mtmp = makemon(mkclass(S_NYMPH, 0), u.ux, u.uy, NO_MINVENT|MM_NOMSG))
-                   != 0) {
+            && (mtmp = makemon(mkclass(S_NYMPH, 0), u.ux, u.uy,
+                               NO_MINVENT | MM_NOMSG)) != 0) {
             You("summon %s!", a_monnam(mtmp));
             if (!obj_resists(obj, 93, 100)) {
                 pline("%s shattered!", Tobjnam(obj, "have"));
@@ -1592,8 +1599,9 @@ use_lamp(struct obj *obj)
         return;
     }
     if (Underwater) {
-        pline(!Is_candle(obj) ? "This is not a diving lamp"
-                              : "Sorry, fire and water don't mix.");
+        pline("%s.",
+              !Is_candle(obj) ? "This is not a diving lamp"
+                              : "Sorry, fire and water don't mix");
         return;
     }
     /* magic lamps with an spe == 0 (wished for) cannot be lit */
@@ -3757,6 +3765,7 @@ do_break_wand(struct obj *obj)
         goto discard_broken_wand;
     case WAN_STRIKING:
         /* we want this before the explosion instead of at the very end */
+        Soundeffect(se_wall_of_force, 65);
         pline("A wall of force smashes down around you!");
         dmg = d(1 + obj->spe, 6); /* normally 2d12 */
         /*FALLTHRU*/
@@ -4202,14 +4211,18 @@ flip_through_book(struct obj *obj)
     You("flip through the pages of %s.", thesimpleoname(obj));
 
     if (obj->otyp == SPE_BOOK_OF_THE_DEAD) {
-        if (!Deaf)
+        if (!Deaf) {
+            if (!Hallucination) {
+                Soundeffect(se_rustling_paper, 50);
+            }
             You_hear("the pages make an unpleasant %s sound.",
                      Hallucination ? "chuckling"
                                    : "rustling");
-        else if (!Blind)
+        } else if (!Blind) {
             You_see("the pages glow faintly %s.", hcolor(NH_RED));
-        else
+        } else {
             You_feel("the pages tremble.");
+        }
     } else if (Blind) {
         pline("The pages feel %s.",
               Hallucination ? "freshly picked"

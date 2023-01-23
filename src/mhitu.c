@@ -739,12 +739,16 @@ mattacku(register struct monst *mtmp)
                 } else if (digests(mtmp->data)) {
                     pline("%s gulps some air!", Monnam(mtmp));
                 } else {
-                    if (youseeit)
+                    if (youseeit) {
                         pline("%s lunges forward and recoils!", Monnam(mtmp));
-                    else
+                    } else {
+                        if (is_whirly(mtmp->data)) {
+                            Soundeffect(se_rushing_wind_noise, 60);
+                        }
                         You_hear("a %s nearby.",
                                  is_whirly(mtmp->data) ? "rushing noise"
                                                        : "splat");
+                    }
                 }
             }
             break;
@@ -841,7 +845,7 @@ summonmu(struct monst *mtmp, boolean youseeit)
 
     if (is_demon(mdat)) {
         if (mdat != &mons[PM_BALROG] && mdat != &mons[PM_AMOROUS_DEMON]) {
-            if (!rn2(13))
+            if (!rn2(Inhell ? 10 : 16))
                 (void) msummon(mtmp);
         }
         return; /* no such thing as a demon were creature, so we're done */
@@ -876,7 +880,8 @@ summonmu(struct monst *mtmp, boolean youseeit)
                 const char *from_nowhere;
 
                 if (!Deaf) {
-                    pline("%s %s!", Something, makeplural(growl_sound(mtmp)));
+                    pline("%s %s!", Something,
+                          makeplural(growl_sound(mtmp)));
                     from_nowhere = "";
                 } else {
                     from_nowhere = " from nowhere";

@@ -617,7 +617,7 @@ getoptstr(int optidx, int ophase)
 
         /* find non-Null, in order optvals[][play_opt], [cmdline_opt],
            [environ_opt], [rc_file_opt], [syscf_opt], [builtin_opt] */
-        for (phase = num_opt_phases; phase >= 0; --phase)
+        for (phase = num_opt_phases - 1; phase >= 0; --phase)
             if (roleoptvals[roleoptindx][phase]) {
                 ophase = phase;
                 break;
@@ -3394,6 +3394,43 @@ optfn_scroll_margin(
             Sprintf(opts, "%d", iflags.wc_scroll_margin);
         else
             Strcpy(opts, defopt);
+        return optn_ok;
+    }
+    return optn_ok;
+}
+
+static int
+optfn_soundlib(int optidx, int req, boolean negated UNUSED,
+                 char *opts, char *op)
+{
+    char soundlibbuf[WINTYPELEN];
+
+    if (req == do_init) {
+        return optn_ok;
+    }
+    if (req == do_set) {
+        /*
+         * soundlib:  option to choose the interface for binaries built
+         * with support for more than the default interface (nosound).
+         *
+         * Option processing sets gc.chosen_soundlib. A later call
+         * to activate_chosen_soundlib() actually activates it, and
+         * sets gc.active_soundlib.
+         */
+        if ((op = string_for_env_opt(allopt[optidx].name, opts, FALSE))
+            != empty_optstr) {
+
+            get_soundlib_name(soundlibbuf, WINTYPELEN);
+            assign_soundlib(gc.chosen_soundlib);
+        } else
+            return optn_err;
+        return optn_ok;
+    }
+    if (req == get_val || req == get_cnf_val) {
+        if (!opts)
+            return optn_err;
+        get_soundlib_name(soundlibbuf, WINTYPELEN);
+        Sprintf(opts, "%s", soundlibbuf);
         return optn_ok;
     }
     return optn_ok;

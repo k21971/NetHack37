@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1670662098 2022/12/10 08:48:18 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1204 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1674294830 2023/01/21 09:53:50 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1223 $ */
 /* Copyright (c) Steve Creps, 1988.                               */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -622,6 +622,7 @@ extern int dog_nutrition(struct monst *, struct obj *);
 extern int dog_eat(struct monst *, struct obj *, coordxy, coordxy, boolean);
 extern int dog_move(struct monst *, int);
 extern void finish_meating(struct monst *);
+extern void quickmimic(struct monst *);
 
 /* ### dokick.c ### */
 
@@ -1457,7 +1458,7 @@ extern struct obj *mkobj(int, boolean) NONNULL;
 extern int rndmonnum_adj(int, int);
 extern int rndmonnum(void);
 extern boolean bogon_is_pname(char);
-extern struct obj *splitobj(struct obj *, long);
+extern struct obj *splitobj(struct obj *, long) NONNULL;
 extern unsigned next_ident(void);
 extern struct obj *unsplitobj(struct obj *);
 extern void clear_splitobjs(void);
@@ -1551,6 +1552,7 @@ extern int minliquid(struct monst *);
 extern boolean movemon_singlemon(struct monst *);
 extern int movemon(void);
 extern void meatbox(struct monst *, struct obj *);
+extern void m_consume_obj(struct monst *, struct obj *);
 extern int meatmetal(struct monst *);
 extern int meatobj(struct monst *);
 extern int meatcorpse(struct monst *);
@@ -1820,6 +1822,7 @@ extern boolean munslime(struct monst *, boolean);
 
 extern void awaken_soldiers(struct monst *);
 extern int do_play_instrument(struct obj *);
+enum instruments obj_to_instr(struct obj *);
 
 /* ### nhlsel.c ### */
 
@@ -2609,6 +2612,13 @@ extern void play_usersound(const char *, int);
 extern void play_usersound_via_idx(int, int);
 #endif
 #endif /* USER SOUNDS */
+extern void assign_soundlib(int);
+extern void activate_chosen_soundlib(void);
+extern void get_soundlib_name(char *dest, int maxlen);
+#ifdef SND_SOUNDEFFECTS_AUTOMAP
+extern char *get_sound_effect_filename(int32_t seidint,
+                                       char *buf, size_t bufsz, int32_t);
+#endif
 
 /* ### sp_lev.c ### */
 
@@ -2921,7 +2931,7 @@ extern void dynamic_multi_reason(struct monst *, const char *, boolean);
 extern void erode_armor(struct monst *, int);
 extern boolean attack_checks(struct monst *, struct obj *);
 extern void check_caitiff(struct monst *);
-extern void mon_maybe_wakeup_on_hit(struct monst *);
+extern void mon_maybe_unparalyze(struct monst *);
 extern int find_roll_to_hit(struct monst *, uchar, struct obj *, int *, int *);
 extern boolean force_attack(struct monst *, boolean);
 extern boolean do_attack(struct monst *);
@@ -3491,7 +3501,7 @@ extern void dobuzz(int, int, coordxy, coordxy, int, int, boolean);
 extern void melt_ice(coordxy, coordxy, const char *);
 extern void start_melt_ice_timeout(coordxy, coordxy, long);
 extern void melt_ice_away(union any *, long);
-extern int zap_over_floor(coordxy, coordxy, int, boolean *, short);
+extern int zap_over_floor(coordxy, coordxy, int, boolean *, boolean, short);
 extern void fracture_rock(struct obj *);
 extern boolean break_statue(struct obj *);
 extern boolean u_adtyp_resistance_obj(int);

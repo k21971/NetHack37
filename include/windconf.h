@@ -28,9 +28,6 @@
 /*#define DUMPLOG_FILE "nethack-%n-%d.log"*/
 #define DUMPLOG_MSG_COUNT 50
 
-#define USER_SOUNDS
-/* #define TTY_SOUND_ESCCODES */
-
 /*#define CHANGE_COLOR*/ /* allow palette changes */
 
 #define QWERTZ_SUPPORT  /* when swap_yz is True, numpad 7 is 'z' not 'y' */
@@ -96,6 +93,10 @@
 extern void interject_assistance(int, int, genericptr_t, genericptr_t);
 extern void interject(int);
 
+#if defined(SND_LIB_WINDSOUND)
+#define SND_SOUNDEFFECTS_AUTOMAP
+#endif
+
 /*
  *===============================================
  * Compiler-specific adjustments
@@ -103,9 +104,11 @@ extern void interject(int);
  */
 
 #ifdef __MINGW32__
+#if 0
 #define MD_USE_TMPFILE_S
 #if !defined(__cplusplus)
 extern errno_t tmpfile_s(FILE * restrict * restrict streamptr);
+#endif
 #endif
 #
 #ifdef strncasecmp

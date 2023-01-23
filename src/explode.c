@@ -376,6 +376,7 @@ explode(
             generic = TRUE;
         }
         if (!Deaf && olet != SCROLL_CLASS) {
+            Soundeffect(se_blast, 75);
             You_hear("a blast.");
             didmsg = TRUE;
         }
@@ -410,7 +411,8 @@ explode(
                  * from inside their engulfer. */
                 if (!(u.uswallow && !gc.context.mon_moving))
                     (void) zap_over_floor(xx, yy, type,
-                                          &shopdamage, exploding_wand_typ);
+                                          &shopdamage, FALSE,
+                                          exploding_wand_typ);
 
                 mtmp = m_at(xx, yy);
                 if (!mtmp && u_at(xx, yy))
@@ -731,6 +733,8 @@ scatter(coordxy sx, coordxy sy,  /* location of objects to scatter */
     while ((otmp = (individual_object ? obj : gl.level.objects[sx][sy])) != 0) {
         if (otmp == uball || otmp == uchain) {
             boolean waschain = (otmp == uchain);
+
+            Soundeffect(se_chain_shatters, 25);
             pline_The("chain shatters!");
             unpunish();
             if (waschain)
@@ -753,10 +757,12 @@ scatter(coordxy sx, coordxy sy,  /* location of objects to scatter */
             && (otmp->otyp == BOULDER || otmp->otyp == STATUE)
             && rn2(10)) {
             if (otmp->otyp == BOULDER) {
-                if (cansee(sx, sy))
+                if (cansee(sx, sy)) {
                     pline("%s apart.", Tobjnam(otmp, "break"));
-                else
+                } else {
+                    Soundeffect(se_stone_breaking, 100);
                     You_hear("stone breaking.");
+                }
                 fracture_rock(otmp);
                 place_object(otmp, sx, sy);
                 if ((otmp = sobj_at(BOULDER, sx, sy)) != 0) {
@@ -769,10 +775,12 @@ scatter(coordxy sx, coordxy sy,  /* location of objects to scatter */
 
                 if ((trap = t_at(sx, sy)) && trap->ttyp == STATUE_TRAP)
                     deltrap(trap);
-                if (cansee(sx, sy))
+                if (cansee(sx, sy)) {
                     pline("%s.", Tobjnam(otmp, "crumble"));
-                else
+                } else {
+                    Soundeffect(se_stone_crumbling, 100); 
                     You_hear("stone crumbling.");
+                }
                 (void) break_statue(otmp);
                 place_object(otmp, sx, sy); /* put fragments on floor */
             }

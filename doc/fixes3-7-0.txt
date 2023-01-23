@@ -1088,6 +1088,10 @@ fix freeing a worn object when forced to drop it by falling down stairs
 allow setting per-level "temperature": hot, cold, or temperate, currently
 	only affects some messages
 digging is noisy
+polymorphing into fire elemental allows you eat flammable items
+hitting sleeping monsters will cause them to wake up noisily
+demon gating happens more in Gehennom and less outside it
+intelligent peacefuls avoid digging shop or temple walls
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository

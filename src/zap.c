@@ -2121,6 +2121,7 @@ bhito(struct obj *obj, struct obj *otmp)
                (the sound could be implicit) */
             maybelearnit = cansee(obj->ox, obj->oy) || !Deaf;
             if (obj->otyp == BOULDER) {
+                Soundeffect(se_crumbling_sound, 75);
                 if (cansee(obj->ox, obj->oy))
                     pline_The("boulder falls apart.");
                 else
@@ -4392,7 +4393,7 @@ dobuzz(
         gb.bhitpos.x = sx, gb.bhitpos.y = sy;
         /* Fireballs only damage when they explode */
         if (type != ZT_SPELL(ZT_FIRE)) {
-            range += zap_over_floor(sx, sy, type, &shopdamage, 0);
+            range += zap_over_floor(sx, sy, type, &shopdamage, TRUE, 0);
             /* zap with fire -> melt ice -> drown monster, so monster
                found and cached above might not be here any more */
             mon = m_at(sx, sy);
@@ -4479,6 +4480,8 @@ dobuzz(
                         }
                         if (mon_could_move && !mon->mcanmove) /* ZT_SLEEP */
                             slept_monst(mon);
+                        if (abstype != ZT_SLEEP)
+                            wakeup(mon, TRUE);
                     }
                 }
                 range -= 2;
@@ -4697,6 +4700,7 @@ zap_over_floor(
     coordxy x, coordxy y,         /* location */
     int type,                 /* damage type plus {wand|spell|breath} info */
     boolean *shopdamage,      /* extra output if shop door is destroyed */
+    boolean ignoremon,        /* ignore any monster here */
     short exploding_wand_typ) /* supplied when breaking a wand; or POT_OIL
                                * when a lit potion of oil explodes */
 {
@@ -4781,6 +4785,7 @@ zap_over_floor(
 
             if (IS_WATERWALL(lev->typ)) {
                 /* For now, don't let WATER freeze. */
+                Soundeffect(se_soft_crackling, 100);
                 if (see_it)
                     pline_The("%s freezes for a moment.", hliquid("water"));
                 else
@@ -4801,6 +4806,9 @@ zap_over_floor(
                     lev->typ = lava ? ROOM : ICE;
                 }
                 bury_objs(x, y);
+                if (!lava) {
+                    Soundeffect(se_soft_crackling, 30);
+                }
                 if (see_it) {
                     if (lava)
                         Norep("The %s cools and solidifies.",
@@ -4810,9 +4818,9 @@ zap_over_floor(
                     else
                         Norep("The %s freezes.", hliquid("water"));
                     newsym(x, y);
-                } else if (!lava)
+                } else if (!lava) {
                     You_hear("a crackling sound.");
-
+                }
                 if (u_at(x, y)) {
                     if (u.uinwater) { /* not just `if (Underwater)' */
                         /* leave the no longer existent water */
@@ -5007,16 +5015,8 @@ zap_over_floor(
             newsym(x, y);
             You("%s of smoke.", !Blind ? "see a puff" : "smell a whiff");
         }
-    if ((mon = m_at(x, y)) != 0) {
-        wakeup(mon, FALSE);
-        if (type >= 0) {
-            setmangry(mon, TRUE);
-            if (mon->ispriest && *in_rooms(mon->mx, mon->my, TEMPLE))
-                ghod_hitsu(mon);
-            if (mon->isshk && !*u.ushops)
-                hot_pursuit(mon);
-        }
-    }
+    if (!ignoremon && (mon = m_at(x, y)) != 0)
+        wakeup(mon, (type >= 0) ? TRUE : FALSE);
     return rangemod;
 }
 
