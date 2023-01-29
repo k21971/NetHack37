@@ -209,8 +209,11 @@ void NetHackQtBind::qt_init_nhwindows(int *argc, char **argv)
      * should be loaded by activate_chosen_soundlib() shortly.
      * gc.chosen_soundlib is initialized to soundlib_nosound. 
      */
-    if (gc.chosen_soundlib == soundlib_nosound)
-        assign_soundlib(soundlib_qtsound);
+    if (gc.chosen_soundlib == (uint32_t) soundlib_nosound) {
+        uint32_t soundlibchoice = (uint32_t) soundlib_qtsound;
+
+        assign_soundlib(soundlibchoice);
+    }
 #endif
 }
 
@@ -1172,7 +1175,7 @@ struct window_procs Qt_procs = {
 #if defined(SND_LIB_QTSOUND) && !defined(QT_NO_SOUND)
 struct sound_procs qtsound_procs = {
     SOUNDID(qtsound),
-    SNDCAP_USERSOUNDS,
+    SOUND_TRIGGER_USERSOUNDS,
     nethack_qt_::NetHackQtBind::qtsound_init_nhsound,
     nethack_qt_::NetHackQtBind::qtsound_exit_nhsound,
     nethack_qt_::NetHackQtBind::qtsound_achievement,

@@ -25,7 +25,8 @@ static void windsound_play_usersound(char *, int32_t, int32_t);
 
 struct sound_procs windsound_procs = {
     SOUNDID(windsound),
-    SNDCAP_USERSOUNDS | SNDCAP_SOUNDEFFECTS | SNDCAP_HEROMUSIC,
+    SOUND_TRIGGER_USERSOUNDS | SOUND_TRIGGER_SOUNDEFFECTS
+        | SOUND_TRIGGER_HEROMUSIC,
     windsound_init_nhsound,
     windsound_exit_nhsound,
     windsound_achievement,
@@ -94,8 +95,7 @@ windsound_hero_playnotes(int32_t instrument, const char *str, int32_t volume)
             has_note_variations = TRUE;
             break;
         case ins_pan_flute:         /* MAGIC_FLUTE */
-             /* wav files for sound_Magic_Flute not added yet */
-            Strcpy(resourcename, "sound_Wooden_Flute");
+            Strcpy(resourcename, "sound_Magic_Flute");
             has_note_variations = TRUE;
             break;
         case ins_english_horn:      /* TOOLED_HORN */
@@ -119,6 +119,7 @@ windsound_hero_playnotes(int32_t instrument, const char *str, int32_t volume)
         case ins_cello:             /* MAGIC_HARP */
             Strcpy(resourcename, "sound_Magic_Harp");
             has_note_variations = TRUE;
+            break;
         case ins_tinkle_bell:
             Strcpy(resourcename, "sound_Bell");
             break;

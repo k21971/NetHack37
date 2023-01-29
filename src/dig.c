@@ -279,6 +279,7 @@ dig(void)
             }
             break;
         case 1:
+            Soundeffect(se_bang_weapon_side, 100);
             pline("Bang!  You hit with the broad side of %s!",
                   the(xname(uwep)));
             wake_nearby();
@@ -908,6 +909,7 @@ static void
 dig_up_grave(coord *cc)
 {
     struct obj *otmp;
+    int what_happens;
     coordxy dig_x, dig_y;
 
     if (!cc) {
@@ -928,12 +930,15 @@ dig_up_grave(coord *cc)
     } else if (Role_if(PM_SAMURAI)) {
         adjalign(-sgn(u.ualign.type));
         You("disturb the honorable dead!");
-    } else if ((u.ualign.type == A_LAWFUL) && (u.ualign.record > -10)) {
-        adjalign(-sgn(u.ualign.type));
+    } else if (u.ualign.type == A_LAWFUL) {
+        if (u.ualign.record > -10)
+            adjalign(-1);
         You("have violated the sanctity of this grave!");
     }
 
-    switch (rn2(5)) {
+    /* -1: force default case for empty grave */
+    what_happens = levl[dig_x][dig_y].emptygrave ? -1 : rn2(5);
+    switch (what_happens) {
     case 0:
     case 1:
         You("unearth a corpse.");
@@ -942,22 +947,24 @@ dig_up_grave(coord *cc)
         break;
     case 2:
         if (!Blind)
-            pline(Hallucination ? "Dude!  The living dead!"
-                                : "The grave's owner is very upset!");
+            pline("%s!", Hallucination ? "Dude!  The living dead"
+                                       : "The grave's owner is very upset");
         (void) makemon(mkclass(S_ZOMBIE, 0), dig_x, dig_y, MM_NOMSG);
         break;
     case 3:
         if (!Blind)
-            pline(Hallucination ? "I want my mummy!"
-                                : "You've disturbed a tomb!");
+            pline("%s!", Hallucination ? "I want my mummy"
+                                       : "You've disturbed a tomb");
         (void) makemon(mkclass(S_MUMMY, 0), dig_x, dig_y, MM_NOMSG);
         break;
     default:
         /* No corpse */
-        pline_The("grave seems unused.  Strange....");
+        pline_The("grave is unoccupied.  Strange...");
         break;
     }
-    levl[dig_x][dig_y].typ = ROOM, levl[dig_x][dig_y].flags = 0;
+    levl[dig_x][dig_y].typ = ROOM;
+    levl[dig_x][dig_y].emptygrave = 0; /* clear 'flags' */
+    levl[dig_x][dig_y].disturbed = 0; /* clear 'horizontal' */
     del_engr_at(dig_x, dig_y);
     newsym(dig_x, dig_y);
     return;
@@ -1913,7 +1920,7 @@ bury_objs(int x, int y)
         debugpline2("bury_objs: at <%d,%d>", x, y);
     }
     for (otmp = gl.level.objects[x][y]; otmp; otmp = otmp2) {
-        if (costly) {
+        if (costly && !gc.context.mon_moving) {
             loss += stolen_value(otmp, x, y, (boolean) shkp->mpeaceful, TRUE);
             if (otmp->oclass != COIN_CLASS)
                 otmp->no_charge = 1;

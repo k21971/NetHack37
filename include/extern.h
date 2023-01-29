@@ -22,7 +22,7 @@ extern void early_init(void);
 extern void moveloop_core(void);
 extern void moveloop(boolean);
 extern void stop_occupation(void);
-extern void display_gamewindows(void);
+extern void init_sound_and_display_gamewindows(void);
 extern void newgame(void);
 extern void welcome(boolean);
 extern int argcheck(int, char **, enum earlyarg);
@@ -644,6 +644,7 @@ extern void endmultishot(boolean);
 extern void hitfloor(struct obj *, boolean);
 extern void hurtle(int, int, int, boolean);
 extern void mhurtle(struct monst *, int, int, int);
+extern boolean harmless_missile(struct obj *);
 extern boolean throwing_weapon(struct obj *);
 extern void throwit(struct obj *, long, boolean, struct obj *);
 extern int omon_adj(struct monst *, struct obj *, boolean);
@@ -829,6 +830,7 @@ extern void engr_stats(const char *, char *, long *, long *);
 extern void del_engr(struct engr *);
 extern void rloc_engr(struct engr *);
 extern void make_grave(coordxy, coordxy, const char *);
+extern void disturb_grave(coordxy, coordxy);
 
 /* ### exper.c ### */
 
@@ -1556,6 +1558,7 @@ extern void m_consume_obj(struct monst *, struct obj *);
 extern int meatmetal(struct monst *);
 extern int meatobj(struct monst *);
 extern int meatcorpse(struct monst *);
+extern void mon_give_prop(struct monst *, int);
 extern void mon_givit(struct monst *, struct permonst *);
 extern void mpickgold(struct monst *);
 extern boolean mpickstuff(struct monst *, const char *);
@@ -2478,9 +2481,11 @@ extern void freedynamicdata(void);
 extern void store_savefileinfo(NHFILE *);
 extern void store_savefileinfo(NHFILE *);
 extern int nhdatatypes_size(void);
+#if 0
 extern void assignlog(char *, char*, int);
 extern FILE *getlog(NHFILE *);
 extern void closelog(NHFILE *);
+#endif
 
 /* ### sfstruct.c ### */
 
@@ -2587,7 +2592,7 @@ extern boolean is_izchak(struct monst *, boolean);
 extern void take_gold(void);
 extern int dosit(void);
 extern void rndcurse(void);
-extern void attrcurse(void);
+extern int attrcurse(void);
 
 /* ### sounds.c ### */
 

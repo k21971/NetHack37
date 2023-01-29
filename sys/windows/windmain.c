@@ -590,7 +590,10 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
             windowtype = gc.chosen_windowtype;
     }
     choose_windows(windowtype);
+
+#if defined(SND_LIB_WINDSOUND)
     assign_soundlib(soundlib_windsound);
+#endif
 
     u.uhp = 1; /* prevent RIP on early quits */
     u.ux = 0;  /* prevent flush_screen() */
@@ -675,7 +678,7 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
      *  new game or before a level restore on a saved game.
      */
     vision_init();
-    display_gamewindows();
+    init_sound_and_display_gamewindows();
     /*
      * First, try to find and restore a save file for specified character.
      * We'll return here if new game player_selection() renames the hero.
