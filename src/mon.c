@@ -3827,13 +3827,17 @@ wakeup(struct monst* mtmp, boolean via_attack)
     }
     finish_meating(mtmp);
     if (via_attack) {
+        boolean was_peaceful = mtmp->mpeaceful;
+
         if (was_sleeping)
             growl(mtmp);
         setmangry(mtmp, TRUE);
-        if (mtmp->ispriest && *in_rooms(mtmp->mx, mtmp->my, TEMPLE))
-            ghod_hitsu(mtmp);
-        if (mtmp->isshk && !*u.ushops)
-            hot_pursuit(mtmp);
+        if (was_peaceful) {
+            if (mtmp->ispriest && *in_rooms(mtmp->mx, mtmp->my, TEMPLE))
+                ghod_hitsu(mtmp);
+            if (mtmp->isshk && !*u.ushops)
+                hot_pursuit(mtmp);
+        }
     }
 }
 
@@ -4075,18 +4079,18 @@ restrap(struct monst *mtmp)
     return FALSE;
 }
 
-/* reveal a monster at x,y hiding under an object,
-   if there are no objects there */
+/* reveal a hiding monster at x,y, either under nonexistent object,
+   or an eel out of water. */
 void
 maybe_unhide_at(coordxy x, coordxy y)
 {
     struct monst *mtmp;
 
-    if (OBJ_AT(x, y))
-        return;
     if ((mtmp = m_at(x, y)) == 0 && u_at(x, y))
         mtmp = &gy.youmonst;
-    if (mtmp && mtmp->mundetected && hides_under(mtmp->data))
+    if (mtmp && mtmp->mundetected
+        && ((hides_under(mtmp->data) && !OBJ_AT(x, y))
+            || (mtmp->data->mlet == S_EEL && !is_pool(x, y))))
         (void) hideunder(mtmp);
 }
 
