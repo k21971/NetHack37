@@ -2139,7 +2139,7 @@ ansimpleoname(struct obj* obj)
        any `known' and `dknown' checking necessary) */
     if (otyp == FAKE_AMULET_OF_YENDOR)
         otyp = AMULET_OF_YENDOR;
-    if (objects[otyp].oc_unique
+    if (objects[otyp].oc_unique && OBJ_NAME(objects[otyp])
         && !strcmp(simpleoname, OBJ_NAME(objects[otyp]))) {
         /* the() will allocate another obuf[]; we want to avoid using two */
         Strcpy(simpleoname, obufp = the(simpleoname));
@@ -4829,6 +4829,8 @@ readobjnam(char *bp, struct obj *no_wish)
 
     /* set eroded and erodeproof */
     if (erosion_matters(d.otmp)) {
+        /* wished-for item shouldn't be eroded unless specified */
+        d.otmp->oeroded = d.otmp->oeroded2 = 0;
         if (d.eroded && (is_flammable(d.otmp) || is_rustprone(d.otmp)))
             d.otmp->oeroded = d.eroded;
         if (d.eroded2 && (is_corrodeable(d.otmp) || is_rottable(d.otmp)))

@@ -1056,10 +1056,12 @@ void freefakeconsole(void)
 }
 #endif
 
+static boolean path_buffer_set = FALSE;
+static char path_buffer[MAX_PATH];
+
 char *
 get_executable_path(void)
 {
-    static char path_buffer[MAX_PATH];
 
 #ifdef UNICODE
     {
@@ -1077,7 +1079,18 @@ get_executable_path(void)
     if (seperator)
         *seperator = '\0';
 
+    path_buffer_set = TRUE;
     return path_buffer;
+}
+
+char *
+windows_exepath(void)
+{
+    char *p = (char *) 0;
+
+    if (path_buffer_set)
+        p = path_buffer;
+    return p;
 }
 
 char *

@@ -20,6 +20,8 @@ static void m_detach(struct monst *, struct permonst *);
 static void set_mon_min_mhpmax(struct monst *, int);
 static void lifesaved_monster(struct monst *);
 static boolean ok_to_obliterate(struct monst *);
+static void qst_guardians_respond(void);
+static void peacefuls_respond(struct monst *);
 static void m_restartcham(struct monst *);
 static boolean restrap(struct monst *);
 static int pick_animal(void);
@@ -152,13 +154,16 @@ sanity_check_single_mon(
         if (ceiling_hider(mptr)
             /* normally !accessible would be overridable with passes_walls,
                but not for hiding on the ceiling */
-            && (!has_ceiling(&u.uz) || !accessible(mx, my)))
+            && (!has_ceiling(&u.uz) ||
+                !(levl[mx][my].typ == POOL
+                  || levl[mx][my].typ == MOAT
+                  || levl[mx][my].typ == LAVAPOOL
+                  || accessible(mx, my))))
             impossible("ceiling hider hiding %s (%s)",
                        !has_ceiling(&u.uz) ? "without ceiling"
                                            : "in solid stone",
                        msg);
-        if (mtmp->mtrapped && (t = t_at(mx, my)) != 0
-            && !(t->ttyp == PIT || t->ttyp == SPIKED_PIT))
+        if (mtmp->mtrapped && (t = t_at(mx, my)) != 0 && !is_pit(t->ttyp))
             impossible("hiding while trapped in a non-pit (%s)", msg);
     } else if (M_AP_TYPE(mtmp) != M_AP_NOTHING) {
         boolean is_mimic = (mptr->mlet == S_MIMIC);
@@ -1575,14 +1580,23 @@ mpickgold(register struct monst* mtmp)
     }
 }
 
+/* monster picks up one item stack from the map location they are at */
 boolean
-mpickstuff(struct monst *mtmp, const char *str)
+mpickstuff(struct monst *mtmp)
 {
     register struct obj *otmp, *otmp2, *otmp3;
     int carryamt = 0;
 
     /* prevent shopkeepers from leaving the door of their shop */
     if (mtmp->isshk && inhishop(mtmp))
+        return FALSE;
+
+    /* non-tame monsters normally don't go shopping */
+    if (!mtmp->mtame && *in_rooms(mtmp->mx, mtmp->my, SHOPBASE) && rn2(25))
+        return FALSE;
+
+    /* item in a pool, but monster can't swim */
+    if (!could_reach_item(mtmp, mtmp->mx, mtmp->my))
         return FALSE;
 
     for (otmp = gl.level.objects[mtmp->mx][mtmp->my]; otmp; otmp = otmp2) {
@@ -1594,20 +1608,18 @@ mpickstuff(struct monst *mtmp, const char *str)
             continue;
 
         /* Nymphs take everything.  Most monsters don't pick up corpses. */
-        if (!str ? searches_for_item(mtmp, otmp)
-                 : !!(strchr(str, otmp->oclass))) {
+        if (mon_would_take_item(mtmp, otmp)) {
+
             if (otmp->otyp == CORPSE && mtmp->data->mlet != S_NYMPH
                 /* let a handful of corpse types thru to can_carry() */
                 && !touch_petrifies(&mons[otmp->corpsenm])
                 && otmp->corpsenm != PM_LIZARD
                 && !acidic(&mons[otmp->corpsenm]))
                 continue;
-            if (!touch_artifact(otmp, mtmp))
+            if (!can_touch_safely(mtmp, otmp))
                 continue;
             carryamt = can_carry(mtmp, otmp);
             if (carryamt == 0)
-                continue;
-            if (is_pool(mtmp->mx, mtmp->my))
                 continue;
             /* handle cases where the critter can only get some */
             otmp3 = otmp;
@@ -1678,6 +1690,26 @@ max_mon_load(struct monst* mtmp)
     return (int) maxload;
 }
 
+/* can monster touch object safely? */
+boolean
+can_touch_safely(struct monst *mtmp, struct obj *otmp)
+{
+    int otyp = otmp->otyp;
+    struct permonst *mdat = mtmp->data;
+
+    if (otyp == CORPSE && touch_petrifies(&mons[otmp->corpsenm])
+        && !(mtmp->misc_worn_check & W_ARMG) && !resists_ston(mtmp))
+        return FALSE;
+    if (otyp == CORPSE && is_rider(&mons[otmp->corpsenm]))
+        return FALSE;
+    if (objects[otyp].oc_material == SILVER && mon_hates_silver(mtmp)
+        && (otyp != BELL_OF_OPENING || !is_covetous(mdat)))
+        return FALSE;
+    if (!touch_artifact(otmp, mtmp))
+        return FALSE;
+    return TRUE;
+}
+
 /* for restricting monsters' object-pickup.
  *
  * to support the new pet behavior, this now returns the max # of objects
@@ -1701,13 +1733,7 @@ can_carry(struct monst* mtmp, struct obj* otmp)
     if (notake(mdat))
         return 0; /* can't carry anything */
 
-    if (otyp == CORPSE && touch_petrifies(&mons[otmp->corpsenm])
-        && !(mtmp->misc_worn_check & W_ARMG) && !resists_ston(mtmp))
-        return 0;
-    if (otyp == CORPSE && is_rider(&mons[otmp->corpsenm]))
-        return 0;
-    if (objects[otyp].oc_material == SILVER && mon_hates_silver(mtmp)
-        && (otyp != BELL_OF_OPENING || !is_covetous(mdat)))
+    if (!can_touch_safely(mtmp, otmp))
         return 0;
 
     /* hostile monsters who like gold will pick up the whole stack;
@@ -1832,6 +1858,16 @@ mon_allowflags(struct monst* mtmp)
     return allowflags;
 }
 
+/* return TRUE if monster is up in the air/on the ceiling */
+boolean
+m_in_air(struct monst *mtmp)
+{
+    return (is_flyer(mtmp->data)
+            || is_floater(mtmp->data)
+            || (is_clinger(mtmp->data)
+                && has_ceiling(&u.uz) && mtmp->mundetected));
+}
+
 /* return number of acceptable neighbour positions */
 int
 mfndpos(
@@ -1859,11 +1895,11 @@ mfndpos(
 
     nodiag = NODIAG(mdat - mons);
     wantpool = (mdat->mlet == S_EEL);
-    poolok = ((!Is_waterlevel(&u.uz) && !grounded(mdat))
+    poolok = ((!Is_waterlevel(&u.uz) && m_in_air(mon))
               || (is_swimmer(mdat) && !wantpool));
     /* note: floating eye is the only is_floater() so this could be
        simplified, but then adding another floater would be error prone */
-    lavaok = (!grounded(mdat) || likes_lava(mdat));
+    lavaok = (m_in_air(mon) || likes_lava(mdat));
     if (mdat == &mons[PM_FLOATING_EYE]) /* prefers to avoid heat */
         lavaok = FALSE;
     thrudoor = ((flag & (ALLOW_WALL | BUSTDOOR)) != 0L);
@@ -3630,6 +3666,124 @@ m_respond(struct monst* mtmp)
     }
 }
 
+/* how quest guardians respond when you attack the quest leader */
+static void
+qst_guardians_respond(void)
+{
+    struct monst *mon;
+    struct permonst *q_guardian = &mons[quest_info(MS_GUARDIAN)];
+    int got_mad = 0;
+
+    /* guardians will sense this attack even if they can't see it */
+    for (mon = fmon; mon; mon = mon->nmon) {
+        if (DEADMONSTER(mon))
+            continue;
+        if (mon->data == q_guardian && mon->mpeaceful) {
+            mon->mpeaceful = 0;
+            if (canseemon(mon))
+                ++got_mad;
+        }
+    }
+    if (got_mad && !Hallucination) {
+        const char *who = q_guardian->pmnames[NEUTRAL];
+
+        if (got_mad > 1)
+            who = makeplural(who);
+        pline_The("%s %s to be angry too...",
+                  who, vtense(who, "appear"));
+    }
+}
+
+/* how other peacefuls react when you attack monster */
+static void
+peacefuls_respond(struct monst *mtmp)
+{
+    struct monst *mon;
+    int mndx = monsndx(mtmp->data);
+
+    for (mon = fmon; mon; mon = mon->nmon) {
+        if (DEADMONSTER(mon))
+            continue;
+        if (mon == mtmp) /* the mpeaceful test catches this since mtmp */
+            continue;    /* is no longer peaceful, but be explicit...  */
+
+        if (!mindless(mon->data) && mon->mpeaceful
+            && couldsee(mon->mx, mon->my) && !mon->msleeping
+            && mon->mcansee && m_canseeu(mon)) {
+            char buf[BUFSZ];
+            boolean exclaimed = FALSE, needpunct = FALSE, alreadyfleeing;
+
+            buf[0] = '\0';
+            if (humanoid(mon->data) || mon->isshk || mon->ispriest) {
+                if (is_watch(mon->data)) {
+                    verbalize("Halt!  You're under arrest!");
+                    (void) angry_guards(!!Deaf);
+                } else {
+                    if (!Deaf && !rn2(5)) {
+                        const char *gasp = maybe_gasp(mon);
+
+                        if (gasp) {
+                            if (!strncmpi(gasp, "gasp", 4)) {
+                                Sprintf(buf, "%s gasps", Monnam(mon));
+                                needpunct = TRUE;
+                            } else {
+                                Sprintf(buf, "%s exclaims \"%s\"",
+                                        Monnam(mon), gasp);
+                            }
+                            exclaimed = TRUE;
+                        }
+                    }
+                    /* shopkeepers and temple priests might gasp in
+                       surprise, but they won't become angry here */
+                    if (mon->isshk || mon->ispriest) {
+                        if (exclaimed)
+                            pline("%s%s", buf, " then shrugs.");
+                        continue;
+                    }
+
+                    if (mon->data->mlevel < rn2(10)) {
+                        alreadyfleeing = (mon->mflee || mon->mfleetim);
+                        monflee(mon, rn2(50) + 25, TRUE, !exclaimed);
+                        if (exclaimed) {
+                            if (Verbose(2, setmangry) && !alreadyfleeing) {
+                                Strcat(buf, " and then turns to flee.");
+                                needpunct = FALSE;
+                            }
+                        } else
+                            exclaimed = TRUE; /* got msg from monflee() */
+                    }
+                    if (*buf)
+                        pline("%s%s", buf, needpunct ? "." : "");
+                    if (mon->mtame) {
+                        ; /* mustn't set mpeaceful to 0 as below;
+                           * perhaps reduce tameness? */
+                    } else {
+                        mon->mpeaceful = 0;
+                        adjalign(-1);
+                        if (!exclaimed)
+                            pline("%s gets angry!", Monnam(mon));
+                    }
+                }
+            } else if (mon->data->mlet == mtmp->data->mlet
+                       && big_little_match(mndx, monsndx(mon->data))
+                       && !rn2(3)) {
+                if (!rn2(4)) {
+                    growl(mon);
+                    exclaimed = (iflags.last_msg == PLNMSG_GROWL);
+                }
+                if (rn2(6)) {
+                    alreadyfleeing = (mon->mflee || mon->mfleetim);
+                    monflee(mon, rn2(25) + 15, TRUE, !exclaimed);
+                    if (exclaimed && !alreadyfleeing)
+                        /* word like a separate sentence so that we
+                           don't have to poke around inside growl() */
+                        pline("And then starts to flee.");
+                }
+            }
+        }
+    }
+}
+
 /* Called whenever the player attacks mtmp; also called in other situations
    where mtmp gets annoyed at the player. Handles mtmp getting annoyed at the
    attack and any ramifications that might have. Useful also in situations
@@ -3683,118 +3837,12 @@ setmangry(struct monst* mtmp, boolean via_attack)
     }
 
     /* attacking your own quest leader will anger his or her guardians */
-    if (mtmp->data == &mons[quest_info(MS_LEADER)]) {
-        struct monst *mon;
-        struct permonst *q_guardian = &mons[quest_info(MS_GUARDIAN)];
-        int got_mad = 0;
-
-        /* guardians will sense this attack even if they can't see it */
-        for (mon = fmon; mon; mon = mon->nmon) {
-            if (DEADMONSTER(mon))
-                continue;
-            if (mon->data == q_guardian && mon->mpeaceful) {
-                mon->mpeaceful = 0;
-                if (canseemon(mon))
-                    ++got_mad;
-            }
-        }
-        if (got_mad && !Hallucination) {
-            const char *who = q_guardian->pmnames[NEUTRAL];
-
-            if (got_mad > 1)
-                who = makeplural(who);
-            pline_The("%s %s to be angry too...",
-                      who, vtense(who, "appear"));
-        }
-    }
+    if (mtmp->data == &mons[quest_info(MS_LEADER)])
+        qst_guardians_respond();
 
     /* make other peaceful monsters react */
-    if (!gc.context.mon_moving) {
-        struct monst *mon;
-        int mndx = monsndx(mtmp->data);
-
-        for (mon = fmon; mon; mon = mon->nmon) {
-            if (DEADMONSTER(mon))
-                continue;
-            if (mon == mtmp) /* the mpeaceful test catches this since mtmp */
-                continue;    /* is no longer peaceful, but be explicit...  */
-
-            if (!mindless(mon->data) && mon->mpeaceful
-                && couldsee(mon->mx, mon->my) && !mon->msleeping
-                && mon->mcansee && m_canseeu(mon)) {
-                char buf[BUFSZ];
-                boolean exclaimed = FALSE, needpunct = FALSE, alreadyfleeing;
-
-                buf[0] = '\0';
-                if (humanoid(mon->data) || mon->isshk || mon->ispriest) {
-                    if (is_watch(mon->data)) {
-                        verbalize("Halt!  You're under arrest!");
-                        (void) angry_guards(!!Deaf);
-                    } else {
-                        if (!Deaf && !rn2(5)) {
-                            const char *gasp = maybe_gasp(mon);
-
-                            if (gasp) {
-                                if (!strncmpi(gasp, "gasp", 4)) {
-                                    Sprintf(buf, "%s gasps", Monnam(mon));
-                                    needpunct = TRUE;
-                                } else {
-                                    Sprintf(buf, "%s exclaims \"%s\"",
-                                            Monnam(mon), gasp);
-                                }
-                                exclaimed = TRUE;
-                            }
-                        }
-                        /* shopkeepers and temple priests might gasp in
-                           surprise, but they won't become angry here */
-                        if (mon->isshk || mon->ispriest) {
-                            if (exclaimed)
-                                pline("%s%s", buf, " then shrugs.");
-                            continue;
-                        }
-
-                        if (mon->data->mlevel < rn2(10)) {
-                            alreadyfleeing = (mon->mflee || mon->mfleetim);
-                            monflee(mon, rn2(50) + 25, TRUE, !exclaimed);
-                            if (exclaimed) {
-                                if (Verbose(2, setmangry) && !alreadyfleeing) {
-                                    Strcat(buf, " and then turns to flee.");
-                                    needpunct = FALSE;
-                                }
-                            } else
-                                exclaimed = TRUE; /* got msg from monflee() */
-                        }
-                        if (*buf)
-                            pline("%s%s", buf, needpunct ? "." : "");
-                        if (mon->mtame) {
-                            ; /* mustn't set mpeaceful to 0 as below;
-                               * perhaps reduce tameness? */
-                        } else {
-                            mon->mpeaceful = 0;
-                            adjalign(-1);
-                            if (!exclaimed)
-                                pline("%s gets angry!", Monnam(mon));
-                        }
-                    }
-                } else if (mon->data->mlet == mtmp->data->mlet
-                           && big_little_match(mndx, monsndx(mon->data))
-                           && !rn2(3)) {
-                    if (!rn2(4)) {
-                        growl(mon);
-                        exclaimed = (iflags.last_msg == PLNMSG_GROWL);
-                    }
-                    if (rn2(6)) {
-                        alreadyfleeing = (mon->mflee || mon->mfleetim);
-                        monflee(mon, rn2(25) + 15, TRUE, !exclaimed);
-                        if (exclaimed && !alreadyfleeing)
-                            /* word like a separate sentence so that we
-                               don't have to poke around inside growl() */
-                            pline("And then starts to flee.");
-                    }
-                }
-            }
-        }
-    }
+    if (!gc.context.mon_moving)
+        peacefuls_respond(mtmp);
 }
 
 /* Indicate via message that a monster has awoken. */
@@ -4089,7 +4137,7 @@ maybe_unhide_at(coordxy x, coordxy y)
     if ((mtmp = m_at(x, y)) == 0 && u_at(x, y))
         mtmp = &gy.youmonst;
     if (mtmp && mtmp->mundetected
-        && ((hides_under(mtmp->data) && !OBJ_AT(x, y))
+        && ((hides_under(mtmp->data) && (!OBJ_AT(x, y) || mtmp->mtrapped))
             || (mtmp->data->mlet == S_EEL && !is_pool(x, y))))
         (void) hideunder(mtmp);
 }
@@ -4103,11 +4151,11 @@ hideunder(struct monst *mtmp)
     coordxy x = is_u ? u.ux : mtmp->mx, y = is_u ? u.uy : mtmp->my;
 
     if (mtmp == u.ustuck) {
-        ; /* can't hide if holding you or held by you */
+        ; /* undetected==FALSE; can't hide if holding you or held by you */
     } else if (is_u ? (u.utrap && u.utraptype != TT_PIT)
-                    : (mtmp->mtrapped && (t = t_at(x, y)) != 0
-                       && !is_pit(t->ttyp))) {
-        ; /* can't hide while stuck in a non-pit trap */
+                    : (mtmp->mtrapped
+                       && (t = t_at(x, y)) != 0 && !is_pit(t->ttyp))) {
+        ; /* undetected==FALSE; can't hide while stuck in a non-pit trap */
     } else if (mtmp->data->mlet == S_EEL) {
         undetected = (is_pool(x, y) && !Is_waterlevel(&u.uz));
     } else if (hides_under(mtmp->data) && OBJ_AT(x, y)) {
@@ -4174,7 +4222,8 @@ mon_animal_list(boolean construct)
         /* if (n == 0) animal_temp[n++] = NON_PM; */
 
         ga.animal_list = (short *) alloc(n * sizeof *ga.animal_list);
-        (void) memcpy((genericptr_t) ga.animal_list, (genericptr_t) animal_temp,
+        (void) memcpy((genericptr_t) ga.animal_list,
+                      (genericptr_t) animal_temp,
                       n * sizeof *ga.animal_list);
         ga.animal_list_count = n;
     } else { /* release */
