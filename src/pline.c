@@ -74,8 +74,8 @@ putmesg(const char *line)
     if ((gp.pline_flags & SUPPRESS_HISTORY) != 0
         && (windowprocs.wincap2 & WC2_SUPPRESS_HIST) != 0)
         attr |= ATR_NOHISTORY;
-
     putstr(WIN_MESSAGE, attr, line);
+    SoundSpeak(line);
 }
 
 static void vpline(const char *, va_list);
@@ -201,6 +201,10 @@ vpline(const char *line, va_list the_args)
     iflags.msg_is_alert = FALSE;
 
  pline_done:
+#ifdef SND_SPEECH
+    /* clear the SPEECH flag so caller never has to */
+    gp.pline_flags &= ~PLINE_SPEECH;
+#endif
     --in_pline;
 }
 
@@ -393,11 +397,13 @@ verbalize(const char *line, ...)
     char *tmp;
 
     va_start(the_args, line);
+    gp.pline_flags |= PLINE_VERBALIZE;
     tmp = You_buf((int) strlen(line) + sizeof "\"\"");
     Strcpy(tmp, "\"");
     Strcat(tmp, line);
     Strcat(tmp, "\"");
     vpline(tmp, the_args);
+    gp.pline_flags &= ~PLINE_VERBALIZE;
     va_end(the_args);
 }
 

@@ -1988,6 +1988,8 @@ mfndpos(
                     || (m_at(x, ny) && m_at(nx, y) && worm_cross(x, y, nx, ny)
                         && !m_at(nx, ny) && (nx != u.ux || ny != u.uy))))
                 continue;
+            if ((!lavaok || !(flag & ALLOW_WALL)) && ntyp == LAVAWALL)
+                continue;
             if ((poolok || is_pool(nx, ny) == wantpool)
                 && (lavaok || !is_lava(nx, ny))) {
                 int dispx, dispy;
@@ -3716,6 +3718,7 @@ peacefuls_respond(struct monst *mtmp)
             buf[0] = '\0';
             if (humanoid(mon->data) || mon->isshk || mon->ispriest) {
                 if (is_watch(mon->data)) {
+                    SetVoice(mon, 0, 80, 0);
                     verbalize("Halt!  You're under arrest!");
                     (void) angry_guards(!!Deaf);
                 } else {
@@ -4133,10 +4136,15 @@ void
 maybe_unhide_at(coordxy x, coordxy y)
 {
     struct monst *mtmp;
+    boolean undetected = FALSE;
 
-    if ((mtmp = m_at(x, y)) == 0 && u_at(x, y))
+    if ((mtmp = m_at(x, y)) == 0 && u_at(x, y)) {
         mtmp = &gy.youmonst;
-    if (mtmp && mtmp->mundetected
+        undetected = u.uundetected;
+    } else {
+        undetected = mtmp->mundetected;
+    }
+    if (mtmp && undetected
         && ((hides_under(mtmp->data) && (!OBJ_AT(x, y) || mtmp->mtrapped))
             || (mtmp->data->mlet == S_EEL && !is_pool(x, y))))
         (void) hideunder(mtmp);

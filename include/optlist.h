@@ -21,7 +21,7 @@ enum OptSection {
     OptS_General, OptS_Behavior, OptS_Map, OptS_Status, OptS_Advanced
 };
 enum menu_terminology_preference {
-    Term_False, Term_Off, Term_Disabled, num_terms
+    Term_False, Term_Off, Term_Disabled, Term_Excluded, num_terms
 };
 
 struct allopt_t {
@@ -661,6 +661,13 @@ static int optfn_##a(int, int, boolean, char *, char *);
                 No, Yes, No, No, NoAlias, "video width")
     NHOPTC(video_height, Advanced, 10, opt_in, set_gameview,
                 No, Yes, No, No, NoAlias, "video height")
+#endif
+#ifdef SND_SPEECH
+    NHOPTB(voices, Advanced, 0, opt_in, set_in_game,
+                Off, Yes, No, No, NoAlias, &iflags.voices, Term_Off)
+#else
+    NHOPTB(voices, Advanced, 0, opt_in, set_gameview,
+                Off, Yes, No, No, NoAlias, &iflags.voices, Term_Excluded)
 #endif
 #ifdef TTY_TILES_ESCCODES
     NHOPTB(vt_tiledata, Advanced, 0, opt_in, set_in_config,

@@ -784,6 +784,8 @@ costly_alteration(struct obj *obj, int alter_type)
     case OBJ_INVENT:
         if (learn_bknown)
             set_bknown(obj, 1);
+        if (shkp)
+            SetVoice(shkp, 0, 80, 0);
         verbalize("You %s %s %s, you pay for %s!",
                   alteration_verbs[alter_type], those, simpleonames(obj),
                   them);
@@ -793,6 +795,8 @@ costly_alteration(struct obj *obj, int alter_type)
         if (learn_bknown)
             obj->bknown = 1; /* ok to bypass set_bknown() here */
         if (costly_spot(u.ux, u.uy) && objroom == *u.ushops) {
+            if (shkp)
+                SetVoice(shkp, 0, 80, 0);
             verbalize("You %s %s, you pay for %s!",
                       alteration_verbs[alter_type], those, them);
             bill_dummy_object(obj);
@@ -2166,6 +2170,12 @@ place_object(struct obj *otmp, coordxy x, coordxy y)
                : impossible;
         (*func)("place_object: \"%s\" [%d] off map <%d,%d>",
                 safe_typename(otmp->otyp), otmp->where, x, y);
+
+        /* we'll only get to here if we've issued a warning (and fuzzer
+           is not running since it escalates impossible to panic), so
+           x,y has failed isok() but is within array bounds for the map;
+           in other words, x specifies column 0 which should not happen
+           but we let the game keep going */
     }
     if (otmp->where != OBJ_FREE)
         panic("place_object: obj \"%s\" [%d] not free",

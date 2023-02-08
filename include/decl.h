@@ -1593,6 +1593,9 @@ struct instance_globals_v {
     coordxy *viz_rmax;   /* max could see indices */
     boolean vision_full_recalc;
 
+    /* new stuff */
+    struct sound_voice voice;
+
     boolean havestate;
     unsigned long magic; /* validate that structure layout is preserved */
 };

@@ -1101,6 +1101,11 @@ use_pick_axe2(struct obj *obj)
             } else if (lev->typ == IRONBARS) {
                 pline("Clang!");
                 wake_nearby();
+            } else if (IS_WATERWALL(lev->typ)) {
+                pline("Splash!");
+            } else if (lev->typ == LAVAWALL) {
+                pline("Splash!");
+                (void) fire_damage(uwep, FALSE, rx, ry);
             } else if (IS_TREE(lev->typ)) {
                 You("need an axe to cut down a tree.");
             } else if (IS_ROCK(lev->typ)) {
@@ -1246,6 +1251,7 @@ watch_dig(struct monst *mtmp, coordxy x, coordxy y, boolean zap)
             mtmp = get_iter_mons(watchman_canseeu);
 
         if (mtmp) {
+            SetVoice(mtmp, 0, 80, 0);
             if (zap || gc.context.digging.warned) {
                 verbalize("Halt, vandal!  You're under arrest!");
                 (void) angry_guards(!!Deaf);

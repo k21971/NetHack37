@@ -53,6 +53,18 @@ struct sound_procs {
     void (*sound_play_usersound)(char *filename, int32_t volume, int32_t idx);
     void (*sound_ambience)(int32_t ambience_action, int32_t ambienceid,
                            int32_t proximity);
+    void (*sound_verbal)(char *text, int32_t gender, int32_t tone,
+                         int32_t vol, int32_t moreinfo);
+};
+
+struct sound_voice {
+    int32_t serialno;
+    int32_t gender;
+    int32_t tone;
+    int32_t volume;
+    int32_t moreinfo;
+    struct monst *mon;
+    const char *nameid;
 };
 
 extern struct sound_procs sndprocs;
@@ -67,7 +79,8 @@ extern struct sound_procs sndprocs;
 #define SOUND_TRIGGER_ACHIEVEMENTS 0x0004L
 #define SOUND_TRIGGER_SOUNDEFFECTS 0x0008L
 #define SOUND_TRIGGER_AMBIENCE     0x0010L
-                            /* 27 free bits */
+#define SOUND_TRIGGER_VERBAL       0x0020L
+                            /* 26 free bits */
 
 extern struct sound_procs soundprocs;
 
@@ -334,6 +347,15 @@ enum ambiences {
     amb_noambience,
 };
 
+enum voice_moreinfo {
+    voice_nothing_special,
+    voice_talking_artifact = 0x0001,
+    voice_deity            = 0x0002,
+    voice_oracle           = 0x0004,
+    voice_throne           = 0x0008,
+    voice_death            = 0x0010
+};
+
 enum achievements_arg2 {
     sa2_zero_invalid, sa2_splashscreen, sa2_newgame_nosplash, sa2_restoregame,
     sa2_xplevelup, sa2_xpleveldown, number_of_sa2_entries
@@ -396,8 +418,6 @@ SoundAchievement(0, sa2_xpleveldown, level);
             (*soundprocs.sound_hero_playnotes)((instrument), (str), (vol));  \
     } while(0)
 
-/*  void (*sound_achievement)(schar, schar, int32_t); */
-
 /* Player's perspective, not the hero's; no Deaf suppression */
 #define SoundAchievement(arg1, arg2, avals) \
     do {                                                                      \
@@ -406,13 +426,35 @@ SoundAchievement(0, sa2_xpleveldown, level);
             (*soundprocs.sound_achievement)((arg1), (arg2), (avals));         \
     } while(0)
 
+/* sound_speak is in sound.c */
+#define SoundSpeak(text) \
+    do {                                                                     \
+        if ((gp.pline_flags & (PLINE_VERBALIZE | PLINE_SPEECH)) != 0         \
+            && soundprocs.sound_verbal && iflags.voices                      \
+            && ((soundprocs.sound_triggers & SOUND_TRIGGER_VERBAL) != 0))    \
+            sound_speak(text);                                               \
+    } while(0)
+
+/* set_voice is in sound.c */
+#define SetVoice(mon, tone, vol, moreinfo) \
+    do {                                                                     \
+        set_voice(mon, tone, vol, moreinfo);                                 \
+    } while(0)
+
 /*  void (*sound_achievement)(schar, schar, int32_t); */
 
 #ifdef SOUNDLIBONLY
 #undef SOUNDLIBONLY
 #endif
 #define SOUNDLIBONLY
-#else  /*  NO SOUNDLIB SELECTED AFTER THIS */
+#ifdef SND_SPEECH
+#define VOICEONLY
+#else
+#define VOICEONLY UNUSED
+#endif
+
+#else  /*  NO SOUNDLIB IS INTEGRATED AFTER THIS */
+
 #ifdef SND_LIB_INTEGRATED
 #undef SND_LIB_INTEGRATED
 #endif
@@ -420,11 +462,21 @@ SoundAchievement(0, sa2_xpleveldown, level);
 #define Soundeffect(seid, vol)
 #define Hero_playnotes(instrument, str, vol)
 #define SoundAchievement(arg1, arg2, avals)
+#define SoundSpeak(text)
+#define SetVoice(mon, tone, vol, moreinfo)
 #ifdef SOUNDLIBONLY
 #undef SOUNDLIBONLY
 #endif
 #define SOUNDLIBONLY UNUSED
+#ifdef SND_SPEECH
+#undef SND_SPEECH
 #endif
+#ifdef VOICEONLY
+#undef VOICEONLY
+#endif
+#define VOICEONLY UNUSED
+
+#endif  /* No SOUNDLIB */
 
 enum findsound_approaches {
     findsound_embedded,
