@@ -473,7 +473,7 @@ done_in_by(struct monst *mtmp, int how)
                 realnm, shape);
         mptr = mtmp->data; /* reset for mimicker case */
     } else if (is_bones_monster(mptr)) {
-        Strcat(buf, m_monnam(mtmp));
+        Strcat(buf, pmname(mptr, Mgender(mtmp)));
         if (has_mgivenname(mtmp))
             Sprintf(eos(buf), " of %s", MGIVENNAME(mtmp));
     } else if (mtmp->isshk) {
