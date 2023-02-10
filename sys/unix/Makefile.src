@@ -461,9 +461,7 @@ AT = $(AT_V$(QUIETCC))
 # verbosity-adjacent; these will already have 'real' values if hints have
 # set up cross-compiling, in which case these assignments will be no-ops
 PREGAME=@true
-CLEANMORE=@true
 PACKAGE=@true
-
 
 MAKEDEFS = ../util/makedefs
 
@@ -754,7 +752,7 @@ tags: $(CSOURCES)
 clean:
 	-rm -f *.o $(HACK_H) $(CONFIG_H)
 	-rm -f monstr.c vis_tab.c ../include/vis_tab.h #obsolete generated files
-	$(CLEANMORE)
+	true; $(CLEANMORE)
 
 spotless: clean
 	-rm -f a.out core $(GAMEBIN) Sys*
