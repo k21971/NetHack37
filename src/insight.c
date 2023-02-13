@@ -2840,7 +2840,7 @@ list_vanquished(char defquery, boolean ask)
      * which needs putstr() and past tense.
      */
     } else if (!gp.program_state.gameover) {
-        /* #dovanquished rather than final disclosure, so pline() is ok */
+        /* #vanquished rather than final disclosure, so pline() is ok */
         pline("No creatures have been vanquished.");
 #if defined(DUMPLOG) || defined(DUMPHTML)
     } else if (dumping) {
@@ -2866,6 +2866,7 @@ num_genocides(void)
     return n;
 }
 
+/* return a count of the number of extinct species */
 static int
 num_extinct(void)
 {
@@ -2880,6 +2881,8 @@ num_extinct(void)
     return n;
 }
 
+/* show genocided and extinct monster types for final disclosure/dumplog
+   or for the #genocided command */
 void
 list_genocided(char defquery, boolean ask)
 {
@@ -2947,11 +2950,24 @@ list_genocided(char defquery, boolean ask)
             display_nhwindow(klwin, TRUE);
             destroy_nhwindow(klwin);
         }
+
+    /* See the comment for similar code near the end of list_vanquished(). */
+    } else if (!gp.program_state.gameover) {
+        /* #genocided rather than final disclosure, so pline() is ok */
+        pline("No creatures have been genocided or become extinct.");
 #if defined (DUMPLOG) || defined (DUMPHTML)
     } else if (dumping) {
         putstr(0, 0, "No species were genocided or became extinct.");
 #endif
     }
+}
+
+/* M-g - #genocided command */
+int
+dogenocided(void)
+{
+    list_genocided('y', FALSE);
+    return ECMD_OK;
 }
 
 /*

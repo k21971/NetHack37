@@ -43,7 +43,7 @@ extern int dofire(void);             /**/
 extern int dothrow(void);            /**/
 extern int doeat(void);              /**/
 extern int done2(void);              /**/
-extern int vanquished(void);         /**/
+extern int dovanquished(void);       /**/
 extern int doengrave(void);          /**/
 extern int dopickup(void);           /**/
 extern int ddoinv(void);             /**/
@@ -2567,6 +2567,9 @@ struct ext_func_tab extcmdlist[] = {
               doforce, AUTOCOMPLETE, NULL },
     { ';',    "glance", "show what type of thing a map symbol corresponds to",
               doquickwhatis, IFBURIED | GENERALCMD, NULL },
+    { M('g'), "genocided",
+              "list monsters that have been genocided or become extinct",
+              dogenocided, IFBURIED | AUTOCOMPLETE, NULL },
     { '?',    "help", "give a help message",
               dohelp, IFBURIED | GENERALCMD, NULL },
     { '\0',   "herecmdmenu", "show menu of commands you can do here",
@@ -6317,7 +6320,8 @@ hangup(
        must continue running longer before attempting a hangup save. */
     gp.program_state.done_hup++;
     /* defer hangup iff game appears to be in progress */
-    if (gp.program_state.in_moveloop && gp.program_state.something_worth_saving)
+    if (gp.program_state.in_moveloop
+        && gp.program_state.something_worth_saving)
         return;
 #endif /* SAFERHANGUP */
     end_of_input();

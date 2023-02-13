@@ -784,8 +784,9 @@ costly_alteration(struct obj *obj, int alter_type)
     case OBJ_INVENT:
         if (learn_bknown)
             set_bknown(obj, 1);
-        if (shkp)
+        if (shkp) {
             SetVoice(shkp, 0, 80, 0);
+	}
         verbalize("You %s %s %s, you pay for %s!",
                   alteration_verbs[alter_type], those, simpleonames(obj),
                   them);
@@ -795,8 +796,9 @@ costly_alteration(struct obj *obj, int alter_type)
         if (learn_bknown)
             obj->bknown = 1; /* ok to bypass set_bknown() here */
         if (costly_spot(u.ux, u.uy) && objroom == *u.ushops) {
-            if (shkp)
+            if (shkp) {
                 SetVoice(shkp, 0, 80, 0);
+            }
             verbalize("You %s %s, you pay for %s!",
                       alteration_verbs[alter_type], those, them);
             bill_dummy_object(obj);
