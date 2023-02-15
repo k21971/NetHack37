@@ -4482,7 +4482,7 @@ dobuzz(
                         if (mon_could_move && !mon->mcanmove) /* ZT_SLEEP */
                             slept_monst(mon);
                         if (abstype != ZT_SLEEP)
-                            wakeup(mon, TRUE);
+                            wakeup(mon, (type >= 0) ? TRUE : FALSE);
                     }
                 }
                 range -= 2;
