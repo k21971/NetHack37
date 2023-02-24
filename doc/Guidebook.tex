@@ -46,7 +46,7 @@
 \author{Original version - Eric S. Raymond\\
 (Edited and expanded for 3.7 by Mike Stephenson and others)}
 %DO NOT REMOVE NH_DATESUB \date{DATE(%B %-d, %Y)}
-\date{February 09, 2023}
+\date{February 21, 2023}
 
 \maketitle
 
@@ -1980,7 +1980,6 @@ letter of the command.
 
 On {\it Windows\/} and {\it MS-DOS\/},
 the `Alt' key can be used in this fashion.
-%% On the {\it Amiga}, set the {\it altmeta\/} option to get this behavior.
 On other systems, if typing `Alt' plus another key transmits a
 two character sequence consisting of an {\tt Escape}
 followed by the other key, you may set the {\it altmeta\/}
@@ -2968,7 +2967,7 @@ weapons or having one of them be stolen or destroyed will also make you
 revert to single-weapon combat.
 
 %.hn 2
-\subsection*{Armor (`{\tt \verb+[+}')}
+\subsection*{Armor (`{\tt [}')}
 
 %.pg
 Lots of unfriendly things lurk about; you need armor to protect
@@ -4957,6 +4956,9 @@ screen.  (Applies to ``tty'' and ``curses'' interfaces only; ``X11'' interface a
 uses a timer-based delay.  The default is on if configured into the
 program.)  Persistent.
 %.lp
+\item[\ib{tips}]
+Show some helpful tips during gameplay (default on).  Persistent.
+%.lp
 \item[\ib{tombstone}]
 Draw a tombstone graphic upon your death (default on).  Persistent.
 %.lp
@@ -5362,15 +5364,6 @@ At other prompts a single ESC suffices.
 Use BIOS calls to update the screen display quickly and to read the keyboard
 (allowing the use of arrow keys to move) on machines with an IBM PC
 compatible BIOS ROM (default off, {\it OS/2, PC\/ {\rm and} ST NetHack\/} only).
-%.lp
-\item[\ib{flush}]
-(default off, {\it Amiga NetHack \/} only).
-%.lp
-\item[\ib{Macgraphics}]
-(default on, {\it Mac NetHack \/} only).
-%.lp
-\item[\ib{page\verb+_+wait}]
-(default off, {\it Mac NetHack \/} only).
 %.lp
 \item[\ib{rawio}]
 Force raw (non-cbreak) mode for faster output and more
@@ -6979,7 +6972,7 @@ operate on various UNIX flavors and maintained the X11 interface.
 %.pg
 \medskip
 {\it Ken Lorber}, {\it Haoyang Wang}, {\it Pat Rankin}, and {\it Dean Luick}
-maintained the port of {\it NetHack\/} 3.6 for Mac OSX.
+maintained the port of {\it NetHack\/} 3.6 for MacOS.
 
 %.pg
 \medskip
@@ -7041,6 +7034,11 @@ and a small number of bug fixes.
 %.pg
 \medskip
 NetHack 3.6.6 was released on March 8, 2020 containing a security fix and
+some bug fixes.
+
+%.pg
+\medskip
+NetHack 3.6.7 was released on February 16, 2023 containing a security fix and
 some bug fixes.
 
 %.pg

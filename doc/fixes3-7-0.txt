@@ -409,7 +409,6 @@ spells that require a target spot rather than a direction (like skilled
 prevent wish request "death wand" from matching Death monster and producing a
 	random wand instead of a wand of death
 grammar bit: "you hear a [AEF] note squeak in the distance" (should be "an")
-curses interface failed to honor menu_xxx option settings for menu interaction
 during engraving, spaces were counted instead of non-spaces [later: affected
 	code is gone, removed when engraving was converted into an occupation]
 when an explosion scatters objects, make any that fly over sinks stop there
@@ -1112,6 +1111,9 @@ dying in a wall spot (temporary gap or via Passes_walls) shared by two shops
 a monster capable of using a polymorph trap to deliberately change form could
 	do so when trapped in an adjacent web or pit; if that happened, the
 	monster remained flagged as 'trapped' and wouldn't be able to move
+give feedback when some types of damage are avoided due to MC (aka negation)
+feedback if a named, shape-shifted vampire reverted to original shape rather
+	than dying when engulfed could say "Dracula turns into Dracula"
 
 
 Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
@@ -1489,6 +1491,9 @@ hallucination of objects incorrectly included generic objects as candidates
 	for what objects looked like; if an object had its dknown flag set,
 	formatting a generic object in its place was unreliable (Null pointer
 	deference prior to static analyzer fix, odd fake name "generic" after)
+some actions that ask the user to pick a location allow typing '$' to show
+	valid spots, accept typing a second '$' prior to moving the cursor to
+	toggle the highlights off; ^R already did that; moving the cursor too
 
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
@@ -1535,6 +1540,9 @@ tty: changes to support utf8 resulted in lines of text windows being shown
 tty: changes to support TTY_PERM_INVENT resulted in blank inventory menu when
 	using the 'i' command while carrying only gold; didn't matter whether
 	or not TTY_PERM_INVENT was enabled during build
+tty: for the !DEF_PAGER configuration, redraw screen properly if attempting
+	to display a file fails and tty_display_file()'s caller requests
+	feedback for that situation
 Unix: after lua changes to Makefiles, 'make spotless' for dat subdirectory
 	left some generated data files which should have been deleted
 Windows: new tile additions in win/share did not trigger the creation of a new
@@ -1577,6 +1585,7 @@ curses: sometimes entering a count during menu selection caused the menu to
 	more digits typed followed by non-digit); in-out menu was still active
 	but no longer displayed
 curses: support backspace/delete when entering a count during menu selection
+curses: was failing to honor menu_xxx option settings for menu interaction
 curses: make extended command prompt behave more sensibly
 curses: if a menu of objects contains at least one iron ball, and player is
 	not already in the midst of entering a count, recognize '0' as a
@@ -1584,6 +1593,9 @@ curses: if a menu of objects contains at least one iron ball, and player is
 curses: obey timed_delay option
 curses: support tty-style extended role/race/&c selection at start of new game
 curses: implement mark_synch() and wait_synch()
+curses: only convert arrow keys to hjkl or 4286 if nethack wants a direction
+curses: conversion of arrows and other numpad-related function keys to digit
+	ignored phone-layout setting (inverted up/down) of the num_pad option
 macOS: Xcode project was failing to build if the path to the NetHack source
 	tree contained a space; the issue was within some shell script code
 	contained within the project
@@ -1973,6 +1985,8 @@ have 'I u' mention whether there are any unpaid items on the floor (unusual
 	but not impossible); it doesn't itemize them or show shop price
 add items given a Japanese name when playing as a Samurai to discoveries list
 make music improvisations more varied and interesting, as well as useful
+give a helpful tip when first entering "farlook" mode
+add a boolean option tips to disable all of the helpful tips
 
 
 Platform- and/or Interface-Specific New Features

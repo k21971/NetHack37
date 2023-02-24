@@ -34,6 +34,7 @@ struct flag {
     boolean friday13;        /* it's Friday the 13th */
     boolean goldX;           /* for BUCX filtering, whether gold is X or U */
     boolean help;            /* look in data file for info about stuff */
+    boolean tips;            /* show helpful hints? */
     boolean ignintr;         /* ignore interrupts */
     boolean implicit_uncursed; /* maybe omit "uncursed" status in inventory */
     boolean ins_chkpt;       /* checkpoint as appropriate; INSURANCE */
@@ -291,11 +292,6 @@ struct instance_flags {
 #endif
 #if defined(MICRO) || defined(WIN32)
     boolean rawio; /* whether can use rawio (IOCTL call) */
-#endif
-#ifdef MAC_GRAPHICS_ENV
-    boolean MACgraphics; /* use Macintosh extended character set, as
-                            as defined in the special font HackFont */
-    unsigned use_stone;  /* use the stone ppats */
 #endif
 #if defined(MSDOS) || defined(WIN32)
     boolean tile_view;

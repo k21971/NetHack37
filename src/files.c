@@ -1437,7 +1437,11 @@ free_saved_games(char **saved)
 #ifdef COMPRESS /* external compression */
 
 static void
-redirect(const char *filename, const char *mode, FILE *stream, boolean uncomp)
+redirect(
+    const char *filename,
+    const char *mode,
+    FILE *stream,
+    boolean uncomp)
 {
     if (freopen(filename, mode, stream) == (FILE *) 0) {
         const char *details;
@@ -1468,10 +1472,10 @@ docompress_file(const char *filename, boolean uncomp)
     FILE *cf;
     const char *args[10];
 #ifdef COMPRESS_OPTIONS
-    char opts[80];
+    char opts[sizeof COMPRESS_OPTIONS];
 #endif
     int i = 0;
-    int f;
+    int f, childstatus;
     unsigned ln;
 #ifdef TTY_GRAPHICS
     boolean istty = WINDOWPORT(tty);
@@ -1505,8 +1509,7 @@ docompress_file(const char *filename, boolean uncomp)
         char *opt;
         boolean inword = FALSE;
 
-        Strcpy(opts, COMPRESS_OPTIONS);
-        opt = opts;
+        opt = strcpy(opts, COMPRESS_OPTIONS);
         while (*opt) {
             if ((*opt == ' ') || (*opt == '\t')) {
                 if (inword) {
@@ -1571,10 +1574,28 @@ docompress_file(const char *filename, boolean uncomp)
         free((genericptr_t) cfn);
         return;
     }
+
+    /*
+     * back in parent...
+     */
 #ifndef NO_SIGNAL
+    childstatus = 1; /* wait() should update this, ideally setting it to 0 */
     (void) signal(SIGINT, SIG_IGN);
     (void) signal(SIGQUIT, SIG_IGN);
-    (void) wait((int *) &i);
+    errno = 0; /* avoid stale details if wait() doesn't set errno */
+    /* wait() returns child's pid and sets 'childstatus' to child's
+       exit status, or returns -1 and leaves 'childstatus' unmodified */
+    if ((long) wait((int *) &childstatus) == -1L) {
+        char numbuf[40];
+        const char *details = strerror(errno);
+
+        if (!details) {
+            Sprintf(numbuf, "(%d)", errno);
+            details = numbuf;
+        }
+        raw_printf("Wait when %scompressing %s failed; %s.",
+                   uncomp ? "un" : "", filename, details);
+    }
     (void) signal(SIGINT, (SIG_RET_TYPE) done1);
     if (wizard)
         (void) signal(SIGQUIT, SIG_DFL);
@@ -1585,9 +1606,9 @@ docompress_file(const char *filename, boolean uncomp)
      * compression if there are no signals, but we want this for
      * testing with FailSafeC
      */
-    i = 1;
+    childstatus = 1; /* non-zero => failure */
 #endif
-    if (i == 0) {
+    if (childstatus == 0) {
         /* (un)compress succeeded: remove file left behind */
         if (uncomp)
             (void) unlink(cfn);

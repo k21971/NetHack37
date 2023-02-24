@@ -784,8 +784,12 @@ gulpmm(
                using that would be excessively verbose */
             pline("%s expels %s.", Monnam(magr),
                   canspotmon(mdef) ? "it" : something);
-            if (canspotmon(mdef))
-                pline("It turns into %s.", a_monnam(mdef));
+            if (canspotmon(mdef)) {
+                pline("It turns into %s.",
+                      x_monnam(mdef, ARTICLE_A, (char *) 0,
+                               (SUPPRESS_NAME | SUPPRESS_IT
+                                | SUPPRESS_INVISIBLE), FALSE));
+            }
         }
         return MM_HIT; /* bypass mdamagem() */
     }
@@ -967,7 +971,8 @@ mdamagem(struct monst *magr, struct monst *mdef,
     if (!mhm.damage)
         return mhm.hitflags;
 
-    if ((mdef->mhp -= mhm.damage) < 1) {
+    mdef->mhp -= mhm.damage;
+    if (mdef->mhp < 1) {
         if (m_at(mdef->mx, mdef->my) == magr) { /* see gulpmm() */
             remove_monster(mdef->mx, mdef->my);
             mdef->mhp = 1; /* otherwise place_monster will complain */

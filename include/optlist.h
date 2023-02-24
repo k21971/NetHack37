@@ -334,11 +334,6 @@ static int optfn_##a(int, int, boolean, char *, char *);
                 Off, Yes, No, No, NoAlias, &flags.lit_corridor, Term_False)
     NHOPTB(lootabc, Advanced, 0, opt_in, set_in_game,
                 Off, Yes, No, No, NoAlias, &flags.lootabc, Term_False)
-#if defined(BACKWARD_COMPAT) && defined(MAC_GRAPHICS_ENV)
-    NHOPTC(Macgraphics, Advanced, 70, opt_in, set_in_config,
-                No, Yes, No, No, NoAlias,
-                "load MACGraphics display symbols into symset")
-#endif
     NHOPTB(mail, Advanced, 0, opt_out, set_in_game,
                 On, Yes, No, No, NoAlias, &flags.biff, Term_False)
     NHOPTC(map_mode, Advanced, 20, opt_in, set_gameview,
@@ -615,6 +610,8 @@ static int optfn_##a(int, int, boolean, char *, char *);
     NHOPTB(timed_delay, Map, 0, opt_in, set_in_config,
                 Off, No, No, No, NoAlias, (boolean *) 0, Term_False)
 #endif
+    NHOPTB(tips, Advanced, 0, opt_out, set_in_game,
+                On, Yes, No, No, NoAlias, &flags.tips, Term_False)
     NHOPTB(tombstone, Advanced, 0, opt_out, set_in_game,
                 On, Yes, No, No, NoAlias, &flags.tombstone, Term_False)
     NHOPTB(toptenwin, Advanced, 0, opt_in, set_in_game,

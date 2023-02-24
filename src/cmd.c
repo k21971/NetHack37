@@ -4059,14 +4059,14 @@ RESTORE_WARNING_FORMAT_NONLITERAL
 static int
 wiz_display_macros(void)
 {
+    static const char display_issues[] = "Display macro issues:";
     char buf[BUFSZ];
     winid win;
-    int test, trouble = 0, no_glyph = NO_GLYPH, max_glyph = MAX_GLYPH;
-    static const char *const display_issues = "Display macro issues:";
+    int glyph, test, trouble = 0, no_glyph = NO_GLYPH, max_glyph = MAX_GLYPH;
 
     win = create_nhwindow(NHW_TEXT);
 
-    for (int glyph = 0; glyph < MAX_GLYPH; ++glyph) {
+    for (glyph = 0; glyph < MAX_GLYPH; ++glyph) {
         /* glyph_is_cmap / glyph_to_cmap() */
         if (glyph_is_cmap(glyph)) {
             test = glyph_to_cmap(glyph);
@@ -5169,6 +5169,7 @@ getdir(const char *s)
     }
 
  retry:
+    gp.program_state.getting_a_command = 1; /* arrow key support for curses */
     if (gi.in_doagain || *readchar_queue)
         dirsym = readchar();
     else
@@ -6199,7 +6200,7 @@ get_count(
             inkey = '\0';
         } else {
             gp.program_state.getting_a_command = 1; /* readchar altmeta
-                                                    * compatibility */
+                                                     * compatibility */
             key = readchar();
         }
 
@@ -6260,8 +6261,8 @@ parse(void)
     flush_screen(1); /* Flush screen buffer. Put the cursor on the hero. */
 
     gp.program_state.getting_a_command = 1; /* affects readchar() behavior for
-                                            * ESC iff 'altmeta' option is On;
-                                            * reset to 0 by readchar() */
+                                             * ESC iff 'altmeta' option is On;
+                                             * reset to 0 by readchar() */
     if (!gc.Cmd.num_pad || (foo = readchar()) == gc.Cmd.spkeys[NHKF_COUNT]) {
         foo = get_count((char *) 0, '\0', LARGEST_INT,
                         &gc.command_count, GC_NOFLAGS);
@@ -6405,8 +6406,8 @@ readchar_core(coordxy *x, coordxy *y, int *mod)
         click_to_cmd(*x, *y, *mod);
     }
     gp.program_state.getting_a_command = 0; /* next readchar() will be for an
-                                            * ordinary char unless parse()
-                                            * sets this back to 1 */
+                                             * ordinary char unless parse()
+                                             * sets this back to 1 */
     return (char) sym;
 }
 
