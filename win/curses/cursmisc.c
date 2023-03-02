@@ -23,8 +23,20 @@
 static int curs_x = -1;
 static int curs_y = -1;
 
-static int parse_escape_sequence(void);
+static boolean modifiers_available =
+#if defined(PDCURSES) && defined(PDC_KEY_MODIFIER_ALT)
+    TRUE;
+#else
+    FALSE;
+#endif
 
+#if defined(PDCURSES) && defined(PDC_KEY_MODIFIER_ALT)
+static unsigned long last_getch_modifiers = 0L;
+#endif
+
+static int modified(int ch);
+static void update_modifiers(void);
+static int parse_escape_sequence(void);
 
 int
 curses_getch(void)
@@ -44,35 +56,16 @@ int
 curses_read_char(void)
 {
     int ch;
-#if defined(ALT_0) || defined(ALT_9) || defined(ALT_A) || defined(ALT_Z)
-    int tmpch;
-#endif
 
     /* cancel message suppression; all messages have had a chance to be read */
     curses_got_input();
 
     ch = curses_getch();
-#if defined(ALT_0) || defined(ALT_9) || defined(ALT_A) || defined(ALT_Z)
-    tmpch = ch;
-#endif
     ch = curses_convert_keys(ch);
 
     if (ch == 0) {
         ch = '\033'; /* map NUL to ESC since nethack doesn't expect NUL */
     }
-#if defined(ALT_0) && defined(ALT_9)    /* PDCurses, maybe others */
-    if ((ch >= ALT_0) && (ch <= ALT_9)) {
-        tmpch = (ch - ALT_0) + '0';
-        ch = M(tmpch);
-    }
-#endif
-
-#if defined(ALT_A) && defined(ALT_Z)    /* PDCurses, maybe others */
-    if ((ch >= ALT_A) && (ch <= ALT_Z)) {
-        tmpch = (ch - ALT_A) + 'a';
-        ch = M(tmpch);
-    }
-#endif
 
 #ifdef KEY_RESIZE
     /* Handle resize events via get_nh_event, not this code */
@@ -867,6 +860,9 @@ curses_convert_keys(int key)
             as_is = FALSE;
     int ret = key;
 
+    if (modifiers_available)
+        update_modifiers();
+
     if (ret == '\033') {
         ret = parse_escape_sequence();
     }
@@ -882,6 +878,24 @@ curses_convert_keys(int key)
         ret = C('H');
         /*FALLTHRU*/
     default:
+        if (modifiers_available)
+            ret = modified(ret);
+#if defined(ALT_A) && defined(ALT_Z)
+        /* for PDcurses, but doesn't handle Alt+X for upper case X;
+           ncurses doesn't have ALT_x definitions so we achieve a similar
+           effect via parse_escape_sequence(), and that works for upper
+           case and other non-letter, non-digit keys */
+        if (ret >= ALT_A && ret <= ALT_Z) {
+            ret = (ret - ALT_A) + 'a';
+            ret = M(ret);
+        }
+#endif
+#if defined(ALT_0) && defined(ALT_9)
+        if (ret >= ALT_0 && ret <= ALT_9) {
+            ret = (ret - ALT_0) + '0';
+            ret = M(ret);
+        }
+#endif
         /* use key as-is unless it's out of normal char range */
         reject = ((uchar) ret < 1 || ret > 255);
         as_is = TRUE;
@@ -1043,6 +1057,9 @@ curses_mouse_support(int mode) /* 0: off, 1: on, 2: alternate on */
 #endif
 }
 
+/* caller just got an input character of ESC;
+   note: curses converts a lot of escape sequences to single values greater
+   than 255 and those won't look like ESC to caller so won't get here */
 static int
 parse_escape_sequence(void)
 {
@@ -1053,19 +1070,21 @@ parse_escape_sequence(void)
 
     ret = getch();
 
-    if (ret != ERR) {           /* Likely an escape sequence */
-        if ((ret >= 'a' && ret <= 'z') || (ret >= '0' && ret <= '9')) {
-            ret |= 0x80;        /* Meta key support for most terminals */
-        } else if (ret == 'O') {        /* Numeric keypad */
-            ret = getch();
-            if (ret != ERR && ret >= 112 && ret <= 121) {
-                ret = ret - 112 + '0';  /* Convert to number */
-            } else {
-                ret = '\033';   /* Escape */
-            }
-        }
+    if (ret == 'O') {               /* Numeric keypad */
+        /* ESC O <something> */
+        ret = getch();
+        if (ret >= 112 && ret <= 121)
+            return ret - 112 + '0'; /* Convert to number */
+
+        if (ret == ERR)
+            ret = 'O'; /* there was no third char; treat as ESC O below */
+    }
+
+    if (ret != ERR && ret <= 255) {
+        /* ESC <something>; effectively 'altmeta' behind player's back */
+        ret = M(ret);               /* Meta key support for most terminals */
     } else {
-        ret = '\033';           /* Just an escape character */
+        ret = '\033';               /* Just an escape character */
     }
 
     timeout(-1);
@@ -1076,3 +1095,36 @@ parse_escape_sequence(void)
 #endif /* !PDCURSES */
 }
 
+static void
+update_modifiers(void)
+{
+#if defined(PDCURSES) && defined(PDC_KEY_MODIFIER_ALT)
+    last_getch_modifiers = PDC_get_key_modifiers();
+#endif
+}
+
+/* This will never be called if modifiers_available is FALSE */
+static int
+modified(int ch)
+{
+    int ret_ch = ch;
+
+#if defined(PDCURSES) && defined(PDC_KEY_MODIFIER_ALT)
+    /* PDCurses key modifier masks:
+     * PDC_KEY_MODIFIER_SHIFT   = 1
+     * PDC_KEY_MODIFIER_CONTROL = 2
+     * PDC_KEY_MODIFIER_ALT     = 4
+     * PDC_KEY_MODIFIER_NUMLOCK = 8
+     * PDC_KEY_MODIFIER_REPEAT  = 16
+     * ALT + 'a' through ALT + 'z' returns ALT_A  through ALT_Z
+     *    and those are out of the normal character range and
+     *    code in curses_convert_keys() handles those.
+     * ALT + 'A' through ALT + 'Z' return normal 'A' through 'Z'
+     *    so we check the modifier here.
+     */
+    if (((last_getch_modifiers & PDC_KEY_MODIFIER_ALT) == PDC_KEY_MODIFIER_ALT)
+        && (ch >= 'A' && ch <= 'Z'))
+        ret_ch = M(ch);
+#endif
+    return ret_ch;
+}

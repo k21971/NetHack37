@@ -1797,6 +1797,8 @@ create_trap(spltrap* t, struct mkroom* croom)
         mktrap_flags |= MKTRAP_NOSPIDERONWEB;
     if (t->seen)
         mktrap_flags |= MKTRAP_SEEN;
+    if (t->novictim)
+        mktrap_flags |= MKTRAP_NOVICTIM;
 
     tm.x = x;
     tm.y = y;
@@ -3710,6 +3712,12 @@ lspo_level_flags(lua_State *L)
             gl.level.flags.temperature = 1;
         else if (!strcmpi(s, "cold"))
             gl.level.flags.temperature = -1;
+        else if (!strcmpi(s, "nomongen"))
+            gl.level.flags.rndmongen = 0;
+        else if (!strcmpi(s, "nodeathdrops"))
+            gl.level.flags.deathdrops = 0;
+        else if (!strcmpi(s, "noautosearch"))
+            gl.level.flags.noautosearch = 1;
         else {
             char buf[BUFSZ];
             Sprintf(buf, "Unknown level flag %s", s);
@@ -3781,6 +3789,9 @@ lspo_engraving(lua_State *L)
     long ecoord;
     coordxy x = -1, y = -1;
     int argc = lua_gettop(L);
+    boolean guardobjs = FALSE;
+    boolean wipeout = TRUE;
+    struct engr *ep;
 
     create_des_coder();
 
@@ -3793,6 +3804,8 @@ lspo_engraving(lua_State *L)
         y = ey;
         etyp = engrtypes2i[get_table_option(L, "type", "engrave", engrtypes)];
         txt = get_table_str(L, "text");
+        wipeout = get_table_boolean_opt(L, "degrade", TRUE);
+        guardobjs = get_table_boolean_opt(L, "guardobjects", FALSE);
     } else if (argc == 3) {
         lua_Integer ex, ey;
         (void) get_coord(L, 1, &ex, &ey);
@@ -3812,6 +3825,11 @@ lspo_engraving(lua_State *L)
     get_location_coord(&x, &y, DRY, gc.coder->croom, ecoord);
     make_engr_at(x, y, txt, 0L, etyp);
     Free(txt);
+    ep = engr_at(x, y);
+    if (ep) {
+        ep->guardobjects = guardobjs;
+        ep->nowipeout = !wipeout;
+    }
     return 0;
 }
 
@@ -4275,6 +4293,7 @@ lspo_trap(lua_State *L)
 
     tmptrap.spider_on_web = TRUE;
     tmptrap.seen = FALSE;
+    tmptrap.novictim = FALSE;
 
     if (argc == 1 && lua_type(L, 1) == LUA_TSTRING) {
         const char *trapstr = luaL_checkstring(L, 1);
@@ -4300,6 +4319,7 @@ lspo_trap(lua_State *L)
         tmptrap.type = get_table_traptype_opt(L, "type", -1);
         tmptrap.spider_on_web = get_table_boolean_opt(L, "spider_on_web", 1);
         tmptrap.seen = get_table_boolean_opt(L, "seen", FALSE);
+        tmptrap.novictim = !get_table_boolean_opt(L, "victim", TRUE);
 
         lua_getfield(L, -1, "launchfrom");
         if (lua_type(L, -1) == LUA_TTABLE) {
@@ -6041,12 +6061,12 @@ lspo_region(lua_State *L)
     } else if (argc == 2) {
         /* region(selection, "lit"); */
         static const char *const lits[] = { "unlit", "lit", NULL };
-        struct selectionvar *sel = l_selection_check(L, 1);
+        struct selectionvar *orig = l_selection_check(L, 1),
+                            *sel = selection_clone(orig);
 
         rlit = luaL_checkoption(L, 2, "lit", lits);
 
         /*
-    TODO: adjust region size for wall, but only if lit
     TODO: lit=random
         */
         if (rlit)
@@ -6822,6 +6842,8 @@ sp_level_coder_init(void)
 
     gl.level.flags.is_maze_lev = 0;
     gl.level.flags.temperature = In_hell(&u.uz) ? 1 : 0;
+    gl.level.flags.rndmongen = 1;
+    gl.level.flags.deathdrops = 1;
 
     reset_xystart_size();
 

@@ -172,6 +172,8 @@ static int optfn_##a(int, int, boolean, char *, char *);
     NHOPTC(autounlock, Behavior, 80, opt_out, set_in_game,
                 Yes, Yes, No, Yes, NoAlias,
                 "action to take when encountering locked door or chest")
+    NHOPTB(bgcolors, Behavior, 0, opt_out, set_in_game,
+                On, Yes, No, No, NoAlias, &iflags.bgcolors, Term_Off)
     NHOPTO("bind keys", Advanced, o_bind_keys, BUFSZ, opt_in, set_in_game,
                 No, Yes, No, NoAlias, "edit key binds")
 #if defined(MICRO) && !defined(AMIGA)
@@ -628,6 +630,8 @@ static int optfn_##a(int, int, boolean, char *, char *);
     NHOPTB(travel_debug, Advanced, 0, opt_out, set_wizonly,
                 Off, No, No, No, NoAlias, (boolean *) 0, Term_False)
 #endif
+    NHOPTB(tutorial, Advanced, 0, opt_out, set_in_config,
+                On, Yes, No, No, NoAlias, &flags.tutorial, Term_False)
     NHOPTB(use_darkgray, Advanced, 0, opt_out, set_in_config,
                 On, Yes, No, No, NoAlias, &iflags.wc2_darkgray, Term_False)
     NHOPTB(use_inverse, Advanced, 0, opt_out, set_in_game,

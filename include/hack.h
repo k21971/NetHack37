@@ -524,6 +524,16 @@ enum nhcore_calls {
     NUM_NHCORE_CALLS
 };
 
+/* Lua callbacks. TODO: Merge with NHCORE */
+enum nhcb_calls {
+    NHCB_CMD_BEFORE = 0,
+    NHCB_LVL_ENTER,
+    NHCB_LVL_LEAVE,
+    NHCB_END_TURN,
+
+    NUM_NHCB
+};
+
 /* Macros for messages referring to hands, eyes, feet, etc... */
 enum bodypart_types {
     ARM       =  0,
@@ -584,6 +594,7 @@ enum bodypart_types {
 #define MKTRAP_MAZEFLAG      0x1 /* trap placed on coords as if in maze */
 #define MKTRAP_NOSPIDERONWEB 0x2 /* web will not generate a spider */
 #define MKTRAP_SEEN          0x4 /* trap is seen */
+#define MKTRAP_NOVICTIM      0x8 /* no victim corpse or items on it */
 
 #define MON_POLE_DIST 5 /* How far monsters can use pole-weapons */
 #define PET_MISSILE_RANGE2 36 /* Square of distance within which pets shoot */

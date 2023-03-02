@@ -33,7 +33,7 @@
 .ds h0 "NetHack Guidebook
 .ds h1
 .ds h2 %
-.ds vr "NetHack 3.7
+.ds vr "NetHack 3.7.0
 .ds f0 "\*(vr
 .ds f1
 .\"DO NOT REMOVE NH_DATESUB .ds f2 "DATE(%B %-d, %Y)
@@ -57,7 +57,7 @@ A Guide to the Mazes of Menace
 (Guidebook for NetHack)
 .au
 Original version - Eric S. Raymond
-(Edited and expanded for 3.7 by Mike Stephenson and others)
+(Edited and expanded for \*(vr by Mike Stephenson and others)
 .sp 1
 \*(f2
 .hn 1
@@ -643,7 +643,7 @@ a monster there).
 .lp ""
 A few non-movement commands use the \(oq\f(CRm\fP\(cq prefix to request
 operating via menu (to temporarily override the
-.op menustyle:Traditional
+.op menustyle \f(CR:traditional\fP
 option).
 Primarily useful for \(oq\f(CR,\fP\(cq (pickup) when there is only one class
 of objects present (where there won't be any \(lqwhat kinds of objects?\(rq
@@ -656,10 +656,10 @@ list of all discovered objects) and the \(oq\f(CR\`\fP\(cq (knownclass,
 show a list of discovered objects in a particular class) commands to offer
 a menu of several sorting alternatives (which sets a new value for the
 .op sortdiscoveries
-option).
+option); also for \(lq#vanquished\(rq command to offer a sorting menu.
 .lp ""
 A few other commands (eat food, offer sacrifice, apply tinning-kit,
-drink/quaff, dip) use
+drink/quaff, dip, tip container) use
 the \(oq\f(CRm\fP\(cq prefix to skip checking for applicable objects on
 the floor and go straight to checking inventory,
 or (for \(lq#loot\(rq to remove a saddle),
@@ -1644,9 +1644,19 @@ Autocompletes.
 Debug mode only.
 .lp "#tip     "
 Tip over a container (bag or box) to pour out its contents.
+When there are containers on the floor, the game will prompt to pick one
+of them or \(lqtip something being carried\(rq.
+If the latter is chosen, there will be another prompt for which item
+from inventory to tip.
+.lp ""
+The \(oq\f(CRm\fP\(cq prefix makes the command skip containers on the
+floor and pick one from inventory, except for the special case of
+.op menustyle \f(CR:traditional\fP
+with two or more containers present; that situation will start with the
+floor container menu.
+.lp ""
 Autocompletes.
 Default key is \(oqM-T\(cq.
-The \(oqm\(cq prefix makes the command use a menu.
 .lp "#travel  "
 Travel to a specific location on the map.
 Default key is \(oq_\(cq. \" underscore
@@ -3724,7 +3734,7 @@ and also
 .op autopickup_exception
 for ways to refine the behavior.
 .lp ""
-Note: prior to version 3.7, the default for
+Note: prior to version 3.7.0, the default for
 .op autopickup
 was \fIon\fP.
 .lp autoquiver
@@ -4546,6 +4556,9 @@ Persistent.
 ." .lp travel_debug
 ." Display intended path during each step of travel (default off).
 ." Debug mode only.
+.lp tutorial
+Play a tutorial level at the start of the game.
+Setting this option on or off in the config file will skip the query.
 .lp "verbose "
 Provide more commentary during the game (default on).  Persistent.
 .lp whatis_coord
@@ -5242,7 +5255,7 @@ An entry that maps a sound file to a user-specified message pattern.
 Each SOUND entry is broken down into the following parts:
 .PS "sound index"
 .PL MESG
-message window mapping (the only one supported in 3.7);
+message window mapping (the only one supported in 3.7.0);
 .PL msgtype
 optional; message type to use, see \(lqConfiguring Message Types\(rq
 .PL pattern

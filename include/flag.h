@@ -35,6 +35,7 @@ struct flag {
     boolean goldX;           /* for BUCX filtering, whether gold is X or U */
     boolean help;            /* look in data file for info about stuff */
     boolean tips;            /* show helpful hints? */
+    boolean tutorial;        /* ask if player wants tutorial level? */
     boolean ignintr;         /* ignore interrupts */
     boolean implicit_uncursed; /* maybe omit "uncursed" status in inventory */
     boolean ins_chkpt;       /* checkpoint as appropriate; INSURANCE */
@@ -220,6 +221,7 @@ struct instance_flags {
                             * as output from getdir(): simulated button used
                             * 0 (none) or CLICK_1 (left) or CLICK_2 (right) */
     int getloc_filter;     /* GFILTER_foo */
+    boolean bgcolors;      /* display background colors on a map position */
     boolean getloc_moveskip;
     boolean getloc_travelmode;
     boolean getloc_usemenu;

@@ -44,7 +44,7 @@
 
 %.au
 \author{Original version - Eric S. Raymond\\
-(Edited and expanded for 3.7 by Mike Stephenson and others)}
+(Edited and expanded for 3.7.0 by Mike Stephenson and others)}
 %DO NOT REMOVE NH_DATESUB \date{DATE(%B %-d, %Y)}
 \date{February 21, 2023}
 
@@ -747,11 +747,12 @@ It can also be used with the `{\tt $\backslash$}' (known, show a
 list of all discovered objects) and the `{\tt \`{}}' (knownclass,
 show a list of discovered objects in a particular class) commands to offer
 a menu of several sorting alternatives (which sets a new value for the
-{\it sortdiscoveries\/} option).
+{\it sortdiscoveries\/}
+option); also for ``{\tt \#vanquished}'' command to offer a sorting menu.
 \\
 %.lp ""
 A few other commands (eat food, offer sacrifice, apply tinning-kit,
-drink/quaff, dip) use
+drink/quaff, dip, tip container) use
 the `{\tt m}' prefix to skip checking for applicable objects on
 the floor and go straight to checking inventory,
 or (for ``{\tt \#loot}'' to remove a saddle),
@@ -1773,8 +1774,20 @@ Debug mode only.
 %.lp
 \item[\tb{\#tip}]
 Tip over a container (bag or box) to pour out its contents.
+When there are containers on the floor, the game will prompt to pick one
+of them or ``tip something being carried''.
+\\
+%.lp ""
+If the latter is chosen, there will be another prompt for which item
+from inventory to tip.
+The `{\tt m}' prefix makes the command skip containers on the
+floor and pick one from inventory, except for the special case of
+{\it menustyle:Traditional\/}
+with two or more containers present; that situation will start with the
+floor container menu.
+\\
+%.lp ""
 Autocompletes. Default key is `{\tt M-T}'.
-The `{\tt m}' prefix makes the command use a menu.
 %.lp
 \item[\tb{\#travel}]
 Travel to a specific location on the map.
@@ -4047,7 +4060,7 @@ See ``{\it pickup\verb+_+types\/}'' and also
 ``{\it autopickup\verb+_+exception\/}'' for ways to refine the behavior.
 \\
 %.lp ""
-Note: prior to version 3.7, the default for {\it autopickup\/} was {\it on}.
+Note: prior to version 3.7.0, the default for {\it autopickup\/} was {\it on}.
 %.lp
 \item[\ib{autoquiver}]
 This option controls what happens when you attempt the `{\tt f}' (fire)
@@ -4979,6 +4992,10 @@ command.  Persistent.
 % Display intended path during each step of travel (default off).
 % Debug mode only.
 %.lp
+\item[\ib{tutorial}]
+Play a tutorial level at the start of the game.
+Setting this option on or off in the config file will skip the query.
+%.lp
 \item[\ib{verbose}]
 Provide more commentary during the game (default on).  Persistent.
 %.lp
@@ -5814,7 +5831,7 @@ Each SOUND entry is broken down into the following parts:
 
 %.sd
 %.si
-{\tt MESG       } --- message window mapping (the only one supported in 3.7);\\
+{\tt MESG       } --- message window mapping (the only one supported in 3.7.0);\\
 {\tt msgtype    } --- optional; message type to use, see ``Configuring User Sounds''\\
 {\tt pattern    } --- the pattern to match;\\
 {\tt sound file } --- the sound file to play;\\
