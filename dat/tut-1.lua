@@ -11,15 +11,15 @@ des.map([[
 ||.|.|.......|....|.......................................................|
 ||.|.|.......|....|.......................................................|
 |-+-S-------------|.......................................................|
-|......|          |.......................................................|
-|......|  ######  |.......................................................|
-|----.-| -+-   #  |.......................................................|
-|----+----.----+---.......................................................|
-|........|.|......|.......................................................|
-|.P......-S|......|------.................................................|
-|..........|......+.|...|.................................................|
-|.W......---......|.|.|.|.................................................|
-|....Z.L.|.F......|.|.|.|+---.............................................|
+|......|          |----------.............................................|
+|......|  ######  |.........|.............................................|
+|----.-| -+-   #  |.....---.|.............................................|
+|----+----.----+---.|.--|.|.|.............................................|
+|........|.|......|.|...F...|.............................................|
+|.P......-S|......|------.---.............................................|
+|..........|......+.|...|.---.............................................|
+|.W......---......|.|.|.|.+...............................................|
+|....Z.L.|.F......|.|.|.|.---.............................................|
 |........|--......|...|.....|.............................................|
 ---------------------------------------------------------------------------
 ]]);
@@ -32,12 +32,11 @@ des.non_diggable();
 des.teleport_region({ region = { 9,3, 9,3 } });
 
 -- TODO:
---  - save hero state when entering, restore hero state when leaving
+--  - save (more of) hero state when entering
 --  - quit-command should maybe exit the tutorial?
 
 -- turn on some newbie-friendly options
 nh.parse_config("OPTIONS=mention_walls");
-nh.parse_config("OPTIONS=autoopen");
 nh.parse_config("OPTIONS=lit_corridor");
 
 local movekeys = nh.eckey("movewest") .. " " ..
@@ -55,8 +54,12 @@ des.engraving({ coord = { 5,2 }, type = "engrave", text = "Move diagonally with 
 
 --
 
+des.engraving({ coord = { 2,4 }, type = "engrave", text = "Some actions may require multiple tries before succeeding", degrade = false });
 des.engraving({ coord = { 2,5 }, type = "engrave", text = "Open the door by moving into it", degrade = false });
 des.door({ coord = { 2,6 }, state = "closed" });
+
+des.engraving({ coord = { 2,7 }, type = "engrave", text = "Close the door with '" .. nh.eckey("close") .. "'", degrade = false });
+
 
 --
 
@@ -98,7 +101,7 @@ des.engraving({ coord = { 19,13 }, type = "engrave", text = "Pick up items with 
 
 local armor = (u.role == "Monk") and "leather gloves" or "leather armor";
 
-des.object({ id = armor, spe = 0, buc = "not-cursed", coord = { 19,14} });
+des.object({ id = armor, spe = 0, buc = "cursed", coord = { 19,14} });
 
 des.engraving({ coord = { 19,15 }, type = "engrave", text = "Wear armor with '" .. nh.eckey("wear") .. "'", degrade = false });
 
@@ -113,15 +116,36 @@ des.monster({ id = "lichen", coord = { 23,15 }, waiting = true, countbirth = fal
 
 --
 
-des.door({ coord = { 25,15 }, state = percent(50) and "locked" or "closed" });
-
 des.engraving({ coord = { 24,16 }, type = "engrave", text = "Now you know the very basics. You can leave the tutorial via the magic portal.", degrade = false });
 
+des.engraving({ coord = { 26,16 }, type = "engrave", text = "Step into this portal to leave the tutorial", degrade = false });
 des.trap({ type = "magic portal", coord = { 27,16 }, seen = true });
 
 --
 
-des.engraving({ coord = { 25,14 }, type = "burn", text = "UNDER CONSTRUCTION", degrade = false });
+des.engraving({ coord = { 25,13 }, type = "engrave", text = "Push boulders by moving into them", degrade = false });
+des.object({ id = "boulder", coord = {25,12} });
+
+--
+
+des.engraving({ coord = { 27,9 }, type = "engrave", text = "Take off armor with '" .. nh.eckey("takeoff") .. "'", degrade = false });
+
+--
+
+des.object({ class = "?", id = "remove curse", buc = "blessed", coord = {23,11} })
+des.engraving({ coord = { 22,11 }, type = "engrave", text = "Some items have shuffled descriptions, different each game", degrade = false });
+des.engraving({ coord = { 23,11 }, type = "engrave", text = "Pick up this scroll, read it with '" .. nh.eckey("read") .. "', and try to remove the armor again", degrade = false });
+
+--
+
+des.engraving({ coord = { 19,10 }, type = "engrave", text = "Another magic portal, a way to leave this tutorial", degrade = false });
+des.trap({ type = "magic portal", coord = { 19,11 }, seen = true });
+
+--
+
+des.door({ coord = { 26,14 }, state = "locked" });
+
+des.engraving({ coord = { 27,14 }, type = "burn", text = "UNDER CONSTRUCTION", degrade = false });
 
 --
 

@@ -1658,6 +1658,9 @@ handle_tip(int tip)
             pline("(Use '%s' prefix to step in if you really want to.)",
                   visctrl(cmd_from_func(do_reqmenu)));
             break;
+        case TIP_UNTRAP_MON:
+            pline("(Perhaps #untrap would help?)");
+            break;
         case TIP_GETPOS:
             l_nhcore_call(NHCORE_GETPOS_TIP);
             break;
@@ -1871,6 +1874,7 @@ domove_swap_with_pet(struct monst *mtmp, coordxy x, coordxy y)
         /* all mtame are also mpeaceful, so this affects pets too */
         You("stop.  %s can't move out of that trap.",
             upstart(y_monnam(mtmp)));
+        handle_tip(TIP_UNTRAP_MON);
         didnt_move = TRUE;
     } else if (mtmp->mpeaceful
                && (!goodpos(u.ux0, u.uy0, mtmp, 0)
@@ -3711,6 +3715,19 @@ maybe_wail(void)
     }
 }
 
+/* once per game, if receiving a killing blow from above 90% HP,
+   allow the hero to survive with 1 HP */
+int
+saving_grace(int dmg)
+{
+    if (!u.usaving_grace && (u.uhp <= dmg)
+        && (u.uhp * 100 / u.uhpmax) > 90) {
+        dmg = u.uhp - 1;
+        u.usaving_grace = TRUE; /* used up */
+    }
+    return dmg;
+}
+
 void
 losehp(int n, const char *knam, schar k_format)
 {
@@ -3734,6 +3751,7 @@ losehp(int n, const char *knam, schar k_format)
         return;
     }
 
+    n = saving_grace(n);
     u.uhp -= n;
     if (u.uhp > u.uhpmax)
         u.uhpmax = u.uhp; /* perhaps n was negative */

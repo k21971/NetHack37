@@ -996,6 +996,7 @@ extern int monster_nearby(void);
 extern void end_running(boolean);
 extern void nomul(int);
 extern void unmul(const char *);
+extern int saving_grace(int);
 extern void losehp(int, const char *, schar);
 extern int weight_cap(void);
 extern int inv_weight(void);
@@ -3042,6 +3043,7 @@ extern void do_stone_mon(struct monst *, struct attack *, struct monst *,
 extern int damageum(struct monst *, struct attack *, int);
 extern int explum(struct monst *, struct attack *);
 extern void missum(struct monst *, struct attack *, boolean);
+extern boolean m_is_steadfast(struct monst *);
 extern boolean mhitm_knockback(struct monst *, struct monst *,struct attack *,
                                int *, boolean);
 extern int passive(struct monst *, struct obj *, boolean, boolean, uchar,
