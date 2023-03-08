@@ -333,6 +333,7 @@ extern void destroy_drawbridge(coordxy, coordxy);
 /* ### decl.c ### */
 
 extern void decl_globals_init(void);
+extern void sa_victual(volatile struct victual_info *);
 
 /* ### detect.c ### */
 
@@ -1330,6 +1331,7 @@ extern boolean usmellmon(struct permonst *);
 
 extern int castmu(struct monst *, struct attack *, boolean, boolean);
 extern void touch_of_death(struct monst *);
+extern char *death_inflicted_by(char *, const char *, struct monst *);
 extern int buzzmu(struct monst *, struct attack *);
 
 /* ### mdlib.c ### */
@@ -2356,6 +2358,7 @@ extern void punish(struct obj *);
 extern void unpunish(void);
 extern boolean cant_revive(int *, boolean, struct obj *);
 extern boolean create_particular(void);
+extern boolean avoid_ceiling(d_level *);
 
 /* ### rect.c ### */
 

@@ -252,6 +252,9 @@ const struct instance_globals_b g_init_b = {
     UNDEFINED_PTR, /* bbubbles */
     /* pickup.c */
     FALSE, /* bucx_filter */
+    /* zap.c */
+    NULL, /* buzzer -- monst that zapped/cast/breathed to initiate buzz() */
+
     TRUE, /* havestate*/
     IVMAGIC  /* b_magic to validate that structure layout has been preserved */
 };
@@ -1050,5 +1053,18 @@ decl_globals_init(void)
 #ifndef NO_VERBOSE_GRANULARITY
 long verbosity_suppressions[vb_elements] = { 0L, 0L, 0L, 0L, 0L, };
 #endif
+
+/* gcc 12.2's static analyzer thinks that some fields of gc.context.victual
+   are uninitialized when compiling 'bite(eat.c)' but that's impossible;
+   it is defined at global scope so guaranteed to be given implicit
+   initialization for fields that aren't explicitly initialized (all of
+   'context'); having bite() pass &gc.context.victual to this no-op
+   eliminates the analyzer's very verbose complaint */
+void
+sa_victual(
+    volatile struct victual_info *context_victual UNUSED)
+{
+    return;
+}
 
 /*decl.c*/
