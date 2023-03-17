@@ -20,6 +20,7 @@ extern void mkmap(lev_init *);
 
 static boolean match_maptyps(xint16, xint16);
 static void solidify_map(void);
+static void map_cleanup(void);
 static void lvlfill_maze_grid(int, int, int, int, schar);
 static void lvlfill_solid(schar, schar);
 static void lvlfill_swamp(schar, schar, schar);
@@ -320,6 +321,34 @@ solidify_map(void)
         for (y = 0; y < ROWNO; y++)
             if (IS_STWALL(levl[x][y].typ) && !SpLev_Map[x][y])
                 levl[x][y].wall_info |= (W_NONDIGGABLE | W_NONPASSWALL);
+}
+
+/* do a post-level-creation cleanup of map, such as
+   removing boulders and traps from lava */
+static void
+map_cleanup(void)
+{
+    struct obj *otmp;
+    struct trap *ttmp;
+    coordxy x, y;
+
+    for (x = 0; x < COLNO; x++)
+        for (y = 0; y < ROWNO; y++) {
+            schar typ = levl[x][y].typ;
+
+            if (typ == LAVAPOOL || typ == LAVAWALL || IS_POOL(typ)) {
+                /* in case any boulders are on liquid, delete them */
+                while ((otmp = sobj_at(BOULDER, x, y)) != 0) {
+                    obj_extract_self(otmp);
+                    obfree(otmp, (struct obj *)0);
+                }
+
+                /* traps on liquid? */
+                if (((ttmp = t_at(x, y)) != 0)
+                    && !undestroyable_trap(ttmp->ttyp))
+                    deltrap(ttmp);
+            }
+        }
 }
 
 static void
@@ -5187,6 +5216,7 @@ selection_iterate(
                 (*func)(x, y, arg);
 }
 
+/* change map location terrain type during level creation */
 static void
 sel_set_ter(coordxy x, coordxy y, genericptr_t arg)
 {
@@ -5202,7 +5232,11 @@ sel_set_ter(coordxy x, coordxy y, genericptr_t arg)
             levl[x][y].doormask = D_CLOSED;
         if (x && (IS_WALL(levl[x - 1][y].typ) || levl[x - 1][y].horizontal))
             levl[x][y].horizontal = 1;
-    }
+    } else if (levl[x][y].typ == HWALL
+               || levl[x][y].typ == IRONBARS)
+        levl[x][y].horizontal = 1;
+    else if (splev_init_present && levl[x][y].typ == ICE)
+        levl[x][y].icedpool = icedpools ? ICED_POOL : ICED_MOAT;
 }
 
 static void
@@ -6473,6 +6507,8 @@ lspo_finalize_level(lua_State *L UNUSED)
     if (L && gc.coder->check_inaccessibles)
         ensure_way_out();
 
+    map_cleanup();
+
     /* FIXME: Ideally, we want this call to only cover areas of the map
      * which were not inserted directly by the special level file (see
      * the insect legs on Baalzebub's level, for instance). Since that
@@ -6684,6 +6720,7 @@ TODO: gc.coder->croom needs to be updated
         reset_xystart_size();
     } else {
         coordxy mptyp;
+        terrain terr;
 
         /* Themed rooms should never overwrite anything */
         if (gi.in_mk_themerooms) {
@@ -6726,37 +6763,16 @@ TODO: gc.coder->croom needs to be updated
                 }
                 if (mptyp >= MAX_TYPE)
                     continue;
-                selection_setpoint(x, y, sel, 1);
-                levl[x][y].typ = mptyp;
-                levl[x][y].lit = lit;
                 /* clear out levl: load_common_data may set them */
                 levl[x][y].flags = 0;
                 levl[x][y].horizontal = 0;
                 levl[x][y].roomno = 0;
                 levl[x][y].edge = 0;
                 SpLev_Map[x][y] = 1;
-                /*
-                 *  Set secret doors to closed (why not trapped too?).  Set
-                 *  the horizontal bit.
-                 */
-                if (levl[x][y].typ == SDOOR || IS_DOOR(levl[x][y].typ)) {
-                    if (levl[x][y].typ == SDOOR)
-                        levl[x][y].doormask = D_CLOSED;
-                    /*
-                     *  If there is a wall to the left that connects to a
-                     *  (secret) door, then it is horizontal.  This does
-                     *  not allow (secret) doors to be corners of rooms.
-                     */
-                    if (x != gx.xstart && (IS_WALL(levl[x - 1][y].typ)
-                                          || levl[x - 1][y].horizontal))
-                        levl[x][y].horizontal = 1;
-                } else if (levl[x][y].typ == HWALL
-                           || levl[x][y].typ == IRONBARS)
-                    levl[x][y].horizontal = 1;
-                else if (levl[x][y].typ == LAVAPOOL)
-                    levl[x][y].lit = 1;
-                else if (splev_init_present && levl[x][y].typ == ICE)
-                    levl[x][y].icedpool = icedpools ? ICED_POOL : ICED_MOAT;
+                selection_setpoint(x, y, sel, 1);
+                terr.ter = mptyp;
+                terr.tlit = lit;
+                sel_set_ter(x, y, &terr);
             }
     }
 
@@ -6946,6 +6962,8 @@ load_special(const char *name)
     /* TODO: ensure_way_out() needs rewrite */
     if (gc.coder->check_inaccessibles)
         ensure_way_out();
+
+    map_cleanup();
 
     /* FIXME: Ideally, we want this call to only cover areas of the map
      * which were not inserted directly by the special level file (see

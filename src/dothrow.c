@@ -654,7 +654,7 @@ walk_path(coord *src_cc, coord *dest_cc,
      * This should be replaced with a more versatile algorithm
      * since it handles slanted moves in a suboptimal way.
      * Going from 'x' to 'y' needs to pass through 'z', and will
-     * fail if there's an obstable there, but it could choose to
+     * fail if there's an obstacle there, but it could choose to
      * pass through 'Z' instead if that way imposes no obstacle.
      *     ..y          .Zy
      *     xz.    vs    x..
@@ -975,20 +975,30 @@ hurtle_step(genericptr_t arg, coordxy x, coordxy y)
     return TRUE;
 }
 
+/* used by mhurtle_step() for actual hurtling and also to vary message
+   if target will/won't change location when knocked back */
+boolean
+will_hurtle(struct monst *mon, coordxy x, coordxy y)
+{
+    if (!isok(x, y))
+        return FALSE;
+    /*
+     * TODO: Treat walls, doors, iron bars, etc. specially
+     * rather than just stopping before.
+     */
+    return goodpos(x, y, mon, MM_IGNOREWATER | MM_IGNORELAVA);
+}
+
 static boolean
 mhurtle_step(genericptr_t arg, coordxy x, coordxy y)
 {
     struct monst *mon = (struct monst *) arg;
     struct monst *mtmp;
 
-    /* TODO: Treat walls, doors, iron bars, etc. specially
-     * rather than just stopping before.
-     */
     if (!isok(x, y))
         return FALSE;
 
-    if (goodpos(x, y, mon, MM_IGNOREWATER | MM_IGNORELAVA)
-        && m_in_out_region(mon, x, y)) {
+    if (will_hurtle(mon, x, y) && m_in_out_region(mon, x, y)) {
         int res;
 
         if (mon != u.usteed) {
@@ -1771,7 +1781,7 @@ return_throw_to_inv(
     struct obj *otmp = NULL;
 
     /* if 'obj' is from a stack split, we can put it back by undoing split
-       so there's no chance of merging with some other compatable stack */
+       so there's no chance of merging with some other compatible stack */
     if (obj->o_id == gc.context.objsplit.parent_oid
         || obj->o_id == gc.context.objsplit.child_oid) {
         obj->nobj = gi.invent;
@@ -1789,7 +1799,7 @@ return_throw_to_inv(
 
     /* if 'obj' wasn't from a stack split or if it wouldn't merge back
        (maybe new erosion damage?) then it needs to be added to invent;
-       don't merge with any other stack even if there is a compatable one
+       don't merge with any other stack even if there is a compatible one
        (others with similar erosion?) */
     if (!otmp) {
         obj->nomerge = 1;

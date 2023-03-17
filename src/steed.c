@@ -514,7 +514,7 @@ landing_spot(
                 if (min_distance < 0 /* no viable candidate yet */
                     /* or better than pending candidate (note: orthogonal
                        spots are distance 1 and diagonal ones distance 2;
-                       treating one as better than the other is arbitary
+                       treating one as better than the other is arbitrary
                        and not wanted for DISMOUNT_KNOCKED) */
                     || ((best_j == -1) ? (distance < min_distance) : (j < 3))
                     /* or equally good, maybe substitute this one */
@@ -833,7 +833,7 @@ stucksteed(boolean checkfeeding)
 }
 
 void
-place_monster(struct monst* mon, int x, int y)
+place_monster(struct monst* mon, coordxy x, coordxy y)
 {
     struct monst *othermon;
     const char *monnm, *othnm;

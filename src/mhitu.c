@@ -23,17 +23,16 @@ static int passiveum(struct permonst *, struct monst *, struct attack *);
 
 #define ld() ((yyyymmdd((time_t) 0) - (getyear() * 10000L)) == 0xe5)
 
-DISABLE_WARNING_FORMAT_NONLITERAL
-
+/* monster hits hero (most callers have been moved to uthim.c) */
 void
 hitmsg(struct monst *mtmp, struct attack *mattk)
 {
     int compat;
-    const char *pfmt = 0;
+    const char *verb = 0, *again, *punct = "!";
     char *Monst_name = Monnam(mtmp);
 
-    /* Note: if opposite gender, "seductively" */
-    /* If same gender, "engagingly" for nymph, normal msg for others */
+    /* Note: if opposite gender, "seductively";
+       if same gender, "engagingly" for nymph, normal msg for others. */
     if ((compat = could_seduce(mtmp, &gy.youmonst, mattk)) != 0
         && !mtmp->mcan && !mtmp->mspec_used) {
         pline("%s %s you %s.", Monst_name,
@@ -42,43 +41,51 @@ hitmsg(struct monst *mtmp, struct attack *mattk)
     } else {
         switch (mattk->aatyp) {
         case AT_BITE:
-            pfmt = "%s bites!";
+            verb = "bites";
             break;
         case AT_KICK:
-            pline("%s kicks%c", Monst_name,
-                  thick_skinned(gy.youmonst.data) ? '.' : '!');
+            if (thick_skinned(gy.youmonst.data))
+                punct = ".";
+            verb = "kicks";
             break;
         case AT_STNG:
-            pfmt = "%s stings!";
+            verb = "stings";
             break;
         case AT_BUTT:
-            pfmt = "%s butts!";
+            verb = "butts";
             break;
         case AT_TUCH:
-            pfmt = "%s touches you!";
+            verb = "touches you";
             break;
         case AT_TENT:
-            pfmt = "%s tentacles suck you!";
+            verb = "tentacles suck your brain";
             Monst_name = s_suffix(Monst_name);
             break;
         case AT_EXPL:
         case AT_BOOM:
-            pfmt = "%s explodes!";
+            verb = "explodes";
             break;
         default:
-            pfmt = "%s hits!";
+            verb = "hits";
         }
-        if (pfmt)
-            pline(pfmt, Monst_name);
+        /* if a monster hits more than once with similar attack, say so */
+        again = (mtmp->m_id == gh.hitmsg_mid
+                 && gh.hitmsg_prev != NULL
+                 && mattk == gh.hitmsg_prev + 1
+                 && mattk->aatyp == gh.hitmsg_prev->aatyp) ? " again" : "";
+        pline("%s %s%s%s", Monst_name, verb, again, punct);
     }
+    gh.hitmsg_mid = mtmp->m_id;
+    gh.hitmsg_prev = mattk;
 }
-
-RESTORE_WARNING_FORMAT_NONLITERAL
 
 /* monster missed you */
 static void
 missmu(struct monst *mtmp, boolean nearmiss, struct attack *mattk)
 {
+    gh.hitmsg_mid = 0;
+    gh.hitmsg_prev = NULL;
+
     if (!canspotmon(mtmp))
         map_invisible(mtmp->mx, mtmp->my);
 
@@ -323,7 +330,7 @@ getmattk(struct monst *magr, struct monst *mdef,
         attk = alt_attk_buf;
         /* 3.6.0 used 4d6 but since energy drain came out of max energy
            once current energy was gone, that tended to have a severe
-           effect on low energy characters; it's now 2d6 with ajustments */
+           effect on low energy characters; it's now 2d6 with adjustments */
         if (u.uen <= 5 * ulev && attk->damn > 1) {
             attk->damn -= 1; /* low energy: 2d6 -> 1d6 */
             if (u.uenmax <= 2 * ulev && attk->damd > 3)
@@ -1203,6 +1210,7 @@ gulpmu(struct monst *mtmp, struct attack *mattk)
         } else {
             urgent_pline("%s %s!", Monnam(mtmp),
                          digests(mtmp->data) ? "swallows you whole"
+                         : enfolds(mtmp->data) ? "folds itself around you"
                            : "engulfs you");
         }
         stop_occupation();
@@ -1210,7 +1218,7 @@ gulpmu(struct monst *mtmp, struct attack *mattk)
 
         if (u.utrap) {
             You("are released from the %s!",
-                u.utraptype == TT_WEB ? "web" : "trap");
+                (u.utraptype == TT_WEB) ? "web" : "trap");
             reset_utrap(FALSE);
         }
 

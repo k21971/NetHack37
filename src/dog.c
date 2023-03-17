@@ -116,10 +116,24 @@ make_familiar(struct obj *otmp, coordxy x, coordxy y, boolean quietly)
                     : (cgend == CORPSTAT_MALE) ? MM_MALE : 0L);
 
         mtmp = makemon(pm, x, y, mmflags);
-        if (otmp && !mtmp) { /* monster was genocided or square occupied */
-            if (!quietly)
-                pline_The("figurine writhes and then shatters into pieces!");
-            break;
+        if (otmp) { /* figurine */
+            if (!mtmp) {
+                /* monster has been genocided or target spot is occupied */
+                if (!quietly)
+                    pline_The(
+                           "figurine writhes and then shatters into pieces!");
+                break;
+            } else if (mtmp->isminion) {
+                /* Fixup for figurine of an Angel:  makemon() is willing to
+                   create a random Angel as either an ordinary monster or as
+                   a minion of random allegiance.  We don't want the latter
+                   here in case it successfully becomes a pet. */
+                mtmp->isminion = 0;
+                free_emin(mtmp);
+                /* [This could and possibly should be redone as a new
+                   MM_flag passed to makemon() to suppress making a minion
+                   so that no post-creation fixup would be needed.] */
+            }
         }
     } while (!mtmp && --trycnt > 0);
 
@@ -547,7 +561,7 @@ mon_catchup_elapsed_time(
         panic("catchup from future time?");
         /*NOTREACHED*/
         return;
-    } else if (nmv == 0L) { /* safe, but should'nt happen */
+    } else if (nmv == 0L) { /* safe, but shouldn't happen */
         impossible("catchup from now?");
     } else
 #endif
@@ -656,7 +670,7 @@ mon_leave(struct monst *mtmp)
         set_residency(mtmp, TRUE);
 
     /* if this is a long worm, handle its tail segments before mtmp itself;
-       we pass possibly trundated segment count to caller via return value  */
+       we pass possibly truncated segment count to caller via return value  */
     if (mtmp->wormno) {
         int cnt = count_wsegs(mtmp), mx = mtmp->mx, my = mtmp->my;
 
@@ -773,7 +787,7 @@ keepdogs(
             num_segs = mon_leave(mtmp);
             /* take off map and move mtmp from fmon list to mydogs */
             relmon(mtmp, &gm.mydogs); /* mtmp->mx,my retain current value */
-            mtmp->mx = mtmp->my = 0; /* mx==0 implies migating */
+            mtmp->mx = mtmp->my = 0; /* mx==0 implies migrating */
             mtmp->wormno = num_segs;
             mtmp->mlstmv = gm.moves;
         } else if (keep_mon_accessible(mtmp)) {
@@ -835,7 +849,7 @@ migrate_to_level(
     mtmp->mtrack[0].y = xyflags;
     mtmp->mux = new_lev.dnum;
     mtmp->muy = new_lev.dlevel;
-    mtmp->mx = mtmp->my = 0; /* mx==0 implies migating */
+    mtmp->mx = mtmp->my = 0; /* mx==0 implies migrating */
 
     /* don't extinguish a mobile light; it still exists but has changed
        from local (monst->mx > 0) to global (mx==0, not on this level) */
@@ -993,7 +1007,7 @@ dogfood(struct monst *mon, struct obj *obj)
         case CARROT:
             return (herbi || mblind) ? DOGFOOD : starving ? ACCFOOD : MANFOOD;
         case BANANA:
-            /* monkeys and apes (tameable) plus sasquatch prefer these,
+            /* monkeys and apes (tamable) plus sasquatch prefer these,
                yetis will only will only eat them if starving */
             return (mptr->mlet == S_YETI && herbi) ? DOGFOOD
                    : (herbi || starving) ? ACCFOOD

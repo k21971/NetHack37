@@ -411,7 +411,7 @@ newman(void)
     polyman("You feel like a new %s!", newform);
 
     newgend = poly_gender();
-    /* note: newman() bypasses achievemnts for new ranks attained and
+    /* note: newman() bypasses achievements for new ranks attained and
        doesn't log "new <form>" when that isn't accompanied by level change */
     if (newlvl != oldlvl)
         livelog_printf(LL_MINORAC, "became experience level %d as a new %s",
@@ -449,7 +449,7 @@ polyself(int psflags)
             controllable_poly = Polymorph_control && !(Stunned || Unaware);
 
     if (Unchanging) {
-        pline("You fail to transform!");
+        You("fail to transform!");
         return;
     }
     /* being Stunned|Unaware doesn't negate this aspect of Poly_control */

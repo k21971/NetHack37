@@ -1185,7 +1185,7 @@ engrave(void)
 
     if (gc.context.engraving.pos.x != u.ux
         || gc.context.engraving.pos.y != u.uy) { /* teleported? */
-        pline("You are unable to continue engraving.");
+        You("are unable to continue engraving.");
         return 0;
     }
     /* Stylus might have been taken out of inventory and destroyed somehow.
@@ -1199,7 +1199,7 @@ engrave(void)
             }
         }
         if (!stylus) {
-            pline("You are unable to continue engraving.");
+            You("are unable to continue engraving.");
             return 0;
         }
     }
