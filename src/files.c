@@ -700,33 +700,41 @@ write_whereis(boolean playing) /* < True if game is running */
 {
     FILE* fp;
     char whereis_work[511];
+    if (!gp.program_state.something_worth_saving)
+        return;
     if (strstr(whereis_file, "%n"))
         set_whereisfile();
-    Sprintf(whereis_work,
-            "player=%s:depth=%d:dnum=%d:dname=%s:hp=%d:maxhp=%d:turns=%ld:score=%ld:role=%s:race=%s:gender=%s:align=%s:conduct=0x%lx:amulet=%d:ascended=%d:playing=%d\n",
+
+    /* construct the whereis string */
+    Sprintf(whereis_work, "player=%s:depth=%d:dnum=%d:dname=%s:",
             gp.plname,
             depth(&u.uz),
             u.uz.dnum,
-            gd.dungeons[u.uz.dnum].dname,
+            gd.dungeons[u.uz.dnum].dname);
+    Sprintf(eos(whereis_work), "hp=%d:maxhp=%d:turns=%ld:score=%ld:",
             u.uhp,
             u.uhpmax,
             gm.moves,
 #ifdef SCORE_ON_BOTL
-            botl_score(),
+            botl_score()
 #else
-            0L,
+            0L
 #endif
+            );
+    Sprintf(eos(whereis_work), "role=%s:race=%s:gender=%s:align=%s:",
             gu.urole.filecode,
             gu.urace.filecode,
             genders[flags.female].filecode,
-            aligns[1 - u.ualign.type].filecode,
+            aligns[1 - u.ualign.type].filecode);
+    Sprintf(eos(whereis_work), "conduct=0x%lx:amulet=%d:ascended=%d:",
 #ifdef RECORD_CONDUCT
             encodeconduct(),
 #else
             0L,
 #endif
             u.uhave.amulet ? 1 : 0,
-            u.uevent.ascended ? 2 : gk.killer.name ? 1 : 0,
+            u.uevent.ascended ? 2 : gk.killer.name ? 1 : 0);
+    Sprintf(eos(whereis_work), "playing=%d\n",
             playing);
 
     fp = fopen_datafile(whereis_file,"w",LEVELPREFIX);
