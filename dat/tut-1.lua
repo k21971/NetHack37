@@ -5,16 +5,16 @@ des.level_flags("mazelevel", "noflip",
 
 des.map([[
 ---------------------------------------------------------------------------
-|-.--|.......|......|..S....|.............................................|
-|.-..........|......|--|....|.............................................|
-||.--|.......|..T......|....|.............................................|
-||.|.|.......|......|-.|....|.............................................|
-||.|.|.......|......||.|-.---.............................................|
-|-+-S---------..---.||......+.............................................|
-|......|          |.---------.............................................|
-|......|  ######  |.........|.............................................|
-|----.-| -+-   #  |.....---.|.............................................|
-|----+----.----+---.|.--|.|.|.............................................|
+|-.--|.......|......|..S....|.F.......|...................................|
+|.-..........|......|--|....|.F.....|.|S-------...........................|
+||.--|.......|..T......|....|.F.....|.|.......|...........................|
+||.|.|.......|......|-.|....|.F.....|.|.......|...........................|
+||.|.|.......|......||.|-.-----------.-.......|...........................|
+|-+-S---------..---.||........................|...........................|
+|......|          |.-------------------.......|...........................|
+|......|  ######  |.........|.........S.......|...........................|
+|----.-| -+-   #  |.....---.|.........|.......S...........................|
+|----+----.----+---.|.--|.|.|.........---------...........................|
 |........|.|......|.|...F...|.............................................|
 |.P......-S|......|------.---.............................................|
 |..........|......+.|...|.|...............................................|
@@ -163,10 +163,41 @@ des.monster({ id = "yellow mold", coord = { 26,2 }, waiting = true, countbirth =
 
 des.engraving({ coord = { 25,5 }, type = "engrave", text = "Throw items with '" .. nh.eckey("throw") .. "'", degrade = false });
 
+des.trap({ type = "magic portal", coord = { 21,1 }, seen = true });
+
 --
 
-des.door({ coord = { 28,6 }, state = "locked" });
-des.engraving({ coord = { 29,6 }, type = "burn", text = "UNDER CONSTRUCTION", degrade = false });
+des.monster({ id = "wolf", coord = { 29,2 }, peaceful = 0, waiting = true, countbirth = false });
+
+des.engraving({ coord = { 37,4 }, type = "engrave", text = "Missiles, such as rocks, work better when fired from appropriate launcher", degrade = false });
+
+des.object({ coord = { 37,3 }, id = "sling", buc = "not-cursed", spe = 9 });
+des.engraving({ coord = { 37,3 }, type = "engrave", text = "Wield the sling", degrade = false });
+des.engraving({ coord = { 36,1 }, type = "engrave", text = "Use '" .. nh.eckey("fire") .. "' to fire missiles with the wielded launcher", degrade = false });
+
+des.engraving({ coord = { 35,4 }, type = "engrave", text = "Firing launches items from your quiver; Use '" .. nh.eckey("quiver") .. "' to put items in it", degrade = false });
+
+des.engraving({ coord = { 33,4 }, type = "engrave", text = "You can wait a turn with '" .. nh.eckey("wait") .. "'", degrade = false });
+
+
+--
+
+des.door({ coord = { 38,6 }, state = "closed" });
+
+des.engraving({ coord = { 39,6 }, type = "engrave", text = "You loot containers with '" .. nh.eckey("loot") .. "'", degrade = false });
+
+des.object({ coord = { 42,6 }, id = "large box", broken = true,
+             contents = function(obj)
+                des.object({ id = "secret door detection", class = "/", spe = 30 }); end
+});
+
+des.engraving({ coord = { 45,6 }, type = "engrave", text = "Magic wands are used with '" .. nh.eckey("zap") .. "'", degrade = false });
+
+--
+
+des.engraving({ coord = { 55,9 }, type = "burn", text = "UNDER CONSTRUCTION", degrade = false });
+
+des.trap({ type = "magic portal", coord = { 60,9 }, seen = true });
 
 ----------------
 

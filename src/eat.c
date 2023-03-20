@@ -33,6 +33,7 @@ static void fprefx(struct obj *);
 static void fpostfx(struct obj *);
 static int bite(void);
 static int edibility_prompts(struct obj *);
+static int doeat_nonfood(struct obj *);
 static int tinopen_ok(struct obj *);
 static int rottenfood(struct obj *);
 static void eatspecial(void);
@@ -581,13 +582,13 @@ eat_brains(
 {
     struct permonst *pd = mdef->data;
     boolean give_nutrit = FALSE;
-    int result = MM_HIT, xtra_dmg = rnd(10);
+    int result = M_ATTK_HIT, xtra_dmg = rnd(10);
 
     if (noncorporeal(pd)) {
         if (visflag)
             pline("%s brain is unharmed.",
                   (mdef == &gy.youmonst) ? "Your" : s_suffix(Monnam(mdef)));
-        return MM_MISS; /* side-effects can't occur */
+        return M_ATTK_MISS; /* side-effects can't occur */
     } else if (magr == &gy.youmonst) {
         You("eat %s brain!", s_suffix(mon_nam(mdef)));
     } else if (mdef == &gy.youmonst) {
@@ -613,12 +614,12 @@ eat_brains(
             monstone(magr);
             if (!DEADMONSTER(magr)) {
                 /* life-saved; don't continue eating the brains */
-                return MM_MISS;
+                return M_ATTK_MISS;
             } else {
                 if (magr->mtame && !visflag)
                     /* parallels mhitm.c's brief_feeling */
                     You("have a sad thought for a moment, then it passes.");
-                return MM_AGR_DIED;
+                return M_ATTK_AGR_DIED;
             }
         }
     }
@@ -631,7 +632,7 @@ eat_brains(
         if (mindless(pd)) { /* (cannibalism not possible here) */
             pline("%s doesn't notice.", Monnam(mdef));
             /* all done; no extra harm inflicted upon target */
-            return MM_MISS;
+            return M_ATTK_MISS;
         } else if (is_rider(pd)) {
             pline("Ingesting that is fatal.");
             Sprintf(gk.killer.name, "unwisely ate the brain of %s",
@@ -696,11 +697,11 @@ eat_brains(
         if (mindless(pd)) {
             if (visflag && canspotmon(mdef))
                 pline("%s doesn't notice.", Monnam(mdef));
-            return MM_MISS;
+            return M_ATTK_MISS;
         } else if (is_rider(pd)) {
             mondied(magr);
             if (DEADMONSTER(magr))
-                result = MM_AGR_DIED;
+                result = M_ATTK_AGR_DIED;
             /* Rider takes extra damage regardless of whether attacker dies */
             *dmg_p += xtra_dmg;
         } else {
@@ -2607,13 +2608,95 @@ edibility_prompts(struct obj *otmp)
     return 0;
 }
 
+static int
+doeat_nonfood(struct obj *otmp)
+{
+    int basenutrit; /* nutrition of full item */
+    int ll_conduct = 0;
+    boolean nodelicious = FALSE;
+    int material;
+
+    gc.context.victual.reqtime = 1;
+    gc.context.victual.piece = otmp;
+    gc.context.victual.o_id = otmp->o_id;
+    /* Don't split it, we don't need to if it's 1 move */
+    gc.context.victual.usedtime = 0;
+    gc.context.victual.canchoke = (u.uhs == SATIATED);
+    /* Note: gold weighs 1 pt. for each 1000 pieces (see
+       pickup.c) so gold and non-gold is consistent. */
+    if (otmp->oclass == COIN_CLASS)
+        basenutrit = ((otmp->quan > 200000L) ? 2000
+                      : (int) (otmp->quan / 100L));
+    else if (otmp->oclass == BALL_CLASS || otmp->oclass == CHAIN_CLASS)
+        basenutrit = weight(otmp);
+    /* oc_nutrition is usually weight anyway */
+    else
+        basenutrit = objects[otmp->otyp].oc_nutrition;
+#ifdef MAIL_STRUCTURES
+    if (otmp->otyp == SCR_MAIL) {
+        basenutrit = 0;
+        nodelicious = TRUE;
+    }
+#endif
+    gc.context.victual.nmod = basenutrit;
+    gc.context.victual.eating = 1; /* needed for lesshungry() */
+
+    if (!u.uconduct.food++) {
+        ll_conduct++;
+        livelog_printf(LL_CONDUCT, "ate for the first time (%s)",
+                       food_xname(otmp, FALSE));
+    }
+    material = objects[otmp->otyp].oc_material;
+    if (material == LEATHER || material == BONE
+        || material == DRAGON_HIDE || material == WAX) {
+        if (!u.uconduct.unvegan++ && !ll_conduct) {
+            livelog_printf(LL_CONDUCT,
+                "consumed animal products for the first time, by eating %s",
+                an(food_xname(otmp, FALSE)));
+            ll_conduct++;
+        }
+        if (material != WAX) {
+            if (!u.uconduct.unvegetarian && !ll_conduct)
+                livelog_printf(LL_CONDUCT,
+                    "tasted meat by-products for the first time, by eating %s",
+                    an(food_xname(otmp, FALSE)));
+            violated_vegetarian();
+        }
+    }
+
+    if (otmp->cursed) {
+        (void) rottenfood(otmp);
+        nodelicious = TRUE;
+    } else if (objects[otmp->otyp].oc_material == PAPER)
+        nodelicious = TRUE;
+
+    if (otmp->oclass == WEAPON_CLASS && otmp->opoisoned) {
+        pline("Ecch - that must have been poisonous!");
+        if (!Poison_resistance) {
+            poison_strdmg(rnd(4), rnd(15), xname(otmp), KILLED_BY_AN);
+        } else
+            You("seem unaffected by the poison.");
+    } else if (!nodelicious) {
+        pline("%s%s is delicious!",
+              (obj_is_pname(otmp)
+               && otmp->oartifact < ART_ORB_OF_DETECTION)
+              ? ""
+              : "This ",
+              (otmp->oclass == COIN_CLASS)
+              ? foodword(otmp)
+              : singular(otmp, xname));
+    }
+    eatspecial();
+    return ECMD_TIME;
+}
+
 /* the #eat command */
 int
 doeat(void)
 {
     struct obj *otmp;
     int basenutrit; /* nutrition of full item */
-    boolean dont_start = FALSE, nodelicious = FALSE,
+    boolean dont_start = FALSE,
             already_partly_eaten;
     int ll_conduct = 0;
 
@@ -2711,82 +2794,9 @@ doeat(void)
             trycall(otmp);
         return ECMD_TIME;
     }
-    if (otmp->oclass != FOOD_CLASS) {
-        int material;
+    if (otmp->oclass != FOOD_CLASS)
+        return doeat_nonfood(otmp);
 
-        gc.context.victual.reqtime = 1;
-        gc.context.victual.piece = otmp;
-        gc.context.victual.o_id = otmp->o_id;
-        /* Don't split it, we don't need to if it's 1 move */
-        gc.context.victual.usedtime = 0;
-        gc.context.victual.canchoke = (u.uhs == SATIATED);
-        /* Note: gold weighs 1 pt. for each 1000 pieces (see
-           pickup.c) so gold and non-gold is consistent. */
-        if (otmp->oclass == COIN_CLASS)
-            basenutrit = ((otmp->quan > 200000L) ? 2000
-                          : (int) (otmp->quan / 100L));
-        else if (otmp->oclass == BALL_CLASS || otmp->oclass == CHAIN_CLASS)
-            basenutrit = weight(otmp);
-        /* oc_nutrition is usually weight anyway */
-        else
-            basenutrit = objects[otmp->otyp].oc_nutrition;
-#ifdef MAIL_STRUCTURES
-        if (otmp->otyp == SCR_MAIL) {
-            basenutrit = 0;
-            nodelicious = TRUE;
-        }
-#endif
-        gc.context.victual.nmod = basenutrit;
-        gc.context.victual.eating = 1; /* needed for lesshungry() */
-
-        if (!u.uconduct.food++) {
-            ll_conduct++;
-            livelog_printf(LL_CONDUCT, "ate for the first time (%s)",
-                           food_xname(otmp, FALSE));
-        }
-        material = objects[otmp->otyp].oc_material;
-        if (material == LEATHER || material == BONE
-            || material == DRAGON_HIDE || material == WAX) {
-            if (!u.uconduct.unvegan++ && !ll_conduct) {
-                livelog_printf(LL_CONDUCT,
-                  "consumed animal products for the first time, by eating %s",
-                               an(food_xname(otmp, FALSE)));
-                ll_conduct++;
-            }
-            if (material != WAX) {
-                if (!u.uconduct.unvegetarian && !ll_conduct)
-                    livelog_printf(LL_CONDUCT,
-                   "tasted meat by-products for the first time, by eating %s",
-                                   an(food_xname(otmp, FALSE)));
-                violated_vegetarian();
-            }
-        }
-
-        if (otmp->cursed) {
-            (void) rottenfood(otmp);
-            nodelicious = TRUE;
-        } else if (objects[otmp->otyp].oc_material == PAPER)
-            nodelicious = TRUE;
-
-        if (otmp->oclass == WEAPON_CLASS && otmp->opoisoned) {
-            pline("Ecch - that must have been poisonous!");
-            if (!Poison_resistance) {
-                poison_strdmg(rnd(4), rnd(15), xname(otmp), KILLED_BY_AN);
-            } else
-                You("seem unaffected by the poison.");
-        } else if (!nodelicious) {
-            pline("%s%s is delicious!",
-                  (obj_is_pname(otmp)
-                   && otmp->oartifact < ART_ORB_OF_DETECTION)
-                      ? ""
-                      : "This ",
-                  (otmp->oclass == COIN_CLASS)
-                      ? foodword(otmp)
-                      : singular(otmp, xname));
-        }
-        eatspecial();
-        return ECMD_TIME;
-    }
 
     if (otmp == gc.context.victual.piece) {
         boolean one_bite_left
