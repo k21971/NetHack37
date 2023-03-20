@@ -288,7 +288,7 @@ endif  # WANT_LIBNH
 PREFIX=/opt/nethack/chroot
 
 # this is the dir where NetHack is inside the chroot
-HACKDIR=/nh370.78-hdf
+HACKDIR=/nh370.80-hdf
 INSTDIR=$(PREFIX)$(HACKDIR)
 VARDIR =$(INSTDIR)/var
 
