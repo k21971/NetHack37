@@ -993,6 +993,15 @@ curses_putmsghistory(const char *msg, boolean restoring_msghist)
         }
         initd = FALSE; /* reset */
     }
+
+    /*
+     * Restoring a game with window borders on and align_status:left
+     * (which pushes the starting column of the message window to the
+     * right) brings up an initial display where the border around
+     * the message window is missing.  This draws it.
+     */
+    if (restoring_msghist)
+        curses_last_messages();
 }
 
 /*cursmesg.c*/

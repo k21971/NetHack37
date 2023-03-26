@@ -1,4 +1,4 @@
-HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1093 $ $NHDT-Date: 1672605786 2023/01/01 20:43:06 $
+HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1139 $ $NHDT-Date: 1679595146 2023/03/23 18:12:26 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -1121,11 +1121,16 @@ feedback if a named, shape-shifted vampire reverted to original shape rather
 adjust archeologist and valkyrie starting intrinsics
 once per game if receiving killing blow from near-full hp, leave 1 hp
 spell of knock can knock back small monsters
-protection from shape changers prevents the Wizard from mimicking monsters
+protection from shape changers now prevents the Wizard from mimicking monsters
+having worn levitation boots removed and destroyed (scroll, monster spell,
+	dragon breath) and floating down into lava can destroy them twice;
+	yielded "object lost" panic if program had been built with a debugging
+	malloc implementation which overwrites the contents of freed memory
+ensure that all window interfaces respect flags.silent (suppress terminal beep)
 
 
-Fixes to 3.7.0-x Problems that Were Exposed Via git Repository
-------------------------------------------------------------------
+Fixes to 3.7.0-x General Problems Exposed Via git Repository
+------------------------------------------------------------
 incrementing EDITLEVEL to invalidate incompatible save files was not working
 	as intended because VERSION_COMPABILITY was defined as 3.7.0-0 and up
 	rather than as 3.7.0-N for the current EDITLEVEL 'N'; undefine it
@@ -1506,6 +1511,9 @@ change 'm' prefix for #tip from 'use menu to pick among floor containers'
 	(since that's already the default) to 'skip floor containers' so that
 	context-sensitive item-action Tip directly operates on the item
 
+
+Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
+------------------------------------------------------------------------------
 curses: 'msg_window' option wasn't functional for curses unless the binary
 	also included tty support
 curses: line input that doesn't take place on the bottom line of the message
@@ -1531,6 +1539,15 @@ curses: for screen refresh, don't attempt to refresh windows that haven't been
 	set up yet or have already been shut down
 curses: for raw_print() in #if PDCURSES config, don't attempt to write to
 	message window if it isn't set up yet or has already been shut down
+curses: scrollbar 'framecolor' wasn't being initialized before use
+	causing an asan crash because the value is used to index an array
+curses: typing ESC to cancel something issued a beep; if the terminal was set
+	to 'visible bell', the screen flashed; only beep when the ESC is part
+	of an escape sequence--other than M-c generating ESC c--and nethack
+	is expecting text rather than a command or direction
+curses: with window borders on and align_status:left, restoring brought up a
+	screen where the message window's border wasn't shown; once it needed
+	to be scrolled to fit a new message, the border appeared
 Qt: at Xp levels above 20 with 'showexp' On, the combined status field
 	"Level:NN/nnnnnnnn" was too big and truncated by a char at each end
 Qt: searching a text window for something that wasn't found and then searching
@@ -1539,6 +1556,7 @@ Qt: changes in glyph handling in the core introduced a bug in the "paper doll"
 	display for inventory subset
 Qt: during role selection, icons for role and race showed giant ant tile after
 	the glyph overhaul changes
+Qt: resolve a use-after-free error when saving message history
 tty: redraw unexplored locations as S_unexplored rather than <space> after
 	map has been partially overwritten by popup menu or text display
 tty: previous change resulted in remnants of previous level being shown on
@@ -1564,6 +1582,8 @@ Windows: nhl_loadlua() was missing the RDBMODE argument on the [dlb_]fopen(),
 	fseek(), ftell() and fread()
 Windows: when VIRTUAL_TERMINAL_SEQUENCES was not defined, the preprocessing
 	would fail on consoletty.c
+Windows: original fix for GLYPH_UNEXPLORED background tile merging resulted
+	in a new issue where the map wasn't being cleared on level changes
 X11: fix build failure if STATUS_HILITES is disabled
 X11: was still initializing map to 'stone' instead of 'unexplored' after they
 	became separate glyphs
@@ -1607,6 +1627,8 @@ curses: implement mark_synch() and wait_synch()
 curses: only convert arrow keys to hjkl or 4286 if nethack wants a direction
 curses: conversion of arrows and other numpad-related function keys to digit
 	ignored phone-layout setting (inverted up/down) of the num_pad option
+curses: ensure alt+'A' through alt+'Z' and alt+'a' through alt+'z' work
+	correctly with PDCURSES
 curses: fix an off-by-one error when deciding whether a long line on the
 	bottom line of the message window can fit ">>" (curses' "--More--")
 macOS: Xcode project was failing to build if the path to the NetHack source
@@ -1759,6 +1781,7 @@ Windows: When there was no interesting background in get_bk_glyph()
 	Windows version, NetHackW.exe, was trying to use the tile mapped to
 	GLYPH_UNEXPLORED as a background tile to merge with the
 	foreground tile, so check for GLYPH_UNEXPLORED and bypass that
+Windows: fix range error detected by address sanitizer in plselInitDialog()
 X11: substantial overhaul of status display, both 'fancy' and 'tty-style'
 X11: extend fancy status one-turn inverse video status-change highlighting to
 	hunger, encumbrance, and conditions
@@ -2001,6 +2024,7 @@ make music improvisations more varied and interesting, as well as useful
 give a helpful tip when first entering "farlook" mode
 add a boolean option tips to disable all of the helpful tips
 add a tutorial level
+engravings appear on the map display
 
 
 Platform- and/or Interface-Specific New Features
