@@ -1,4 +1,4 @@
-/* NetHack 3.7	mon.c	$NHDT-Date: 1655065140 2022/06/12 20:19:00 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.436 $ */
+/* NetHack 3.7	mon.c	$NHDT-Date: 1679896593 2023/03/27 05:56:33 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.491 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -2363,18 +2363,18 @@ dealloc_mextra(struct monst* m)
 
     if (x) {
         if (x->mgivenname)
-            free((genericptr_t) x->mgivenname);
+            free((genericptr_t) x->mgivenname), x->mgivenname = 0;
         if (x->egd)
-            free((genericptr_t) x->egd);
+            free((genericptr_t) x->egd), x->egd = 0;
         if (x->epri)
-            free((genericptr_t) x->epri);
+            free((genericptr_t) x->epri), x->epri = 0;
         if (x->eshk)
-            free((genericptr_t) x->eshk);
+            free((genericptr_t) x->eshk), x->eshk = 0;
         if (x->emin)
-            free((genericptr_t) x->emin);
+            free((genericptr_t) x->emin), x->emin = 0;
         if (x->edog)
-            free((genericptr_t) x->edog);
-        /* [no action needed for x->mcorpsenm] */
+            free((genericptr_t) x->edog), x->edog = 0;
+        x->mcorpsenm = NON_PM; /* no allocation to release */
 
         free((genericptr_t) x);
         m->mextra = (struct mextra *) 0;
@@ -2393,6 +2393,9 @@ dealloc_monst(struct monst *mon)
     }
     if (mon->mextra)
         dealloc_mextra(mon);
+    /* clear out of date information contained in the about-to-become
+       stale memory; see dealloc_obj() */
+    *mon = cg.zeromonst;
     free((genericptr_t) mon);
 }
 
@@ -3646,15 +3649,14 @@ m_respond(struct monst* mtmp)
             pline("%s shrieks.", Monnam(mtmp));
             stop_occupation();
         }
-        if (!rn2(10)) {
-            if (!rn2(13)) {
-                /* don't generate purple worms if too difficult */
-                int pm = montoostrong(PM_PURPLE_WORM, monmax_difficulty_lev())
-                         ? PM_BABY_PURPLE_WORM : PM_PURPLE_WORM;
-
-                (void) makemon(&mons[pm], 0, 0, NO_MM_FLAGS);
-            } else
-                (void) makemon((struct permonst *) 0, 0, 0, NO_MM_FLAGS);
+        if (!rn2(10)) { /* 1/10 chance per shriek to create a monster */
+            /* new monster has a 1/13 chance to be a purple worm, random
+               otherwise; baby purple worm if adult is too difficult */
+            (void) makemon(rn2(13) ? (struct permonst *) 0
+                           : &mons[montoostrong(PM_PURPLE_WORM,
+                                                monmax_difficulty_lev())
+                                   ? PM_BABY_PURPLE_WORM : PM_PURPLE_WORM],
+                           0, 0, NO_MM_FLAGS);
         }
         aggravate();
     }
@@ -4065,7 +4067,7 @@ get_iter_mons_xy(boolean (*func)(struct monst *, coordxy, coordxy),
 
 /* force all chameleons and mimics to become themselves and werecreatures
    to revert to human form; called when Protection_from_shape_changers gets
-   activated via wearing or eating ring */
+   activated via wearing or eating ring or wizintrinsics */
 void
 rescham(void)
 {

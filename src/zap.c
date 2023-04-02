@@ -55,12 +55,10 @@ static void wishcmdassist(int);
 static const char are_blinded_by_the_flash[] = "are blinded by the flash!";
 
 /*
- * FIXME:
- *  flash_types[0] for wand of magic missile is ambiguous.
- *  A positive index means zapped/cast/breathed by hero.
- *  A negative index means zapped/cast/breathed by a monster.
- *  Since abs(-0)==abs(0), there's no way to tell who zapped a wand of
- *  magic missile by just checking the index.
+ * A positive index means zapped/cast/breathed by hero.
+ * A negative index means zapped/cast/breathed by a monster, with value
+ * index fixup beyond abs() needed for wand zaps.  Wand zaps for monster
+ * use -39..-30 rather than -9..-0 because -0 is ambiguous (same as 0).
  */
 static const char *const flash_types[] = {
     "magic missile", /* Wands must be 0-9 */
@@ -307,9 +305,11 @@ bhitm(struct monst *mtmp, struct obj *otmp)
         if (disguised_mimic)
             seemimic(mtmp);
         reveal_invis = !u_teleport_mon(mtmp, TRUE);
+        learn_it = canspotmon(mtmp);
         break;
     case WAN_MAKE_INVISIBLE: {
         int oldinvis = mtmp->minvis;
+        boolean couldsee = canseemon(mtmp);
         char nambuf[BUFSZ];
 
         if (disguised_mimic)
@@ -321,6 +321,12 @@ bhitm(struct monst *mtmp, struct obj *otmp)
             pline("%s turns transparent!", nambuf);
             reveal_invis = TRUE;
             learn_it = TRUE;
+        }
+        else if (couldsee && !canseemon(mtmp)) {
+            /* keep the immediate effects of make invisible and teleportation
+             * ambiguous by using the same message that's used if we teleported
+             * mtmp (and it ended up somewhere you can't see) */
+            pline("%s vanishes!", nambuf);
         }
         break;
     }

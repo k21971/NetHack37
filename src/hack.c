@@ -1605,7 +1605,7 @@ check_buried_zombies(coordxy x, coordxy y)
             && otmp->oy >= y - 1 && otmp->oy <= y + 1
             && (t = peek_timer(ZOMBIFY_MON, obj_to_any(otmp))) > 0) {
             t = stop_timer(ZOMBIFY_MON, obj_to_any(otmp));
-            (void) start_timer(max(1, t - rn2(10)), TIMER_OBJECT,
+            (void) start_timer(max(1, (t*2/3)), TIMER_OBJECT,
                                ZOMBIFY_MON, obj_to_any(otmp));
         }
     }
@@ -2851,6 +2851,10 @@ spoteffects(boolean pick)
         && spotterrain == levl[u.ux][u.uy].typ
         /* or transformed trap (land mine -> pit) */
         && (!spottrap || !trap || trap->ttyp == spottraptyp))
+        return;
+    /* when float_down() puts hero into lava and she teleports out,
+       defer spoteffects() until after "you are back on solid <surface>" */
+    if (iflags.in_lava_effects)
         return;
 
     ++inspoteffects;

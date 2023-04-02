@@ -186,71 +186,6 @@ cant_reach_floor(coordxy x, coordxy y, boolean up, boolean check_pit)
                : surface(x, y));
 }
 
-const char *
-surface(coordxy x, coordxy y)
-{
-    struct rm *lev = &levl[x][y];
-
-    if (u_at(x, y) && u.uswallow && is_animal(u.ustuck->data))
-        /* 'husk' is iffy but maw is wrong for 't' class */
-        return digests(u.ustuck->data) ? "maw"
-               : enfolds(u.ustuck->data) ? "husk"
-                 : "nonesuch"; /* can't happen (fingers crossed...) */
-    else if (IS_AIR(lev->typ) && Is_airlevel(&u.uz))
-        return "air";
-    else if (is_pool(x, y))
-        return (Underwater && !Is_waterlevel(&u.uz))
-            ? "bottom" : hliquid("water");
-    else if (is_ice(x, y))
-        return "ice";
-    else if (is_lava(x, y))
-        return hliquid("lava");
-    else if (lev->typ == DRAWBRIDGE_DOWN)
-        return "bridge";
-    else if (IS_ALTAR(levl[x][y].typ))
-        return "altar";
-    else if (IS_GRAVE(levl[x][y].typ))
-        return "headstone";
-    else if (IS_FOUNTAIN(levl[x][y].typ))
-        return "fountain";
-    else if ((IS_ROOM(lev->typ) && !Is_earthlevel(&u.uz))
-             || IS_WALL(lev->typ) || IS_DOOR(lev->typ) || lev->typ == SDOOR)
-        return "floor";
-    else
-        return "ground";
-}
-
-const char *
-ceiling(coordxy x, coordxy y)
-{
-    struct rm *lev = &levl[x][y];
-    const char *what;
-
-    /* other room types will no longer exist when we're interested --
-     * see check_special_room()
-     */
-    if (*in_rooms(x, y, VAULT))
-        what = "vault's ceiling";
-    else if (*in_rooms(x, y, TEMPLE))
-        what = "temple's ceiling";
-    else if (*in_rooms(x, y, SHOPBASE))
-        what = "shop's ceiling";
-    else if (Is_waterlevel(&u.uz))
-        /* water plane has no surface; its air bubbles aren't below sky */
-        what = "water above";
-    else if (IS_AIR(lev->typ))
-        what = "sky";
-    else if (Underwater)
-        what = "water's surface";
-    else if ((IS_ROOM(lev->typ) && !Is_earthlevel(&u.uz))
-             || IS_WALL(lev->typ) || IS_DOOR(lev->typ) || lev->typ == SDOOR)
-        what = "ceiling";
-    else
-        what = "rock cavern";
-
-    return what;
-}
-
 struct engr *
 engr_at(coordxy x, coordxy y)
 {
@@ -317,6 +252,7 @@ void
 read_engr_at(coordxy x, coordxy y)
 {
     struct engr *ep = engr_at(x, y);
+    const char *eloc = surface(x, y);
     int sensed = 0;
 
     /* Sensing an engraving does not require sight,
@@ -335,21 +271,20 @@ read_engr_at(coordxy x, coordxy y)
         case HEADSTONE:
             if (!Blind || can_reach_floor(TRUE)) {
                 sensed = 1;
-                pline("%s is engraved here on the %s.", Something,
-                      surface(x, y));
+                pline("%s is engraved here on the %s.", Something, eloc);
             }
             break;
         case BURN:
             if (!Blind || can_reach_floor(TRUE)) {
                 sensed = 1;
                 pline("Some text has been %s into the %s here.",
-                      is_ice(x, y) ? "melted" : "burned", surface(x, y));
+                      is_ice(x, y) ? "melted" : "burned", eloc);
             }
             break;
         case MARK:
             if (!Blind) {
                 sensed = 1;
-                pline("There's some graffiti on the %s here.", surface(x, y));
+                pline("There's some graffiti on the %s here.", eloc);
             }
             break;
         case ENGR_BLOOD:
