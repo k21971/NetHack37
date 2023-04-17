@@ -671,6 +671,7 @@ typedef unsigned char uchar;
 
 #if defined(DUMPLOG) || defined(DUMPHTML)
 
+#ifdef DUMPLOG
 #ifndef DUMPLOG_MSG_COUNT
 #define DUMPLOG_MSG_COUNT   50
 #endif /* DUMPLOG_MSG_COUNT */
