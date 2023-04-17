@@ -155,12 +155,14 @@ struct u_conduct {     /* number of times... */
     long wisharti;     /* wished for an artifact */
     long elbereth;     /* engraved Elbereth */
     long sokocheat;    /* violated special 'rules' in Sokoban */
+    long pets;         /* obtained a pet */
     /* genocides already listed at end of game */
 };
 
 struct u_roleplay {
     boolean blind;  /* permanently blind */
     boolean nudist; /* has not worn any armor, ever */
+    boolean deaf;   /* permanently deaf */
     long numbones;  /* # of bones files loaded  */
 };
 

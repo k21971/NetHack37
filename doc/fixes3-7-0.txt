@@ -1,4 +1,4 @@
-HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1139 $ $NHDT-Date: 1679595146 2023/03/23 18:12:26 $
+HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1153 $ $NHDT-Date: 1681429662 2023/04/13 23:47:42 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -976,6 +976,8 @@ wielding a bec de corbin makes ravens generate peaceful
 moving with 'm' prefix allows hero to enter a known pit carefully
 rangers always succeed in disarming bear traps, unless impaired
 bigroom variant 2 may have ice floor in unlit areas
+bigroom variant 4 may have two large squares of terrain in the middle
+bigroom variant 5 may have patches of ice or clouds
 some large monsters can knock back smaller monsters with a hit
 change Demonbane to a mace, make it the first sac gift for priests,
 	and give it an invoke ability to banish demons
@@ -1132,6 +1134,19 @@ falling into lava, being life-saved, and teleporting out could yield redundant
 if hero had passes-walls capability and was at the location of a closed door,
 	attempting to use 'o' on own spot reported "you don't find anything
 	here to loot"; change to open door for '.' (or '<'), only loot for '>'
+items thrown by monster landing on an altar did not show BUC flash
+a chameleon in giant form who gets trapped (bear trap?) while carrying
+	boulders and changes shape could be killed when dropping them;
+	shape-change traversal of its inventory would continue after it
+	dropped everything, possibly resulting in a crash
+if hero is engulfed and polymorphs into a monster form which is too big to be
+	engulfed, make engulfer expel the poly'd hero
+give feedback if monster holding onto the hero has to let go when hero polys
+	into a form which can't be held
+prevent hug attacks and touch or engulf attacks for wrap, stick-to, and
+	digestion damage from succeeding against unsolid targets (ghosts,
+	vortices, a few others)
+wand of speed gives temporary speed, potion gives intrinsic
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -1515,6 +1530,10 @@ some actions that ask the user to pick a location allow typing '$' to show
 change 'm' prefix for #tip from 'use menu to pick among floor containers'
 	(since that's already the default) to 'skip floor containers' so that
 	context-sensitive item-action Tip directly operates on the item
+anti-magic field's reduction of hero's maximum energy could result in current
+	energy being one point higher than maximum
+if hero was killed by a wand zapped by a monster, cause of death was reported
+	as "killed by a bolt of <damage type> imagined by <monster>"
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
@@ -1636,6 +1655,8 @@ curses: ensure alt+'A' through alt+'Z' and alt+'a' through alt+'z' work
 	correctly with PDCURSES
 curses: fix an off-by-one error when deciding whether a long line on the
 	bottom line of the message window can fit ">>" (curses' "--More--")
+curses: selecting a partial stack, unselecting it, and then selecting it
+	normally did not reset the quantity to the whole stack
 macOS: Xcode project was failing to build if the path to the NetHack source
 	tree contained a space; the issue was within some shell script code
 	contained within the project
@@ -2030,6 +2051,8 @@ give a helpful tip when first entering "farlook" mode
 add a boolean option tips to disable all of the helpful tips
 add a tutorial level
 engravings appear on the map display
+option to create the character deaf
+add conduct for petless
 
 
 Platform- and/or Interface-Specific New Features

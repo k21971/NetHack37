@@ -3598,10 +3598,12 @@ cmd_from_dir(int dir, int mode)
     return cmd_from_func(move_funcs[dir][mode]);
 }
 
+/* return the key bound to extended command */
 char
 cmd_from_func(int (*fn)(void))
 {
     int i;
+    char ret = '\0';
 
     /* skip NUL; allowing it would wreak havoc */
     for (i = 1; i < 256; ++i) {
@@ -3615,12 +3617,17 @@ cmd_from_func(int (*fn)(void))
             && !gc.Cmd.num_pad)
             continue;
 
-        if (gc.Cmd.commands[i] && gc.Cmd.commands[i]->ef_funct == fn)
-            return (char) i;
+        if (gc.Cmd.commands[i] && gc.Cmd.commands[i]->ef_funct == fn) {
+            if (i >= ' ' && i <= '~')
+                return (char) i;
+            else {
+                ret = (char) i;
+            }
+        }
     }
     if (gc.Cmd.commands[' '] && gc.Cmd.commands[' ']->ef_funct == fn)
         return ' ';
-    return '\0';
+    return ret;
 }
 
 /* return visual interpretation of the key bound to extended command,
@@ -5209,7 +5216,7 @@ getdir(const char *s)
     }
 
  retry:
-    gp.program_state.getting_a_command = 1; /* arrow key support for curses */
+    gp.program_state.input_state = getdirInp;
     if (gi.in_doagain || *readchar_queue)
         dirsym = readchar();
     else
@@ -6219,7 +6226,7 @@ get_count(
     unsigned gc_flags)   /* control flags: GC_SAVEHIST, GC_ECHOFIRST */
 {
     char qbuf[QBUFSZ];
-    int key;
+    int key, save_input_state = gp.program_state.input_state;
     long cnt = 0L, first = inkey ? (long) (inkey - '0') : 0L;
     boolean backspaced = FALSE, showzero = TRUE,
             /* should "Count: 123" go into message history? */
@@ -6239,8 +6246,9 @@ get_count(
             key = inkey;
             inkey = '\0';
         } else {
-            gp.program_state.getting_a_command = 1; /* readchar altmeta
-                                                     * compatibility */
+            /* if readchar() has already been called in this loop, it will
+               have reset input_state; put that back to its previous value */
+            gp.program_state.input_state = save_input_state;
             key = readchar();
         }
 
@@ -6300,9 +6308,9 @@ parse(void)
     gc.context.move = TRUE; /* assume next command will take game time */
     flush_screen(1); /* Flush screen buffer. Put the cursor on the hero. */
 
-    gp.program_state.getting_a_command = 1; /* affects readchar() behavior for
-                                             * ESC iff 'altmeta' option is On;
-                                             * reset to 0 by readchar() */
+    /* affects readchar() behavior for ESC iff 'altmeta' option is On;
+       reset to 0 by readchar() */
+    gp.program_state.input_state = commandInp;
     if (!gc.Cmd.num_pad || (foo = readchar()) == gc.Cmd.spkeys[NHKF_COUNT]) {
         foo = get_count((char *) 0, '\0', LARGEST_INT,
                         &gc.command_count, GC_NOFLAGS);
@@ -6400,8 +6408,10 @@ readchar_core(coordxy *x, coordxy *y, int *mod)
 {
     register int sym;
 
-    if (iflags.debug_fuzzer)
-        return randomkey();
+    if (iflags.debug_fuzzer) {
+        sym = randomkey();
+        goto readchar_done;
+    }
     if (*readchar_queue)
         sym = *readchar_queue++;
     else if (gi.in_doagain)
@@ -6431,9 +6441,11 @@ readchar_core(coordxy *x, coordxy *y, int *mod)
         sym = '\033';
 #ifdef ALTMETA
     } else if (sym == '\033' && iflags.altmeta
-               && gp.program_state.getting_a_command) {
+               && gp.program_state.input_state != otherInp) {
         /* iflags.altmeta: treat two character ``ESC c'' as single `M-c' but
-           only when we're called by parse() [possibly via get_count()] */
+           only when we're called by parse() [possibly via get_count()]
+           or getpos() [to support Alt+digit] or getdir() [for arrow keys
+           under curses] */
         sym = *readchar_queue ? *readchar_queue++ : pgetchar();
         if (sym == EOF || sym == 0)
             sym = '\033';
@@ -6445,12 +6457,15 @@ readchar_core(coordxy *x, coordxy *y, int *mod)
         gc.clicklook_cc.x = gc.clicklook_cc.y = -1;
         click_to_cmd(*x, *y, *mod);
     }
-    gp.program_state.getting_a_command = 0; /* next readchar() will be for an
-                                             * ordinary char unless parse()
-                                             * sets this back to 1 */
+
+ readchar_done:
+    /* next readchar() will be for an ordinary char unless parse()
+       sets this back to non-zero */
+    gp.program_state.input_state = otherInp;
     return (char) sym;
 }
 
+/* get a character */
 char
 readchar(void)
 {
@@ -6462,11 +6477,13 @@ readchar(void)
     return ch;
 }
 
+/* used by getpos() to accept mouse input as well as keyboard input */
 char
 readchar_poskey(coordxy *x, coordxy *y, int *mod)
 {
     char ch;
 
+    gp.program_state.input_state = getposInp;
     ch = readchar_core(x, y, mod);
     return ch;
 }
@@ -6632,6 +6649,8 @@ yn_function(
         dumplogmsg(dumplog_buf);
     }
 #endif
+    /* in case we're called via getdir() which sets input_state */
+    gp.program_state.input_state = otherInp;
     return res;
 }
 

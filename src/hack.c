@@ -1678,6 +1678,9 @@ swim_move_danger(coordxy x, coordxy y)
     boolean liquid_wall = IS_WATERWALL(newtyp)
         || newtyp == LAVAWALL;
 
+    if (Underwater && (is_pool(x,y) || IS_WATERWALL(newtyp)))
+        return FALSE;
+
     if ((newtyp != u_simple_floortyp(u.ux, u.uy))
         && !Stunned && !Confusion && levl[x][y].seenv
         && (is_pool(x, y) || is_lava(x, y) || liquid_wall)) {
@@ -2822,7 +2825,8 @@ pooleffects(
             if (lava_effects())
                 return TRUE;
         } else if ((!Wwalking || is_waterwall(u.ux,u.uy))
-                   && (newspot || !u.uinwater || !(Swimming || Amphibious))) {
+                   && (newspot || !u.uinwater
+                       || !(Swimming || Amphibious || Breathless))) {
             if (drown())
                 return TRUE;
         }

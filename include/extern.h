@@ -1351,6 +1351,7 @@ extern void dump_glyphids(void);
 extern int fightm(struct monst *);
 extern int mdisplacem(struct monst *, struct monst *, boolean);
 extern int mattackm(struct monst *, struct monst *);
+extern boolean failed_grab(struct monst *, struct monst *, struct attack *);
 extern boolean engulf_target(struct monst *, struct monst *);
 extern int mon_poly(struct monst *, struct monst *, int);
 extern void paralyze_monst(struct monst *, int);
@@ -2257,6 +2258,7 @@ extern void mongrantswish(struct monst **);
 extern void djinni_from_bottle(struct obj *);
 extern struct monst *split_mon(struct monst *, struct monst *);
 extern const char *bottlename(void);
+extern void speed_up(long);
 
 /* ### pray.c ### */
 
@@ -2919,7 +2921,7 @@ extern int water_damage(struct obj *, const char *, boolean);
 extern void water_damage_chain(struct obj *, boolean);
 extern boolean rnd_nextto_goodpos(coordxy *, coordxy *, struct monst *);
 extern boolean drown(void);
-extern void drain_en(int);
+extern void drain_en(int, boolean);
 extern int dountrap(void);
 extern int could_untrap(boolean, boolean);
 extern void cnv_trap_obj(int, int, struct trap *, boolean);

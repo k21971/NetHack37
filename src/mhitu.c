@@ -701,6 +701,9 @@ mattacku(register struct monst *mtmp)
                             || !touch_petrifies(gy.youmonst.data))) {
                 if (foundyou) {
                     if (tmp > (j = rnd(20 + i))) {
+                        if (unsolid(gy.youmonst.data)
+                            && failed_grab(mtmp, &gy.youmonst, mattk))
+                            continue;
                         if (mattk->aatyp != AT_KICK
                             || !thick_skinned(gy.youmonst.data))
                             sum[i] = hitmu(mtmp, mattk);
@@ -717,8 +720,10 @@ mattacku(register struct monst *mtmp)
         case AT_HUGS: /* automatic if prev two attacks succeed */
             /* Note: if displaced, prev attacks never succeeded */
             if ((!range2 && i >= 2 && sum[i - 1] && sum[i - 2])
-                || mtmp == u.ustuck)
-                sum[i] = hitmu(mtmp, mattk);
+                || mtmp == u.ustuck) {
+                if (!failed_grab(mtmp, &gy.youmonst, mattk))
+                    sum[i] = hitmu(mtmp, mattk);
+            }
             break;
 
         case AT_GAZE: /* can affect you either ranged or not */
@@ -1182,6 +1187,8 @@ gulpmu(struct monst *mtmp, struct attack *mattk)
             return M_ATTK_MISS;
         if ((t && is_pit(t->ttyp)) && sobj_at(BOULDER, u.ux, u.uy))
             return M_ATTK_MISS;
+        if (failed_grab(mtmp, &gy.youmonst, mattk))
+            return M_ATTK_MISS;
 
         if (Punished)
             unplacebc(); /* ball&chain go away */
@@ -1321,8 +1328,7 @@ gulpmu(struct monst *mtmp, struct attack *mattk)
                                  : amphibious(gy.youmonst.data)
                                        ? "feel comforted."
                                        : "can barely breathe!");
-            /* NB: Amphibious includes Breathless */
-            if (Amphibious && !flaming(gy.youmonst.data))
+            if ((Amphibious || Breathless) && !flaming(gy.youmonst.data))
                 tmp = 0;
         } else {
             You("are %s!", enfolds(mtmp->data) ? "being squashed"
@@ -1406,7 +1412,7 @@ gulpmu(struct monst *mtmp, struct attack *mattk)
     case AD_DREN:
         /* AC magic cancellation doesn't help when engulfed */
         if (!mtmp->mcan && rn2(4)) /* 75% chance */
-            drain_en(tmp);
+            drain_en(tmp, FALSE);
         tmp = 0;
         break;
     default:

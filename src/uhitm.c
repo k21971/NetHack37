@@ -2224,7 +2224,7 @@ mhitm_ad_dren(
         /* mhitu */
         hitmsg(magr, mattk);
         if (!negated && !rn2(4)) /* 25% chance */
-            drain_en(mhm->damage);
+            drain_en(mhm->damage, FALSE);
         mhm->damage = 0;
     } else {
         /* mhitm */
@@ -3094,8 +3094,7 @@ mhitm_ad_wrap(
                 }
             } else if (u.ustuck == mdef) {
                 /* Monsters don't wear amulets of magical breathing */
-                if (is_pool(u.ux, u.uy) && !is_swimmer(pd)
-                    && !amphibious(pd)) {
+                if (is_pool(u.ux, u.uy) && !cant_drown(pd)) {
                     You("drown %s...", mon_nam(mdef));
                     mhm->damage = mdef->mhp;
                 } else if (mattk->aatyp == AT_HUGS)
@@ -3124,7 +3123,8 @@ mhitm_ad_wrap(
                                  Some_Monnam(magr), coil ? "coils" : "swings");
                 }
             } else if (u.ustuck == magr) {
-                if (is_pool(magr->mx, magr->my) && !Swimming && !Amphibious) {
+                if (is_pool(magr->mx, magr->my) && !Swimming && !Amphibious
+                    && !Breathless) {
                     boolean moat = (levl[magr->mx][magr->my].typ != POOL)
                                    && !is_waterwall(magr->mx, magr->my)
                                    && !Is_medusa_level(&u.uz)
@@ -3311,7 +3311,7 @@ mhitm_ad_slim(
 
                 if (gv.vis && canseemon(mdef))
                     ncflags |= NC_SHOW_MSG;
-                if (newcham(mdef, &mons[PM_GREEN_SLIME], ncflags)) 
+                if (newcham(mdef, &mons[PM_GREEN_SLIME], ncflags))
                     pd = mdef->data;
                 mdef->mstrategy &= ~STRAT_WAITFORU;
                 mhm->hitflags = M_ATTK_HIT;
@@ -4769,7 +4769,7 @@ gulpum(struct monst *mdef, struct attack *mattk)
             case AD_PHYS:
                 if (gy.youmonst.data == &mons[PM_FOG_CLOUD]) {
                     pline("%s is laden with your moisture.", Monnam(mdef));
-                    if (amphibious(pd) && !flaming(pd)) {
+                    if ((breathless(pd) || amphibious(pd)) && !flaming(pd)) {
                         dam = 0;
                         pline("%s seems unharmed.", Monnam(mdef));
                     }
@@ -5254,6 +5254,11 @@ hmonas(struct monst *mon)
                     Your("%s %s harmlessly through %s.",
                          verb, vtense(verb, "pass"), mon_nam(mon));
                 } else {
+                    /* either not a shade or no special silver/blessed damage,
+                       other unsolid monsters are immune to AT_TUCH+AD_WRAP */
+                    if (failed_grab(&gy.youmonst, mon, mattk))
+                        break; /* miss; message already given */
+
                     if (mattk->aatyp == AT_TENT) {
                         Your("tentacles suck %s.", mon_nam(mon));
                     } else {
@@ -5333,6 +5338,9 @@ hmonas(struct monst *mon)
                 }
                 break;
             }
+            /* can't grab unsolid creatures (checked after shade handling) */
+            if (failed_grab(&gy.youmonst, mon, mattk))
+                break;
             /* hug attack against ordinary foe */
             if (mon == u.ustuck) {
                 pline("%s is being %s%s.", Monnam(mon),
@@ -5371,12 +5379,17 @@ hmonas(struct monst *mon)
             mon_maybe_unparalyze(mon);
             if ((dhit = (tmp > rnd(20 + i)))) {
                 wakeup(mon, TRUE);
+                /* can't engulf unsolid creatures */
                 if (mon->data == &mons[PM_SHADE]) {
+                    /* no specialdmg check needed */
                     Your("attempt to surround %s is harmless.", mon_nam(mon));
+                } else if (failed_grab(&gy.youmonst, mon, mattk)) {
+                    ; /* non-shade miss; message already given */
                 } else {
                     sum[i] = gulpum(mon, mattk);
-                    if (sum[i] == M_ATTK_DEF_DIED && (mon->data->mlet == S_ZOMBIE
-                                        || mon->data->mlet == S_MUMMY)
+                    if (sum[i] == M_ATTK_DEF_DIED
+                        && (mon->data->mlet == S_ZOMBIE
+                            || mon->data->mlet == S_MUMMY)
                         && rn2(5) && !Sick_resistance) {
                         You_feel("%ssick.", (Sick) ? "very " : "");
                         mdamageu(mon, rnd(8));

@@ -1,4 +1,4 @@
-/* NetHack 3.7	mon.c	$NHDT-Date: 1679896593 2023/03/27 05:56:33 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.491 $ */
+/* NetHack 3.7	mon.c	$NHDT-Date: 1681429657 2023/04/13 23:47:37 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.495 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -826,8 +826,7 @@ minliquid_core(struct monst* mtmp)
          * water damage to dead monsters' inventory, but survivors need to
          * be handled here.  Swimmers are able to protect their stuff...
          */
-        if ((waterwall || !is_clinger(mtmp->data))
-            && !is_swimmer(mtmp->data) && !amphibious(mtmp->data)) {
+        if ((waterwall || !is_clinger(mtmp->data)) && !cant_drown(mtmp->data)) {
             /* like hero with teleport intrinsic or spell, teleport away
                if possible */
             if (can_teleport(mtmp->data) && !tele_restrict(mtmp)) {
@@ -1157,9 +1156,9 @@ m_consume_obj(struct monst *mtmp, struct obj *otmp)
         int poly, grow, heal, eyes, mstone, vis = canseemon(mtmp);
         int corpsenm = (otmp->otyp == CORPSE ? otmp->corpsenm : NON_PM);
 
-        deadmimic = (otmp->otyp == CORPSE && (otmp->corpsenm == PM_SMALL_MIMIC
-                                             || otmp->corpsenm == PM_LARGE_MIMIC
-                                             || otmp->corpsenm == PM_GIANT_MIMIC));
+        deadmimic = (otmp->otyp == CORPSE && (corpsenm == PM_SMALL_MIMIC
+                                              || corpsenm == PM_LARGE_MIMIC
+                                              || corpsenm == PM_GIANT_MIMIC));
         slimer = (otmp->otyp == GLOB_OF_GREEN_SLIME);
         poly = polyfodder(otmp);
         grow = mlevelgain(otmp);
@@ -4743,7 +4742,7 @@ newcham(
 
     /* (this code used to try to adjust the monster's health based on
        a normal one of its type but there are too many special cases
-       which need to handled in order to do that correctly, so just
+       which need to be handled in order to do that correctly, so just
        give the new form the same proportion of HP as its old one had) */
     hpn = mtmp->mhp;
     hpd = mtmp->mhpmax;
@@ -4790,8 +4789,8 @@ newcham(
         if (u.uswallow) {
             if (!attacktype(mdat, AT_ENGL)) {
                 /* Does mdat care? */
-                if (!noncorporeal(mdat) && !amorphous(mdat)
-                    && !is_whirly(mdat) && (mdat != &mons[PM_YELLOW_LIGHT])) {
+                if (!noncorporeal(mdat) && !is_whirly(mdat)
+                    && !(amorphous(mdat) || mdat->mlet == S_LIGHT)) {
                     char msgtrail[BUFSZ];
 
                     if (is_vampshifter(mtmp)) {
@@ -4802,7 +4801,6 @@ newcham(
                     } else {
                         msgtrail[0] = '\0';
                     }
-
                     /* Do this even if msg is FALSE */
                     You("%s %s%s!",
                         (amorphous(olddata) || is_whirly(olddata))
@@ -4816,8 +4814,15 @@ newcham(
                 /* update swallow glyphs for new monster */
                 swallowed(0);
             }
-        } else if (!sticks(mdat) && !sticks(gy.youmonst.data))
+        } else if ((!sticks(mdat) && !sticks(gy.youmonst.data))
+                   /* sticky hero can't continue to hold mtmp if it has
+                      turned into a non-solid creature; we don't use
+                      uunstick() for that because its message would be
+                      shown out of sequence [before 'if (msg)' below];
+                      unstuck() doesn't issue any messages */
+                   || unsolid(mdat)) {
             unstuck(mtmp);
+        }
     }
 
     if (mdat == &mons[PM_LONG_WORM] && (mtmp->wormno = get_wormno()) != 0) {
@@ -4864,7 +4869,9 @@ newcham(
     if (mtmp->minvent && !throws_rocks(mdat)) {
         register struct obj *otmp, *otmp2;
 
-        for (otmp = mtmp->minvent; otmp; otmp = otmp2) {
+        /* DEADMONSTER(): it is possible for flooreffects() to kill mtmp;
+           the rest of its inventory would be dropped making otmp2 stale */
+        for (otmp = mtmp->minvent; otmp && !DEADMONSTER(mtmp); otmp = otmp2) {
             otmp2 = otmp->nobj;
             if (otmp->otyp == BOULDER) {
                 /* this keeps otmp from being polymorphed in the
