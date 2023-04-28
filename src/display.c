@@ -1,4 +1,4 @@
-/* NetHack 3.7	display.c	$NHDT-Date: 1672561294 2023/01/01 08:21:34 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.200 $ */
+/* NetHack 3.7	display.c	$NHDT-Date: 1682205030 2023/04/22 23:10:30 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.215 $ */
 /* Copyright (c) Dean Luick, with acknowledgements to Kevin Darcy */
 /* and Dave Cohrs, 1990.                                          */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -502,22 +502,24 @@ show_mon_or_warn(coordxy x, coordxy y, int monglyph)
  *
  */
 static void
-display_monster(coordxy x, coordxy y,    /* display position */
-                struct monst *mon,   /* monster to display */
-                int sightflags,      /* 1 if the monster is physically seen;
-                                        2 if detected using Detect_monsters */
-                boolean worm_tail)   /* mon is actually a worm tail */
+display_monster(
+    coordxy x, coordxy y,   /* display position */
+    struct monst *mon,      /* monster to display */
+    int sightflags,         /* 1 if the monster is physically seen;
+                             * 2 if detected using Detect_monsters */
+    boolean worm_tail)      /* mon is actually a worm tail */
 {
     boolean mon_mimic = (M_AP_TYPE(mon) != M_AP_NOTHING);
     int sensed = (mon_mimic && (Protection_from_shape_changers
-                                || sensemon(mon)));
+                                || sensemon(mon))),
+        mgendercode = mon->female ? FEMALE : MALE;
+
     /*
      * We must do the mimic check first.  If the mimic is mimicing something,
      * and the location is in sight, we have to change the hero's memory
      * so that when the position is out of sight, the hero remembers what
      * the mimic was mimicing.
      */
-
     if (mon_mimic && (sightflags == PHYSICALLY_SEEN)) {
         switch (M_AP_TYPE(mon)) {
         default:
@@ -563,13 +565,13 @@ display_monster(coordxy x, coordxy y,    /* display position */
             break;
         }
 
-        case M_AP_MONSTER:
-            show_glyph(x, y,
-                       monnum_to_glyph(what_mon((int) mon->mappearance,
-                                                rn2_on_display_rng),
-                                       mon->female ? FEMALE : MALE));
+        case M_AP_MONSTER: {
+            int mndx = what_mon((int) mon->mappearance, rn2_on_display_rng);
+
+            show_glyph(x, y, monnum_to_glyph(mndx, mgendercode));
             break;
-        }
+        } /* case M_AP_MONSTER */
+        } /* switch M_AP_TYPE() */
     }
 
     /* If mimic is unsuccessfully mimicing something, display the monster. */
@@ -586,26 +588,26 @@ display_monster(coordxy x, coordxy y,    /* display position */
          */
         if (mon->mtame && !Hallucination) {
             if (worm_tail)
-                num = petnum_to_glyph(PM_LONG_WORM_TAIL,
-                        mon->female ? FEMALE : MALE);
+                num = petnum_to_glyph(PM_LONG_WORM_TAIL, mgendercode);
             else
                 num = pet_to_glyph(mon, rn2_on_display_rng);
         } else if (sightflags == DETECTED) {
             if (worm_tail)
-                num = detected_monnum_to_glyph(
-                             what_mon(PM_LONG_WORM_TAIL, rn2_on_display_rng),
-                            mon->female ? FEMALE : MALE);
+                num = detected_monnum_to_glyph(what_mon(PM_LONG_WORM_TAIL,
+                                                        rn2_on_display_rng),
+                                               mgendercode);
             else
                 num = detected_mon_to_glyph(mon, rn2_on_display_rng);
         } else {
             if (worm_tail)
-                num = monnum_to_glyph(
-                             what_mon(PM_LONG_WORM_TAIL, rn2_on_display_rng),
-                             mon->female ? FEMALE : MALE);
+                num = monnum_to_glyph(what_mon(PM_LONG_WORM_TAIL,
+                                               rn2_on_display_rng),
+                                      mgendercode);
             else
                 num = mon_to_glyph(mon, rn2_on_display_rng);
         }
         show_mon_or_warn(x, y, num);
+        mon->meverseen = 1;
     }
 }
 
@@ -1032,7 +1034,7 @@ shieldeff(coordxy x, coordxy y)
         for (i = 0; i < SHIELD_COUNT; i++) {
             show_glyph(x, y, cmap_to_glyph(shield_static[i]));
             flush_screen(1); /* make sure the glyph shows up */
-            delay_output();
+            nh_delay_output();
         }
         newsym(x, y); /* restore the old information */
     }
@@ -1050,7 +1052,7 @@ tether_glyph(coordxy x, coordxy y)
 /*
  * tmp_at()
  *
- * Temporarily place glyphs on the screen.  Do not call delay_output().  It
+ * Temporarily place glyphs on the screen.  Do not call nh_delay_output().  It
  * is up to the caller to decide if it wants to wait [presently, everyone
  * but explode() wants to delay].
  *
@@ -1145,7 +1147,7 @@ tmp_at(coordxy x, coordxy y)
                         show_glyph(tglyph->saved[i - 1].x,
                                    tglyph->saved[i - 1].y, tglyph->glyph);
                         flush_screen(0); /* make sure it shows up */
-                        delay_output();
+                        nh_delay_output();
                     }
                     tglyph->sidx = 1;
                 }
@@ -1229,7 +1231,7 @@ flash_glyph_at(coordxy x, coordxy y, int tg, int rpt)
     for (i = 0; i < rpt; i++) {
         show_glyph(x, y, glyph[i % 2]);
         flush_screen(1);
-        delay_output();
+        nh_delay_output();
     }
 }
 
@@ -1405,13 +1407,24 @@ see_monsters(void)
     if (gd.defer_see_monsters)
         return;
 
+    /* steed and unseen engulfer/holder/holdee are recognized via touch
+       even if they don't aren't going to be rendered; other monsters
+       may get flagged as having been seen by display_monster() if it's
+       called by newsym() */
+    if (u.usteed)
+        u.usteed->meverseen = 1;
+    if (u.ustuck)
+        u.ustuck->meverseen = 1;
+
+    /* loop through level.monsters (aka fmon) */
     for (mon = fmon; mon; mon = mon->nmon) {
         if (DEADMONSTER(mon))
             continue;
         newsym(mon->mx, mon->my);
         if (mon->wormno)
             see_wsegs(mon);
-        if (Warn_of_mon && (gc.context.warntype.obj & mon->data->mflags2) != 0L)
+        if (Warn_of_mon
+            && (gc.context.warntype.obj & mon->data->mflags2) != 0L)
             new_warn_obj_cnt++;
     }
 
@@ -2309,7 +2322,10 @@ glyphinfo_at(coordxy x, coordxy y, int glyph)
  */
 
 static void
-get_bkglyph_and_framecolor(coordxy x, coordxy y, int *bkglyph, uint32 *framecolor)
+get_bkglyph_and_framecolor(
+    coordxy x, coordxy y,
+    int *bkglyph,
+    uint32 *framecolor)
 {
     int idx, tmp_bkglyph = GLYPH_UNEXPLORED;
     struct rm *lev = &levl[x][y];
@@ -2387,7 +2403,6 @@ get_bkglyph_and_framecolor(coordxy x, coordxy y, int *bkglyph, uint32 *framecolo
 #define HAS_ROGUE_IBM_GRAPHICS \
     (gc.currentgraphics == ROGUESET && SYMHANDLING(H_IBM))
 #endif
-#define HI_DOMESTIC CLR_WHITE /* monst.c */
 
 /* masks for per-level variances kept in gg.glyphmap_perlevel_flags */
 #define GMAP_SET            0x0001
@@ -3179,7 +3194,8 @@ const seenV seenv_matrix[3][3] = {
     { SV4, SV5,   SV6 }
 };
 
-#define sign(z) ((z) < 0 ? -1 : ((z) > 0 ? 1 : 0))
+/* negative: -1, zero: 0, positive +1; same as sgn() function (hacklib.c) */
+#define sign(z) ((z) < 0 ? -1 : ((z) != 0))
 
 /* Set the seen vector of lev as if seen from (x0,y0) to (x,y). */
 static void
@@ -3192,6 +3208,8 @@ set_seenv(
 
     lev->seenv |= seenv_matrix[sign(dy) + 1][sign(dx) + 1];
 }
+
+#undef sign
 
 /* Called by blackout(vault.c) when vault guard removes temporary corridor,
    turning spot <x0,y0> back into stone; <x1,y1> is an adjacent spot. */
@@ -3640,4 +3658,19 @@ fn_cmap_to_glyph(int cmap)
 {
     return cmap_to_glyph(cmap);
 }
+
+/* for 'onefile' processing where end of this file isn't necessarily the
+   end of the source code seen by the compiler (there are lots of other
+   macros defined above...) */
+#undef remember_topology
+#undef DETECTED
+#undef PHYSICALLY_SEEN
+#undef is_worm_tail
+#undef TMP_AT_MAX_GLYPHS
+#undef Glyphinfo_at
+#undef reset_glyph_bbox
+#undef HAS_ROGUE_IBM_GRAPHICS
+#undef GMAP_SET
+#undef GMAP_ROGUELEVEL
+
 /*display.c*/

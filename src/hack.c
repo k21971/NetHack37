@@ -1322,10 +1322,10 @@ findtravelpath(int mode)
                 for (i = 0; i < nn; ++i) {
                     tmp_at(travelstepx[1 - set][i], travelstepy[1 - set][i]);
                 }
-                delay_output();
+                nh_delay_output();
                 if (flags.runmode == RUN_CRAWL) {
-                    delay_output();
-                    delay_output();
+                    nh_delay_output();
+                    nh_delay_output();
                 }
                 tmp_at(DISP_END, 0);
             }
@@ -1381,12 +1381,12 @@ findtravelpath(int mode)
                 /* Use of warning glyph is arbitrary. It stands out. */
                 tmp_at(DISP_ALL, warning_to_glyph(2));
                 tmp_at(px, py);
-                delay_output();
+                nh_delay_output();
                 if (flags.runmode == RUN_CRAWL) {
-                    delay_output();
-                    delay_output();
-                    delay_output();
-                    delay_output();
+                    nh_delay_output();
+                    nh_delay_output();
+                    nh_delay_output();
+                    nh_delay_output();
                 }
                 tmp_at(DISP_END, 0);
             }
@@ -2623,12 +2623,12 @@ runmode_delay_output(void)
             /* moveloop() suppresses time_botl when running */
             iflags.time_botl = flags.time;
             curs_on_u();
-            delay_output();
+            nh_delay_output();
             if (flags.runmode == RUN_CRAWL) {
-                delay_output();
-                delay_output();
-                delay_output();
-                delay_output();
+                nh_delay_output();
+                nh_delay_output();
+                nh_delay_output();
+                nh_delay_output();
             }
         }
     }
@@ -3332,8 +3332,7 @@ pickup_checks(void)
         else if (IS_ALTAR(lev->typ))
             pline("Moving the altar would be a very bad idea.");
         else if (lev->typ == STAIRS)
-            pline_The("stairs are solidly fixed to the %s.",
-                      surface(u.ux, u.uy));
+            pline_The("stairs are solidly affixed.");
         else
             There("is nothing here to pick up.");
         return 0;

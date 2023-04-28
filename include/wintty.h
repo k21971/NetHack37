@@ -294,14 +294,23 @@ E void tty_refresh_inventory(int start, int stop, int y);
 /* termcap is implied if NO_TERMS is not defined */
 #ifndef NO_TERMS
 #ifndef NO_TERMCAP_HEADERS
-#ifdef delay_output /* avoid conflict in curses.h */
-#undef delay_output
-#endif
 #include <curses.h>
 #ifdef clear_screen /* avoid a conflict */
 #undef clear_screen
 #endif
 #include <term.h>
+#ifdef bell
+#undef bell
+#endif
+#ifdef color_names
+#undef color_names
+#endif
+#ifdef tone
+#undef tone
+#endif
+#ifdef hangup
+#undef hangup
+#endif
 #else
 extern int tgetent(char *, const char *);
 extern void tputs(const char *, int, int (*)(int));
