@@ -1,4 +1,4 @@
-/* NetHack 3.7	trap.c	$NHDT-Date: 1683116409 2023/05/03 12:20:09 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.530 $ */
+/* NetHack 3.7	trap.c	$NHDT-Date: 1683333758 2023/05/06 00:42:38 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.531 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -190,9 +190,9 @@ erode_obj(
     uvictim = (victim == &gy.youmonst);
     vismon = victim && (victim != &gy.youmonst) && canseemon(victim);
     /* Is gb.bhitpos correct here? Ugh. */
-    visobj = !victim && cansee(gb.bhitpos.x, gb.bhitpos.y)
-        && (!is_pool(gb.bhitpos.x, gb.bhitpos.y)
-            || (next2u(gb.bhitpos.x,gb.bhitpos.y) && Underwater));
+    visobj = (!victim && cansee(gb.bhitpos.x, gb.bhitpos.y)
+              && (!is_pool(gb.bhitpos.x, gb.bhitpos.y)
+                  || (next2u(gb.bhitpos.x,gb.bhitpos.y) && Underwater)));
 
     switch (type) {
     case ERODE_BURN:
@@ -287,6 +287,7 @@ erode_obj(
 
         return ER_DAMAGED;
     } else if (ef_flags & EF_DESTROY) {
+        otmp->in_use = 1; /* in case of hangup during message w/ --More-- */
         if (uvictim || vismon || visobj)
             pline("%s %s %s away!",
                   uvictim ? "Your"
@@ -297,7 +298,23 @@ erode_obj(
         if (ef_flags & EF_PAY)
             costly_alteration(otmp, cost_type);
 
-        setnotworn(otmp);
+        if (otmp->owornmask) {
+            /* unwear otmp before deleting it */
+            if (carried(otmp)) {
+                /* otmp remains in hero's invent */
+                remove_worn_item(otmp, TRUE); /* calls Cloak_off(),&c */
+            } else if (mcarried(otmp)) {
+                /* results in otmp->where==OBJ_FREE; delobj() doesn't care */
+                extract_from_minvent(otmp->ocarry, otmp, TRUE, FALSE);
+            } else { /* worn but not in hero invent or monster minvent ? */
+                impossible(
+            "erode_obj(%d): destroying strangely worn item [%d, 0x%08lx: %s]",
+                           type,
+                           otmp->where, otmp->owornmask, simpleonames(otmp));
+                otmp->owornmask = 0L; /* otherwise a second complaint (about
+                                       * deleting a worn item) will ensue */
+            }
+        }
         delobj(otmp);
         return ER_DESTROYED;
     } else {
@@ -438,7 +455,8 @@ maketrap(coordxy x, coordxy y, int typ)
         /* old <tx,ty> remain valid */
     } else if ((IS_FURNITURE(lev->typ)
                 && (!IS_GRAVE(lev->typ) || (typ != PIT && typ != HOLE)))
-               || (is_pool_or_lava(x, y) || IS_AIR(lev->typ))
+               || is_pool_or_lava(x, y)
+               || (IS_AIR(lev->typ) && typ != MAGIC_PORTAL)
                || (typ == LEVEL_TELEP && single_level_branch(&u.uz))) {
         /* no trap on top of furniture (caller usually screens the
            location to inhibit this, but wizard mode wishing doesn't)

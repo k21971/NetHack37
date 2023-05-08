@@ -2210,7 +2210,12 @@ bhito(struct obj *obj, struct obj *otmp)
             break;
         case WAN_TELEPORTATION:
         case SPE_TELEPORT_AWAY:
-            (void) rloco(obj);
+            {
+                coordxy ox = obj->ox, oy = obj->oy;
+
+                (void) rloco(obj);
+                maybe_unhide_at(ox, oy);
+            }
             break;
         case WAN_MAKE_INVISIBLE:
             break;
@@ -3217,7 +3222,7 @@ zap_updown(struct obj *obj) /* wand or spell */
             case WAN_POLYMORPH:
             case SPE_POLYMORPH:
                 del_engr(e);
-                make_engr_at(x, y, random_engraving(buf), gm.moves, (coordxy) 0);
+                make_engr_at(x, y, random_engraving(buf), gm.moves, 0);
                 break;
             case WAN_CANCELLATION:
             case SPE_CANCELLATION:

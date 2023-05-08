@@ -3467,6 +3467,8 @@ mhitm_ad_poly(
                 pline("%s is not transformed.", Monnam(mdef));
             } else {
                 mhm->damage = mon_poly(&gy.youmonst, mdef, mhm->damage);
+                mhm->hitflags |= M_ATTK_HIT;
+                mhm->done = TRUE;
             }
         }
     } else if (mdef == &gy.youmonst) {
@@ -3478,12 +3480,17 @@ mhitm_ad_poly(
                     You("aren't transformed.");
             } else {
                 mhm->damage = mon_poly(magr, &gy.youmonst, mhm->damage);
+                mhm->hitflags |= M_ATTK_HIT;
+                mhm->done = TRUE;
             }
         }
     } else {
         /* mhitm */
-        if (mhm->damage < mdef->mhp && !negated)
+        if (mhm->damage < mdef->mhp && !negated) {
             mhm->damage = mon_poly(magr, mdef, mhm->damage);
+            mhm->hitflags |= M_ATTK_HIT;
+            mhm->done = TRUE;
+        }
     }
 }
 
@@ -5020,12 +5027,15 @@ mhitm_knockback(
             dismount_steed(DISMOUNT_KNOCKED);
         } else {
             hurtle(dx, dy, knockdistance, FALSE);
+            *hitflags |= M_ATTK_HIT;
         }
         set_apparxy(magr); /* update magr's idea of where you are */
         if (!Stunned && !rn2(4))
             make_stunned((long) (knockdistance + 1), TRUE); /* 2 or 3 */
     } else {
         mhurtle(mdef, dx, dy, knockdistance);
+        if (!u_agr)
+            *hitflags |= M_ATTK_HIT;
         if (DEADMONSTER(mdef)) {
             if (!was_u)
                 *hitflags |= M_ATTK_DEF_DIED;
