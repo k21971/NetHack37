@@ -1,4 +1,4 @@
-/* NetHack 3.7	do.c	$NHDT-Date: 1652831519 2022/05/17 23:51:59 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.304 $ */
+/* NetHack 3.7	do.c	$NHDT-Date: 1683832317 2023/05/11 19:11:57 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.352 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -253,6 +253,8 @@ flooreffects(struct obj *obj, coordxy x, coordxy y, const char *verb)
  deletedwithboulder:
         if ((t = t_at(x, y)) != 0)
             deltrap(t);
+        if (u.utrap && u_at(x, y))
+            reset_utrap(FALSE);
         useupf(obj, 1L);
         bury_objs(x, y);
         newsym(x, y);
@@ -1464,7 +1466,7 @@ goto_level(
             gc.context.mysteryforce += rn2(diff + 2); /* L:0-4, N:0-3, C:0-2 */
 
             if (on_level(newlevel, &u.uz)) {
-                (void) safe_teleds(FALSE);
+                (void) safe_teleds(TELEDS_NO_FLAGS);
                 (void) next_to_u();
                 return;
             }

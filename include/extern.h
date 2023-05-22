@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1674294830 2023/01/21 09:53:50 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1223 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1684138080 2023/05/15 08:08:00 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1263 $ */
 /* Copyright (c) Steve Creps, 1988.                               */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -22,7 +22,7 @@ extern void early_init(void);
 extern void moveloop_core(void);
 extern void moveloop(boolean);
 extern void stop_occupation(void);
-extern void init_sound_and_display_gamewindows(void);
+extern void init_sound_disp_gamewindows(void);
 extern void newgame(void);
 extern void welcome(boolean);
 extern int argcheck(int, char **, enum earlyarg);
@@ -2792,7 +2792,7 @@ extern void savedsym_free(void);
 extern void savedsym_strbuf(strbuf_t *);
 extern boolean parsesymbols(char *, int);
 #ifdef ENHANCED_SYMBOLS
-extern struct customization_detail *find_matching_symset_customization(
+extern struct customization_detail *find_matching_symset_customiz(
                const char *symset_name, int custtype,
                enum graphics_sets which_set);
 extern void apply_customizations_to_symset(enum graphics_sets which_set);
@@ -2812,6 +2812,8 @@ extern boolean enexto(coord *, coordxy, coordxy, struct permonst *);
 extern boolean enexto_core(coord *, coordxy, coordxy, struct permonst *,
                            mmflags_nht);
 extern void teleds(coordxy, coordxy, int);
+extern int collect_coords(coord *, coordxy, coordxy, int, unsigned,
+                          boolean (*)(coordxy, coordxy));
 extern boolean safe_teleds(int);
 extern boolean teleport_pet(struct monst *, boolean);
 extern void tele(void);
@@ -2923,6 +2925,7 @@ extern void acid_damage(struct obj *);
 extern int water_damage(struct obj *, const char *, boolean);
 extern void water_damage_chain(struct obj *, boolean);
 extern boolean rnd_nextto_goodpos(coordxy *, coordxy *, struct monst *);
+extern void back_on_ground(int);
 extern boolean drown(void);
 extern void drain_en(int, boolean);
 extern int dountrap(void);
