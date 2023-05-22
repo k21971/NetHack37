@@ -2807,8 +2807,6 @@ mondead(struct monst *mtmp)
 
 RESTORE_WARNING_FORMAT_NONLITERAL
 
-#undef livelog_mon_nam
-
 /* TRUE if corpse might be dropped, magr may die if mon was swallowed */
 boolean
 corpse_chance(
@@ -3342,6 +3340,7 @@ xkilled(
 }
 
 #undef LEVEL_SPECIFIC_NOCORPSE
+#undef livelog_mon_nam
 
 /* changes the monster into a stone monster of the same type
    this should only be called when poly_when_stoned() is true */
