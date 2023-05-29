@@ -1,4 +1,4 @@
-/* NetHack 3.7	apply.c	$NHDT-Date: 1655631557 2022/06/19 09:39:17 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.381 $ */
+/* NetHack 3.7	apply.c	$NHDT-Date: 1685202442 2023/05/27 15:47:22 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.420 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -33,7 +33,7 @@ static int set_trap(void); /* occupation callback */
 static void display_polearm_positions(int);
 static int use_cream_pie(struct obj *);
 static int jelly_ok(struct obj *);
-static int use_royal_jelly(struct obj *);
+static int use_royal_jelly(struct obj **);
 static int grapple_range(void);
 static boolean can_grapple_location(coordxy, coordxy);
 static int use_grapple(struct obj *);
@@ -540,7 +540,10 @@ magic_whistled(struct obj *obj)
         mnexto(mtmp, !already_discovered ? RLOC_MSG : RLOC_NONE);
 
         if (mtmp->mx != omx || mtmp->my != omy) {
-            mtmp->mundetected = 0; /* reveal non-mimic hider iff it moved */
+            if (mtmp->mundetected) { /* reveal non-mimic hider that moved */
+                mtmp->mundetected = 0;
+                newsym(mtmp->mx, mtmp->my);
+            }
             /*
              * FIXME:
              *  All relocated monsters should change positions essentially
@@ -1756,7 +1759,7 @@ dorub(void)
         if (is_graystone(obj)) {
             return use_stone(obj);
         } else if (obj->otyp == LUMP_OF_ROYAL_JELLY) {
-            return use_royal_jelly(obj);
+            return use_royal_jelly(&obj);
         } else {
             pline("Sorry, I don't know how to use that.");
             return ECMD_OK;
@@ -2834,6 +2837,7 @@ use_trap(struct obj *otmp)
     return;
 }
 
+/* occupation routine called each turn while arming a beartrap or landmine */
 static int
 set_trap(void)
 {
@@ -2841,9 +2845,8 @@ set_trap(void)
     struct trap *ttmp;
     int ttyp;
 
-    if (!otmp || !carried(otmp) || u.ux != gt.trapinfo.tx
-        || u.uy != gt.trapinfo.ty) {
-        /* ?? */
+    if (!otmp || !carried(otmp) || !u_at(gt.trapinfo.tx, gt.trapinfo.ty)) {
+        /* trap object might have been stolen or hero teleported */
         reset_trapset();
         return 0;
     }
@@ -3470,10 +3473,11 @@ jelly_ok(struct obj *obj)
 }
 
 static int
-use_royal_jelly(struct obj *obj)
+use_royal_jelly(struct obj **optr)
 {
     int oldcorpsenm;
     unsigned was_timed;
+    struct obj *obj = *optr;
     struct obj *eobj;
 
     if (obj->quan > 1L)
@@ -3529,6 +3533,7 @@ use_royal_jelly(struct obj *obj)
     /* not useup() because we've already done freeinv() */
     setnotworn(obj);
     obfree(obj, (struct obj *) 0);
+    *optr = 0;
     return ECMD_TIME;
 }
 
@@ -4038,9 +4043,10 @@ doapply(void)
         break;
     case CREAM_PIE:
         res = use_cream_pie(obj);
+        obj = (struct obj *) 0;
         break;
     case LUMP_OF_ROYAL_JELLY:
-        res = use_royal_jelly(obj);
+        res = use_royal_jelly(&obj);
         break;
     case BULLWHIP:
         res = use_whip(obj);
@@ -4168,6 +4174,8 @@ doapply(void)
     case LAND_MINE:
     case BEARTRAP:
         use_trap(obj);
+        if (go.occupation == set_trap)
+            obj = (struct obj *) 0; /* not gone yet but behave as if it was */
         break;
     case FLINT:
     case LUCKSTONE:
@@ -4187,6 +4195,8 @@ doapply(void)
         pline("Sorry, I don't know how to use that.");
         return ECMD_FAIL;
     }
+    /* This assumes that anything that potentially destroyed obj has kept
+     * track of it and set obj to null before this point. */
     if (obj && obj->oartifact) {
         res |= arti_speak(obj); /* sets ECMD_TIME bit if artifact speaks */
     }

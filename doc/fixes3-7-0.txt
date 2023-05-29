@@ -1,4 +1,4 @@
-HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1181 $ $NHDT-Date: 1684621591 2023/05/20 22:26:31 $
+HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1188 $ $NHDT-Date: 1685202441 2023/05/27 15:47:21 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -1037,11 +1037,16 @@ improve consistency between applying a key and explicitly opening a door:
 	isn't any door in the direction supplied, you're told "no door" and
 	time elapses if you discover the non-door's terrain type but doesn't
 	if you already knew the type there
-if a bones file contains a doppelganger imitating a unique monster, a game
-	that loads those bones will end up with that monster counted as
-	having already been created so it won't be created if/when the time
-	for that arrives (the doppelganger will change its shape normally,
+if a bones file contained a doppelganger imitating a unique monster, a game
+	that loaded those bones would end up with that monster counted as
+	having already been created so it wouldn't be created when the time
+	for that arrived (the doppelganger would change its shape normally,
 	not be stuck in the unique monster's form)
+if Vlad was lured to a level which allowed bones, he could be present in a
+	bones file for that level if he was in wolf/bat/cloud form at the
+	time hero died; getting those bones in another game would flag him
+	as extinct; if that occurred before entering his level he would not
+	be created there, leaving no way for hero to acquire the Candelabrum
 when mounted hero got hit by an explosion, hero and steed shared resistances
 removing an engraving from frost (ie, written with fingers on ice) reported
 	"you wipe out the message that was written in the _dust_"
@@ -1187,6 +1192,13 @@ don't exclude map column 1 from consideration when rloc() picks a random spot
 	for destination of a teleported monster
 covetous monster attacking another monster to acquire special item would not
 	do so if positioned diagonally adjacent
+skip sanity_check handling when current command is ^P, otherwise it might
+	re-trigger and show new sanity warning every time when set for
+	line-at-a-line feedback
+applying a cream pie (always) or lump of royal jelly (sometimes) would use up
+	the object and then access its memory after that had been freed
+keep track of hero's pending movement points across save and restore
+give feedback if hero sees a monster become hidden under an object or water
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -1586,6 +1598,12 @@ the fuzzer could get stuck in a loop if hero died in a way where life-saving
 fix unicorn horn's ability to repair blindness
 quest nemesis and a few other special monsters are suppressed from bones;
 	their death feedback could be given when they were removed
+running the tutorial until completion and returning to normal play but left
+	the 'no followers' flag set; adjacent pets wouldn't tag along when
+	hero moved to other levels
+when a magic whistle moved a hidden pet it brought that out of hiding and
+	gave a message about "your <pet> appears" but the map was updated
+	while it was still hidden so nothing seemed to appear
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository

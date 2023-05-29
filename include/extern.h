@@ -869,6 +869,7 @@ extern void makerogueghost(void);
 
 /* ### files.c ### */
 
+extern const char *nh_basename(const char *, boolean);
 #if !defined(CROSSCOMPILE) || defined(CROSSCOMPILE_TARGET)
 extern int l_get_config_errors(lua_State *);
 #endif
@@ -3222,7 +3223,7 @@ extern int vms_creat(const char *, unsigned int);
 extern int vms_open(const char *, int, unsigned int);
 extern boolean same_dir(const char *, const char *);
 extern int c__translate(int);
-extern char *vms_basename(const char *);
+extern char *vms_basename(const char *, boolean);
 
 /* ### vmsmail.c ### */
 
@@ -3262,6 +3263,9 @@ extern void introff(void);
 ATTRNORETURN extern void error (const char *, ...) PRINTF_F(1, 2) NORETURN;
 #ifdef TIMED_DELAY
 extern void msleep(unsigned);
+#endif
+#ifdef ENHANCED_SYMBOLS
+extern void tty_utf8graphics_fixup(void);
 #endif
 
 /* ### vmsunix.c ### */

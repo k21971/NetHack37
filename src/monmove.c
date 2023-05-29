@@ -16,7 +16,8 @@ static void mind_blast(struct monst *);
 static boolean holds_up_web(coordxy, coordxy);
 static int count_webbing_walls(coordxy, coordxy);
 static boolean soko_allow_web(struct monst *);
-static boolean m_search_items(struct monst *, coordxy *, coordxy *, schar *, int *);
+static boolean m_search_items(struct monst *, coordxy *, coordxy *, schar *,
+                              int *);
 static boolean leppie_avoidance(struct monst *);
 static void leppie_stash(struct monst *);
 static boolean m_balks_at_approaching(struct monst *);
@@ -719,6 +720,7 @@ dochug(register struct monst* mtmp)
     /* mind flayers can make psychic attacks! */
     } else if (is_mind_flayer(mdat) && !rn2(20)) {
         mind_blast(mtmp);
+        distfleeck(mtmp, &inrange, &nearby, &scared);
     }
 
     /* If monster is nearby you, and has to wield a weapon, do so.  This
