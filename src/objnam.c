@@ -1,4 +1,4 @@
-/* NetHack 3.7	objnam.c	$NHDT-Date: 1672829441 2023/01/04 10:50:41 $  $NHDT-Branch: naming-overflow-fix $:$NHDT-Revision: 1.386 $ */
+/* NetHack 3.7	objnam.c	$NHDT-Date: 1686386790 2023/06/10 08:46:30 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.392 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2011. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1039,7 +1039,9 @@ add_erosion_words(struct obj* obj, char* prefix)
             Strcat(prefix, "thoroughly ");
             break;
         }
-        Strcat(prefix, is_rustprone(obj) ? "rusty " : "burnt ");
+        Strcat(prefix, is_rustprone(obj) ? "rusty "
+                       : is_crackable(obj) ? "cracked "
+                         : "burnt ");
     }
     if (obj->oeroded2 && !iscrys) {
         switch (obj->oeroded2) {
@@ -1052,21 +1054,21 @@ add_erosion_words(struct obj* obj, char* prefix)
         }
         Strcat(prefix, is_corrodeable(obj) ? "corroded " : "rotted ");
     }
+    /* note: it is possible for an item to be both eroded and erodeproof
+       (cursed scroll of destroy armor read while confused erodeproofs an
+       item of armor without repairing existing erosion) */
     if (rknown && obj->oerodeproof)
-        Strcat(prefix, iscrys
-                          ? "fixed "
-                          : is_rustprone(obj)
-                             ? "rustproof "
-                             : is_corrodeable(obj)
-                                ? "corrodeproof " /* "stainless"? */
-                                : is_flammable(obj)
-                                   ? "fireproof "
-                                   : "");
+        Strcat(prefix, iscrys ? "fixed "
+                       : is_rustprone(obj) ? "rustproof "
+                         : is_corrodeable(obj) ? "corrodeproof "
+                           : is_flammable(obj) ? "fireproof "
+                             : is_crackable(obj) ? "tempered " /* hardened */
+                               : "");
 }
 
 /* used to prevent rust on items where rust makes no difference */
 boolean
-erosion_matters(struct obj* obj)
+erosion_matters(struct obj *obj)
 {
     switch (obj->oclass) {
     case TOOL_CLASS:
@@ -1564,8 +1566,7 @@ not_fully_identified(struct obj* otmp)
             && otmp->oclass != BALL_CLASS)) /* (useless) */
         return FALSE;
     else /* lack of `rknown' only matters for vulnerable objects */
-        return (boolean) (is_rustprone(otmp) || is_corrodeable(otmp)
-                          || is_flammable(otmp));
+        return (boolean) is_damageable(otmp);
 }
 
 /* format a corpse name (xname() omits monster type; doname() calls us);
@@ -3267,9 +3268,10 @@ wizterrainwish(struct _readobjnam_data *d)
     p = eos(bp);
     if (!BSTRCMPI(bp, p - 8, "fountain")) {
         lev->typ = FOUNTAIN;
-        gl.level.flags.nfountains++;
+        if (oldtyp != FOUNTAIN)
+            gl.level.flags.nfountains++;
         lev->looted = d->looted ? F_LOOTED : 0; /* overlays 'flags' */
-        lev->blessedftn = !strncmpi(bp, "magic ", 6);
+        lev->blessedftn = d->blessed || !strncmpi(bp, "magic ", 6);
         pline("A %sfountain.", lev->blessedftn ? "magic " : "");
         madeterrain = TRUE;
     } else if (!BSTRCMPI(bp, p - 6, "throne")) {
@@ -3279,7 +3281,8 @@ wizterrainwish(struct _readobjnam_data *d)
         madeterrain = TRUE;
     } else if (!BSTRCMPI(bp, p - 4, "sink")) {
         lev->typ = SINK;
-        gl.level.flags.nsinks++;
+        if (oldtyp != SINK)
+            gl.level.flags.nsinks++;
         lev->looted = d->looted ? (S_LPUDDING | S_LDWASHER | S_LRING) : 0;
         pline("A sink.");
         madeterrain = TRUE;
@@ -3502,14 +3505,9 @@ wizterrainwish(struct _readobjnam_data *d)
             }
         }
 
-        /* fixups for replaced terrain that aren't handled above;
-           for fountain placed on fountain or sink placed on sink, the
-           increment above gets canceled out by the decrement here;
-           otherwise if fountain or sink was replaced, there's one less */
-        if (IS_FOUNTAIN(oldtyp))
-            gl.level.flags.nfountains--;
-        else if (IS_SINK(oldtyp))
-            gl.level.flags.nsinks--;
+        /* fixups for replaced terrain that aren't handled above */
+        if (IS_FOUNTAIN(oldtyp) || IS_SINK(oldtyp))
+            count_level_features(); /* update level.flags.nfountains,nsinks */
         /* horizontal is overlaid by fountain->blessedftn, grave->disturbed */
         if (IS_FOUNTAIN(oldtyp) || IS_GRAVE(oldtyp)
             || IS_WALL(oldtyp) || oldtyp == IRONBARS
@@ -3620,7 +3618,9 @@ readobjnam_preparse(struct _readobjnam_data *d)
                    || !strncmpi(d->bp, "corrodeproof ", l = 13)
                    || !strncmpi(d->bp, "fixed ", l = 6)
                    || !strncmpi(d->bp, "fireproof ", l = 10)
-                   || !strncmpi(d->bp, "rotproof ", l = 9)) {
+                   || !strncmpi(d->bp, "rotproof ", l = 9)
+                   || !strncmpi(d->bp, "tempered ", l = 9)
+                   || !strncmpi(d->bp, "crackproof ", l = 11)) {
             d->erodeproof = 1;
         } else if (!strncmpi(d->bp, "lit ", l = 4)
                    || !strncmpi(d->bp, "burning ", l = 8)) {
@@ -3692,7 +3692,8 @@ readobjnam_preparse(struct _readobjnam_data *d)
         } else if (!strncmpi(d->bp, "rusty ", l = 6)
                    || !strncmpi(d->bp, "rusted ", l = 7)
                    || !strncmpi(d->bp, "burnt ", l = 6)
-                   || !strncmpi(d->bp, "burned ", l = 7)) {
+                   || !strncmpi(d->bp, "burned ", l = 7)
+                   || !strncmpi(d->bp, "cracked ", l = 8)) {
             d->eroded = 1 + d->very;
             d->very = 0;
         } else if (!strncmpi(d->bp, "corroded ", l = 9)
@@ -4849,7 +4850,8 @@ readobjnam(char *bp, struct obj *no_wish)
     if (erosion_matters(d.otmp)) {
         /* wished-for item shouldn't be eroded unless specified */
         d.otmp->oeroded = d.otmp->oeroded2 = 0;
-        if (d.eroded && (is_flammable(d.otmp) || is_rustprone(d.otmp)))
+        if (d.eroded && (is_flammable(d.otmp) || is_rustprone(d.otmp)
+                         || is_crackable(d.otmp)))
             d.otmp->oeroded = d.eroded;
         if (d.eroded2 && (is_corrodeable(d.otmp) || is_rottable(d.otmp)))
             d.otmp->oeroded2 = d.eroded2;
@@ -5098,7 +5100,7 @@ helm_simple_name(struct obj *helmet)
      *      fedora, cornuthaum, dunce cap       -> hat
      *      all other types of helmets          -> helm
      */
-    return (helmet && !is_metallic(helmet)) ? "hat" : "helm";
+    return !hard_helmet(helmet) ? "hat" : "helm";
 }
 
 /* gloves vs gauntlets; depends upon discovery state */

@@ -712,11 +712,11 @@ curses_get_count(int first_digit)
        curses's message window will display that in count window instead */
     current_char = get_count(NULL, (char) first_digit,
                              /* 0L => no limit on value unless it wraps
-                                to negative */
+                              * to negative */
                              0L, &current_count,
-                             /* default: don't put into message history,
-                                don't echo until second digit entered */
-                             GC_NOFLAGS);
+                             /* don't put into message history, echo full
+                              * number rather than waiting until 2nd digit */
+                             GC_ECHOFIRST);
 
     ungetch(current_char);
     if (current_char == '\033') {     /* Cancelled with escape */
@@ -729,10 +729,10 @@ curses_get_count(int first_digit)
 /* Convert the given NetHack text attributes into the format curses
    understands, and return that format mask. */
 
-int
+attr_t
 curses_convert_attr(int attr)
 {
-    int curses_attr;
+    attr_t curses_attr;
 
     /* first, strip off control flags masked onto the display attributes
        (caller should have already done this...) */
@@ -857,7 +857,7 @@ int
 curses_convert_keys(int key)
 {
     boolean reject = (gp.program_state.input_state == otherInp),
-            as_is = FALSE, numpad_esc;
+            as_is = FALSE, numpad_esc = FALSE;
     int ret = key;
 
     if (modifiers_available)
@@ -1106,6 +1106,7 @@ parse_escape_sequence(boolean *keypadnum)
 
     return ret;
 #else
+    nhUse(keypadnum);
     return '\033';
 #endif /* !PDCURSES */
 }

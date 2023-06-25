@@ -512,6 +512,15 @@ Helmet_off(void)
     return 0;
 }
 
+/* hard helms provide better protection against against falling rocks */
+boolean
+hard_helmet(struct obj *obj)
+{
+    if (!obj || !is_helmet(obj))
+        return FALSE;
+    return (is_metallic(obj) || is_crackable(obj)) ? TRUE : FALSE;
+}
+
 static int
 Gloves_on(void)
 {

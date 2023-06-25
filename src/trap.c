@@ -1,4 +1,4 @@
-/* NetHack 3.7	trap.c	$NHDT-Date: 1684140131 2023/05/15 08:42:11 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.536 $ */
+/* NetHack 3.7	trap.c	$NHDT-Date: 1687033655 2023/06/17 20:27:35 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.540 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -171,12 +171,14 @@ erode_obj(
     int ef_flags)
 {
     static NEARDATA const char
-        *const action[] = { "smoulder", "rust", "rot", "corrode" },
-        *const msg[] = { "burnt", "rusted", "rotten", "corroded" },
-        *const bythe[] = { "heat", "oxidation", "decay", "corrosion" };
+        *const action[] = { "smoulder", "rust", "rot", "corrode", "crack" },
+        *const msg[] = { "burnt", "rusted", "rotten", "corroded", "cracked" },
+        *const bythe[] = { "heat", "oxidation", "decay", "corrosion",
+                           "impact" }; /* this could use improvement... */
     boolean vulnerable = FALSE, is_primary = TRUE,
             check_grease = (ef_flags & EF_GREASE) ? TRUE : FALSE,
             print = (ef_flags & EF_VERBOSE) ? TRUE : FALSE,
+            crackers = FALSE, /* True: different feedback if otmp destroyed */
             uvictim, vismon, visobj;
     int erosion, cost_type;
     struct monst *victim;
@@ -219,6 +221,12 @@ erode_obj(
         is_primary = FALSE;
         cost_type = COST_CORRODE;
         break;
+    case ERODE_CRACK: /* crystal armor */
+        vulnerable = is_crackable(otmp);
+        is_primary = TRUE;
+        crackers = TRUE;
+        cost_type = COST_CRACK;
+        break;
     default:
         impossible("Invalid erosion type in erode_obj");
         return ER_NOTHING;
@@ -247,8 +255,8 @@ erode_obj(
             && (uvictim || vismon || visobj))
             pline("Somehow, %s %s %s not affected by the %s.",
                   uvictim ? "your"
-                          : !vismon ? "the" /* visobj */
-                                    : s_suffix(mon_nam(victim)),
+                  : !vismon ? "the" /* visobj */
+                    : s_suffix(mon_nam(victim)),
                   ostr, vtense(ostr, "are"), bythe[type]);
         /* We assume here that if the object is protected because it
          * is blessed, it still shows some minor signs of wear, and
@@ -270,8 +278,8 @@ erode_obj(
         if (uvictim || vismon || visobj)
             pline("%s %s %s%s!",
                   uvictim ? "Your"
-                          : !vismon ? "The" /* visobj */
-                                    : s_suffix(Monnam(victim)),
+                  : !vismon ? "The" /* visobj */
+                    : s_suffix(Monnam(victim)),
                   ostr, vtense(ostr, action[type]), adverb);
 
         if (ef_flags & EF_PAY)
@@ -288,13 +296,19 @@ erode_obj(
         return ER_DAMAGED;
     } else if (ef_flags & EF_DESTROY) {
         otmp->in_use = 1; /* in case of hangup during message w/ --More-- */
-        if (uvictim || vismon || visobj)
-            pline("%s %s %s away!",
-                  uvictim ? "Your"
-                          : !vismon ? "The" /* visobj */
-                                    : s_suffix(Monnam(victim)),
-                  ostr, vtense(ostr, action[type]));
+        if (uvictim || vismon || visobj) {
+            char actbuf[BUFSZ];
 
+            if (!crackers)
+                Sprintf(actbuf, "%s away", vtense(ostr, action[type]));
+            else
+                Sprintf(actbuf, "shatters");
+            pline("%s %s %s!",
+                  uvictim ? "Your"
+                  : !vismon ? "The" /* visobj */
+                    : s_suffix(Monnam(victim)),
+                  ostr, actbuf);
+        }
         if (ef_flags & EF_PAY)
             costly_alteration(otmp, cost_type);
 
@@ -1197,7 +1211,7 @@ trapeffect_rocktrap(
                     pline("Unfortunately, you are wearing %s.",
                           an(helm_simple_name(uarmh))); /* helm or hat */
                     dmg = 2;
-                } else if (is_metallic(uarmh)) {
+                } else if (hard_helmet(uarmh)) {
                     pline("Fortunately, you are wearing a hard helmet.");
                     dmg = 2;
                 } else if (Verbose(3, trapeffect_rocktrap)) {
@@ -4196,8 +4210,7 @@ acid_damage(struct obj* obj)
 
 /* Get an object wet and damage it appropriately.
  *   "obj": if null, returns ER_NOTHING
- *   "ostr", if present, is used instead of the object name in some
- *     messages.
+ *   "ostr", if present, is used instead of the object name in some messages.
  *   "force" means not to roll luck to protect some objects.
  * Returns an erosion return value (ER_*)
  */
@@ -4241,14 +4254,18 @@ water_damage(
         return ER_GREASED;
     } else if (Is_container(obj)
                && (!Waterproof_container(obj) || (obj->cursed && !rn2(3)))) {
-        if (in_invent)
+        if (in_invent) {
             pline("Some %s gets into your %s!", hliquid("water"), ostr);
+            gm.mentioned_water = !Hallucination;
+        }
         water_damage_chain(obj->cobj, FALSE);
         return ER_DAMAGED; /* contents were damaged */
     } else if (Waterproof_container(obj)) {
         if (in_invent) {
             pline_The("%s slides right off your %s.", hliquid("water"), ostr);
-            makeknown(obj->otyp);
+            gm.mentioned_water = !Hallucination;
+            makeknown(obj->otyp); /* if an oilskin sack, discover it; doesn't
+                                   * matter for chest, large box, ice box */
         }
         /* not actually damaged, but because we /didn't/ get the "water
            gets into!" message, the player now has more information and

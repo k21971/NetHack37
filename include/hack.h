@@ -303,7 +303,8 @@ enum cost_alteration_types {
     COST_BRKLCK  = 15, /* break box/chest's lock */
     COST_RUST    = 16, /* rust damage */
     COST_ROT     = 17, /* rotting attack */
-    COST_CORRODE = 18 /* acid damage */
+    COST_CORRODE = 18, /* acid damage */
+    COST_CRACK   = 19, /* damage to crystal armor */
 };
 
 /* read.c, create_particular() & create_particular_parse() */
@@ -354,6 +355,7 @@ struct dgn_topology { /* special dungeon levels for speed */
     xint16 d_tower_dnum;
     xint16 d_sokoban_dnum;
     xint16 d_mines_dnum, d_quest_dnum;
+    xint16 d_tutorial_dnum;
     d_level d_qstart_level, d_qlocate_level, d_nemesis_level;
     d_level d_knox_level;
     d_level d_mineend_level;
@@ -386,6 +388,7 @@ struct dgn_topology { /* special dungeon levels for speed */
 #define sokoban_dnum            (gd.dungeon_topology.d_sokoban_dnum)
 #define mines_dnum              (gd.dungeon_topology.d_mines_dnum)
 #define quest_dnum              (gd.dungeon_topology.d_quest_dnum)
+#define tutorial_dnum           (gd.dungeon_topology.d_tutorial_dnum)
 #define qstart_level            (gd.dungeon_topology.d_qstart_level)
 #define qlocate_level           (gd.dungeon_topology.d_qlocate_level)
 #define nemesis_level           (gd.dungeon_topology.d_nemesis_level)
@@ -632,6 +635,8 @@ enum nhcore_calls {
     NHCORE_MOVELOOP_TURN,
     NHCORE_GAME_EXIT,
     NHCORE_GETPOS_TIP,
+    NHCORE_ENTER_TUTORIAL,
+    NHCORE_LEAVE_TUTORIAL,
 
     NUM_NHCORE_CALLS
 };

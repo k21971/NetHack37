@@ -22,6 +22,18 @@ extern char erase_char, kill_char;
 
 extern long curs_mesg_suppress_seq; /* from cursmesg.c */
 extern boolean curs_mesg_no_suppress; /* ditto */
+extern int mesg_mixed;
+extern glyph_info mesg_gi;
+
+#ifndef CURSES_GENL_PUTMIXED
+#if defined(PDC_WIDE) || defined(NCURSES_WIDECHAR)
+#define USE_CURSES_PUTMIXED
+#else  /* WIDE */
+#ifdef NH_PRAGMA_MESSAGE
+#pragma message "Curses wide support not defined so NetHack curses message window functionality reduced"
+#endif
+#endif /* WIDE */
+#endif /* CURSES_GENL_PUTMIXED */
 
 /* stubs for curses_procs{} */
 #ifdef POSITIONBAR
@@ -70,7 +82,11 @@ struct window_procs curses_procs = {
     curses_destroy_nhwindow,
     curses_curs,
     curses_putstr,
+#ifdef USE_CURSES_PUTMIXED
+    curses_putmixed,
+#else
     genl_putmixed,
+#endif
     curses_display_file,
     curses_start_menu,
     curses_add_menu,
@@ -561,6 +577,19 @@ curses_putstr(winid wid, int attr, const char *text)
     curs_mesg_no_suppress = FALSE;
 }
 
+void
+curses_putmixed(winid window, int attr, const char *str)
+{
+    if (window == WIN_MESSAGE) {
+        str = mixed_to_glyphinfo(str, &mesg_gi);
+        mesg_mixed = 1;
+    }
+    /* now send it to the normal putstr */
+    curses_putstr(window, attr, str);
+    if (window == WIN_MESSAGE)
+        mesg_mixed = 0;
+}
+
 /* Display the file named str.  Complain about missing files
                    iff complain is TRUE.
 */
@@ -751,7 +780,11 @@ mark_synch()    -- Don't go beyond this point in I/O on any channel until
 void
 curses_mark_synch(void)
 {
-    curses_refresh_nethack_windows();
+     /* full refresh has unintended side-effect of making a menu window
+        that has called core's get_count() to vanish; do a basic screen
+        refresh instead */
+     /*curses_refresh_nethack_windows();*/
+     refresh();
 }
 
 /*

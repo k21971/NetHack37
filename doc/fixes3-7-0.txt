@@ -1,4 +1,4 @@
-HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1188 $ $NHDT-Date: 1685202441 2023/05/27 15:47:21 $
+HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1201 $ $NHDT-Date: 1687036542 2023/06/17 21:15:42 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -1199,6 +1199,17 @@ applying a cream pie (always) or lump of royal jelly (sometimes) would use up
 	the object and then access its memory after that had been freed
 keep track of hero's pending movement points across save and restore
 give feedback if hero sees a monster become hidden under an object or water
+hero might hear unseen monster read scroll of create monster or scroll of
+	teleportation; when it was create monster, player was given a chance
+	to call it something but not when it was teleportation, allowing the
+	player to deduce which type of scroll it actually was
+wizard mode wish for terrain while on a fountain|sink spot made the counter
+	for number of fountains|sinks become one too big; would affect level
+	sound messages if all fountains|sinks were eventually destroyed
+add a level arrival region to the Gnone King's Wine Cellar variation of the
+	Mines' End level so that hero can't end up in the treature chamber
+make potion of water become discovered if dipping a carried container into an
+	uncursed one reports that water gets inside or slides right off
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -1604,6 +1615,15 @@ running the tutorial until completion and returning to normal play but left
 when a magic whistle moved a hidden pet it brought that out of hiding and
 	gave a message about "your <pet> appears" but the map was updated
 	while it was still hidden so nothing seemed to appear
+entering the tutorial stashed hero's equipment for eventual return to normal
+	play but going down stairs to the second tutorial level returned it
+	too soon and allowed any items gathered on the first level to be kept
+entering the tutorial disables the Save command; exiting it is supposed to
+	re-enable that but the change to fix the second level broke that
+entering the tutorial and then returning to play made the tutorial branch be
+	eligible for a portal destination via wizard's Eye of the Aethiopica
+'hard helmet' was based on being metallic so overlooked crystal helmet
+don't blame/credit hero for stinking cloud if dying quest nemesis releases one
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
@@ -1642,6 +1662,9 @@ curses: typing ESC to cancel something issued a beep; if the terminal was set
 curses: with window borders on and align_status:left, restoring brought up a
 	screen where the message window's border wasn't shown; once it needed
 	to be scrolled to fit a new message, the border appeared
+curses: after changing curses_mark_synch() to do something, making a menu
+	selection by entering a count that uses more than 1 digit caused the
+	menu to vanish
 Qt: at Xp levels above 20 with 'showexp' On, the combined status field
 	"Level:NN/nnnnnnnn" was too big and truncated by a char at each end
 Qt: searching a text window for something that wasn't found and then searching
@@ -1840,6 +1863,11 @@ Qt: {maybe just Qt+macOS:} when viewing a text window ('V' to look at 'history'
 	window got pushed underneath the main window so seemed to go away
 Qt: use idPressed signal instead of buttonPressed and mappedString instead
 	of mapped for recent Qt (pr #913 by chasonr)
+Qt: support Unicode supplementary characters (pr #1047 by chasonr)
+Qt: qt_tilewidth and qt_tileheight are allocated with alloc() and need to be
+	freed with free(); don't use qt_tilewidth and qt_tileheight after
+	they have been freed; instead, retrieve the size from the glyphs
+	object (pr #1049 by chasonr)
 Qt+macOS: fix control key (fixed all except for ^V); handle ^V as a shortcut
 Qt+macOS: rename menu entry "nethack->Preferences..." for invoking nethack's
 	'O' command to "Game->Run-time options" and entry "Game->Qt settings"
@@ -2084,7 +2112,9 @@ reading a blessed scroll of light has a chance to improve bless/curse state
 	of wielded Sunsword or worn gold dragon scales/mail similar to dipping
 	those into holy water; cursed scroll has chance to worsen the state
 added a chronicle of major events, and optional live logging of those
-paranoid:swim to prevent accidental dunking into dangerous liquids
+paranoid_confirm:swim to prevent accidental dunking into dangerous liquids;
+        joins paranoid_confirm:pray as the default setting
+paranoid_confirm:Autoall to confirm picking 'A' in menustyle:Full filter menu
 looking at a monster will indicate whether it is asleep, and waking up a
 	monster yields a message
 extend farlook's "<mon>, asleep" to "<mon>, can't move (paralyzed or sleeping
@@ -2132,6 +2162,7 @@ preceding #overview with the 'm' prefix brings up the overview display as a
 	menu allowing selection of any visited level to #annotate; it also
 	shows every level visited rather than just the "interesting" ones
 include monster size in feedback for wand of probing and stethoscope
+crystal armor is now subject to cracking damage rather than outright breakage
 
 
 Platform- and/or Interface-Specific New Features

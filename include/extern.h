@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1684138080 2023/05/15 08:08:00 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1263 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1687343496 2023/06/21 10:31:36 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1276 $ */
 /* Copyright (c) Steve Creps, 1988.                               */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -8,9 +8,15 @@
 /* ### alloc.c ### */
 
 #if 0
+/* routines in alloc.c depend on MONITOR_HEAP and are declared in global.h */
 extern long *alloc(unsigned int);
 #endif
 extern char *fmt_ptr(const void *) NONNULL;
+/* moved from hacklib.c to alloc.c so that utility programs have access */
+#define FITSint(x) FITSint_(x, __func__, __LINE__)
+extern int FITSint_(long long, const char *, int);
+#define FITSuint(x) FITSuint_(x, __func__, __LINE__)
+extern unsigned FITSuint_(unsigned long long, const char *, int);
 
 /* This next pre-processor directive covers almost the entire file,
  * interrupted only occasionally to pick up specific functions as needed. */
@@ -565,6 +571,7 @@ extern int stop_donning(struct obj *);
 extern int Armor_off(void);
 extern int Armor_gone(void);
 extern int Helmet_off(void);
+extern boolean hard_helmet(struct obj *);
 extern void wielding_corpse(struct obj *, struct obj *, boolean);
 extern int Gloves_off(void);
 extern int Boots_on(void);
@@ -658,7 +665,7 @@ extern int thitmonst(struct monst *, struct obj *);
 extern int hero_breaks(struct obj *, coordxy, coordxy, unsigned);
 extern int breaks(struct obj *, coordxy, coordxy);
 extern void release_camera_demon(struct obj *, coordxy, coordxy);
-extern void breakobj(struct obj *, coordxy, coordxy, boolean, boolean);
+extern int breakobj(struct obj *, coordxy, coordxy, boolean, boolean);
 extern boolean breaktest(struct obj *);
 extern boolean walk_path(coord *, coord *,
                          boolean(*)(void *, coordxy, coordxy), genericptr_t);
@@ -1096,10 +1103,6 @@ extern void shuffle_int_array(int *, int);
     nh_snprintf(__func__, __LINE__, str, size, __VA_ARGS__)
 extern void nh_snprintf(const char *func, int line, char *str, size_t size,
                         const char *fmt, ...) PRINTF_F(5, 6);
-#define FITSint(x) FITSint_(x, __func__, __LINE__)
-extern int FITSint_(long long, const char *, int);
-#define FITSuint(x) FITSuint_(x, __func__, __LINE__)
-extern unsigned FITSuint_(unsigned long long, const char *, int);
 #ifdef ENHANCED_SYMBOLS
 extern int unicodeval_to_utf8str(int, uint8 *, size_t);
 #endif
@@ -1408,6 +1411,7 @@ extern void add_subroom(struct mkroom *, int, int, int, int, boolean, schar,
 extern void free_luathemes(boolean);
 extern void makecorridors(void);
 extern void add_door(coordxy, coordxy, struct mkroom *);
+extern void count_level_features(void);
 extern void clear_level_structures(void);
 extern void level_finalize_topology(void);
 extern void mklev(void);
@@ -1737,6 +1741,7 @@ extern boolean can_fog(struct monst *);
 extern boolean should_displace(struct monst *, coord *, long *, int, coordxy,
                                coordxy);
 extern boolean undesirable_disp(struct monst *, coordxy, coordxy);
+extern boolean can_hide_under_obj(struct obj *);
 
 /* ### monst.c ### */
 
@@ -1908,6 +1913,7 @@ extern int str_lines_max_width(const char *);
 extern char *stripdigits(char *);
 extern const char *get_lua_version(void);
 extern void nhl_pushhooked_open_table(lua_State *L);
+extern void tutorial(boolean);
 #endif /* !CROSSCOMPILE || CROSSCOMPILE_TARGET */
 #endif /* MAKEDEFS_C MDLIB_C CPPREGEX_C */
 
@@ -2316,6 +2322,7 @@ extern void artitouch(struct obj *);
 extern boolean ok_to_quest(void);
 extern void leader_speaks(struct monst *);
 extern void nemesis_speaks(void);
+extern void nemesis_stinks(coordxy, coordxy);
 extern void quest_chat(struct monst *);
 extern void quest_talk(struct monst *);
 extern void quest_stat_check(struct monst *);
@@ -2828,6 +2835,7 @@ extern void level_tele_trap(struct trap *, unsigned);
 extern void rloc_to(struct monst *, coordxy, coordxy);
 extern void rloc_to_flag(struct monst *, coordxy, coordxy, unsigned);
 extern boolean rloc(struct monst *, unsigned);
+extern boolean control_mon_tele(struct monst *, coord *cc, unsigned, boolean);
 extern boolean tele_restrict(struct monst *);
 extern void mtele_trap(struct monst *, struct trap *, int);
 extern int mlevel_tele_trap(struct monst *, struct trap *, boolean, int);
@@ -3130,6 +3138,7 @@ extern int hide_privileges(boolean);
 #ifdef ENHANCED_SYMBOLS
 extern int glyphrep(const char *);
 extern char *mixed_to_utf8(char *buf, size_t bufsz, const char *str, int *);
+extern const char *mixed_to_glyphinfo(const char *str, glyph_info *gip);
 extern int match_glyph(char *);
 extern void dump_all_glyphids(FILE *fp);
 extern void fill_glyphid_cache(void);

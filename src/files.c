@@ -2275,7 +2275,7 @@ do_write_config_file(void)
         fclose(fp);
         strbuf_empty(&buf);
         if (wrote != len)
-            pline("An error occurred, wrote only partial data (%lu/%lu).",
+            pline("An error occurred, wrote only partial data (%zu/%zu).",
                   wrote, len);
     }
     return ECMD_OK;

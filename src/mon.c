@@ -1,4 +1,4 @@
-/* NetHack 3.7	mon.c	$NHDT-Date: 1683831104 2023/05/11 18:51:44 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.501 $ */
+/* NetHack 3.7	mon.c	$NHDT-Date: 1687036544 2023/06/17 21:15:44 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.509 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -2477,7 +2477,7 @@ m_detach(
     if (mtmp->mleashed)
         m_unleash(mtmp, FALSE);
 
-    if (mtmp->mx > 0 && emits_light(mptr))
+    if (mx > 0 && emits_light(mptr))
         del_light_source(LS_MONSTER, monst_to_any(mtmp));
 
     /*
@@ -2504,7 +2504,7 @@ m_detach(
             /* The Archeologist, Caveman, and Priest quest texts describe
                the nemesis's body creating noxious fumes/gas when killed. */
             if (stinky_nemesis(mtmp))
-                create_gas_cloud(mx, my, 5, 8);
+                nemesis_stinks(mx, my);
         }
         if (mtmp->data->msound == MS_LEADER)
             leaddead();
@@ -2758,12 +2758,6 @@ mondead(struct monst *mtmp)
             break;
         }
     }
-#if 0   /* moved to m_detach() to kick in if mongone() happens */
-    if (mtmp->iswiz)
-        wizdead();
-    if (mtmp->data->msound == MS_NEMESIS)
-        nemdead();
-#endif
 
     if (mndx == PM_MEDUSA && gm.mvitals[mndx].died == 1) {
         record_achievement(ACH_MEDU); /* also generates a livelog event */
@@ -3571,6 +3565,17 @@ mnexto(struct monst *mtmp, unsigned int rlocflags)
         deal_with_overcrowding(mtmp);
         return;
     }
+    /* wizard-mode player can choose destination by setting 'montelecontrol'
+       option; enexto()'s value for 'mm' will be the default; 'savemm' is
+       used to make sure player doesn't choose hero's location and then
+       answer 'y' to the 'override invalid spot' prompt */
+    if (iflags.mon_telecontrol) {
+        coord savemm = mm;
+
+        if (!control_mon_tele(mtmp, &mm, rlocflags, FALSE))
+            mm = savemm;
+    }
+
     rloc_to_flag(mtmp, mm.x, mm.y, rlocflags);
     return;
 }
@@ -3602,6 +3607,7 @@ maybe_mnexto(struct monst *mtmp)
         if (couldsee(mm.x, mm.y)
             /* don't move grid bugs diagonally */
             && (diagok || mm.x == mtmp->mx || mm.y == mtmp->my)) {
+            /* [this doesn't honor the 'montelecontrol' option] */
             rloc_to(mtmp, mm.x, mm.y);
             return;
         }
@@ -3665,6 +3671,7 @@ mnearto(
         newx = mm.x;
         newy = mm.y;
     }
+    /* [this doesn't honor the 'montelecontrol' option] */
     rloc_to_flag(mtmp, newx, newy, rlocflags);
 
     if (move_other && othermon) {
@@ -4190,57 +4197,81 @@ maybe_unhide_at(coordxy x, coordxy y)
     }
 
     if (undetected
-        && ((hides_under(mtmp->data) && (!OBJ_AT(x, y) || trapped))
+        && ((hides_under(mtmp->data)
+             && (!OBJ_AT(x, y) || trapped
+                 || !can_hide_under_obj(gl.level.objects[x][y])))
             || (mtmp->data->mlet == S_EEL && !is_pool(x, y))))
         (void) hideunder(mtmp);
 }
 
-/* monster/hero tries to hide under something at the current location */
+/* monster/hero tries to hide under something at the current location;
+   if used by monster creation, should only happen during during level
+   creation, otherwise there will be message sequencing issues */
 boolean
 hideunder(struct monst *mtmp)
 {
     struct trap *t;
+    struct obj *otmp;
     const char *seenmon = (char *) 0, *seenobj = (char *) 0;
-    int seeit = canseemon(mtmp);
+    int seeit = gi.in_mklev ? 0 : canseemon(mtmp);
     boolean oldundetctd, undetected = FALSE, is_u = (mtmp == &gy.youmonst);
     coordxy x = is_u ? u.ux : mtmp->mx, y = is_u ? u.uy : mtmp->my;
 
     if (mtmp == u.ustuck) {
         ; /* undetected==FALSE; can't hide if holding you or held by you */
-    } else if (is_u ? (u.utrap && u.utraptype != TT_PIT)
-                    : (mtmp->mtrapped
-                       && (t = t_at(x, y)) != 0 && !is_pit(t->ttyp))) {
-        ; /* undetected==FALSE; can't hide while stuck in a non-pit trap */
+    } else if ((is_u ? u.utrap : mtmp->mtrapped)
+               || ((t = t_at(x, y)) != 0 && !is_pit(t->ttyp))) {
+        ; /* undetected==FALSE; can't hide while trapped or on/in/under
+             any non-pit trap when not trapped */
     } else if (mtmp->data->mlet == S_EEL) {
-        undetected = (is_pool(x, y) && !Is_waterlevel(&u.uz));
+        /* aquatic creatures only hide under water, not under objects;
+           they don't do so on the Plane of Water or when hero is also
+           under water unless some obstacle blocks line-of-sight */
+        undetected = (is_pool(x, y) && !Is_waterlevel(&u.uz)
+                      && (!Underwater || !couldsee(x, y)));
         if (seeit)
             seenobj = "the water";
-    } else if (hides_under(mtmp->data) && OBJ_AT(x, y)) {
-        struct obj *otmp = gl.level.objects[x][y];
-
-        if (seeit)
+    } else if (hides_under(mtmp->data)
+               /* hider-underers only hide under objects */
+               && (otmp = gl.level.objects[x][y]) != 0
+               /* most things can be hidden under, but not all */
+               && can_hide_under_obj(otmp)
+               /* aquatic creatures don't reach here; other swimmers
+                  shouldn't hide beneath underwater objects */
+               && !is_pool_or_lava(x, y)) {
+        if (seeit) /*&& (!is_pool(x, y) || (Underwater && distu(x, y) <= 2))*/
             seenobj = ansimpleoname(otmp);
-        /* most monsters won't hide under cockatrice corpse but they
+        /* most monsters won't hide under a cockatrice corpse but they
            can hide under a pile containing more than just such corpses */
-        while (otmp && otmp->otyp == CORPSE
-               && touch_petrifies(&mons[otmp->corpsenm]))
-            otmp = otmp->nexthere;
-        if (otmp != 0 || ((mtmp == &gy.youmonst) ? Stone_resistance
-                                                 : resists_ston(mtmp)))
+        if (is_u ? !Stone_resistance : !resists_ston(mtmp))
+            while (otmp && otmp->otyp == CORPSE
+                   && touch_petrifies(&mons[otmp->corpsenm]))
+                otmp = otmp->nexthere;
+        if (otmp)
             undetected = TRUE;
     }
 
     if (is_u) {
         oldundetctd = u.uundetected != 0;
         u.uundetected = undetected ? 1 : 0;
+#if 0   /* feedback handled via #monster */
+        if (undetected && !oldundeteced && seenobj)
+            You("hide under %s.", seenobj);
+#endif
     } else {
         if (seeit)
             seenmon = y_monnam(mtmp);
         oldundetctd = mtmp->mundetected != 0;
         mtmp->mundetected = undetected ? 1 : 0;
-        if (undetected && seenmon && seenobj)
-            You_see("%s %s under %s", seenmon,
+        /* the "you see" message won't be shown for monster hiding during
+           level creation because 'seeit' will be 0 so 'seenmon' and 'seenobj'
+           will be Null */
+        if (undetected && seenmon && seenobj) {
+            You_see("%s %s under %s.", seenmon,
                     locomotion(mtmp->data, "hide"), seenobj);
+            iflags.last_msg = PLNMSG_HIDE_UNDER;
+            gl.last_hider = mtmp->m_id;
+        }
     }
     if (undetected != oldundetctd)
         newsym(x, y);

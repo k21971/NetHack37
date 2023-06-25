@@ -85,6 +85,8 @@ static const char *const nhcore_call_names[NUM_NHCORE_CALLS] = {
     "moveloop_turn",
     "game_exit",
     "getpos_tip",
+    "enter_tutorial",
+    "leave_tutorial",
 };
 static boolean nhcore_call_available[NUM_NHCORE_CALLS];
 
@@ -1508,45 +1510,28 @@ nhl_callback(lua_State *L)
 {
     int argc = lua_gettop(L);
     int i;
+    boolean rm;
+    const char *fn, *cb;
 
-    if (argc == 2) {
-        const char *fn = luaL_checkstring(L, -1);
-        const char *cb = luaL_checkstring(L, -2);
+    if (!gl.luacore) {
+        nhl_error(L, "nh luacore not inited");
+        /*NOTREACHED*/
+        return 0;
+    }
 
-        if (!gl.luacore) {
-            nhl_error(L, "nh luacore not inited");
-            /*NOTREACHED*/
-            return 0;
+    if (argc == 2 || argc == 3) {
+        if (argc == 2) {
+            rm = FALSE;
+            fn = luaL_checkstring(L, -1);
+            cb = luaL_checkstring(L, -2);
+        } else {
+            rm = lua_toboolean(L, -1);
+            fn = luaL_checkstring(L, -2);
+            cb = luaL_checkstring(L, -3);
         }
-
         for (i = 0; i < NUM_NHCB; i++)
             if (!strcmp(cb, nhcb_name[i]))
                 break;
-
-        if (i >= NUM_NHCB)
-            return 0;
-
-        nhcb_counts[i]++;
-
-        lua_getglobal(gl.luacore, "nh_callback_set");
-        lua_pushstring(gl.luacore, cb);
-        lua_pushstring(gl.luacore, fn);
-        nhl_pcall(gl.luacore, 2, 0);
-    } else if (argc == 3) {
-        boolean rm = lua_toboolean(L, -1);
-        const char *fn = luaL_checkstring(L, -2);
-        const char *cb = luaL_checkstring(L, -3);
-
-        if (!gl.luacore) {
-            nhl_error(L, "nh luacore not inited");
-            /*NOTREACHED*/
-            return 0;
-        }
-
-        for (i = 0; i < NUM_NHCB; i++)
-            if (!strcmp(cb, nhcb_name[i]))
-                break;
-
         if (i >= NUM_NHCB)
             return 0;
 
@@ -1563,7 +1548,6 @@ nhl_callback(lua_State *L)
         lua_pushstring(gl.luacore, fn);
         nhl_pcall(gl.luacore, 2, 0);
     }
-
     return 0;
 }
 
@@ -1575,52 +1559,76 @@ nhl_callback(lua_State *L)
 static int
 nhl_gamestate(lua_State *L)
 {
+    static struct obj *gmst_invent = NULL;
+    static long gmst_moves = 0;
+    static boolean gmst_stored = FALSE;
+    static struct you gmst_ubak;
+    long wornmask;
+    struct obj *otmp;
     int argc = lua_gettop(L);
-    boolean reststate = argc > 0 ? lua_toboolean(L, -1) : FALSE;
-    static struct obj *invent = NULL;
-    static long moves = 0;
-    static boolean stored = FALSE;
-    static struct you ubak;
+    boolean reststate = (argc > 0) ? lua_toboolean(L, -1) : FALSE;
 
-    if (reststate && stored) {
+    debugpline4("gamestate: %d:%d (%c vs %c)", u.uz.dnum, u.uz.dlevel,
+                reststate ? 'T' : 'F', gmst_stored ? 't' : 'f');
+
+    if (reststate && gmst_stored) {
+        d_level cur_uz = u.uz, cur_uz0 = u.uz0;
+
         /* restore game state */
-        gm.moves = moves;
+        gm.moves = gmst_moves;
         gl.lastinvnr = 51;
         while (gi.invent)
             useupall(gi.invent);
-        while (invent) {
-            struct obj *otmp = invent;
-            long wornmask = otmp->owornmask;
+        while ((otmp = gmst_invent) != NULL) {
+            wornmask = otmp->owornmask;
             otmp->owornmask = 0L;
-            extract_nobj(otmp, &invent);
+            extract_nobj(otmp, &gmst_invent);
             addinv(otmp);
             if (wornmask)
                 setworn(otmp, wornmask);
         }
-        u = ubak;
+        u = gmst_ubak;
+        /* some restored state would confuse the level change in progress */
+        u.uz = cur_uz, u.uz0 = cur_uz0;
         init_uhunger();
-        stored = FALSE;
-    } else {
+        gmst_stored = FALSE;
+    } else if (!reststate && !gmst_stored) {
         /* store game state */
-        while (gi.invent) {
-            struct obj *otmp = gi.invent;
-            long wornmask = otmp->owornmask;
+        while ((otmp = gi.invent) != NULL) {
+            wornmask = otmp->owornmask;
             setnotworn(otmp);
             freeinv(otmp);
-            otmp->nobj = invent;
+            otmp->nobj = gmst_invent;
             otmp->owornmask = wornmask;
-            invent = otmp;
+            gmst_invent = otmp;
         }
-        gl.lastinvnr = 51;
-        moves = gm.moves;
-        ubak = u;
-        stored = TRUE;
+        gl.lastinvnr = 51; /* next inv letter to try to use will be 'a' */
+        gmst_moves = gm.moves;
+        gmst_ubak = u;
+        gmst_stored = TRUE;
+    } else {
+        impossible("nhl_gamestate: inconsistent state (%s vs %s)",
+                   reststate ? "restore" : "save",
+                   gmst_stored ? "already stored" : "not stored");
     }
     update_inventory();
     return 0;
 }
 
 RESTORE_WARNING_UNREACHABLE_CODE
+
+/* called from gotolevel(do.c) */
+void
+tutorial(boolean entering)
+{
+    l_nhcore_call(entering ? NHCORE_ENTER_TUTORIAL : NHCORE_LEAVE_TUTORIAL);
+
+    if (!entering) { /* after leaving, can't go back */
+        nhcore_call_available[NHCORE_ENTER_TUTORIAL]
+            = nhcore_call_available[NHCORE_LEAVE_TUTORIAL]
+                = FALSE;
+    }
+}
 
 static const struct luaL_Reg nhl_functions[] = {
     {"test", nhl_test},
@@ -1870,7 +1878,7 @@ nhl_pcall(lua_State *L, int nargs, int nresults)
 
     lua_pushcfunction(L, traceback_handler);
     lua_insert(L, 1);
-    (void)lua_getallocf(L, (void **)&nud);
+    (void) lua_getallocf(L, (void **) &nud);
 #ifdef NHL_SANDBOX
     if (nud && (nud->steps || nud->perpcall)) {
         if (nud->perpcall)
