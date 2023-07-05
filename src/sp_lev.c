@@ -124,7 +124,6 @@ static const char *get_mkroom_name(int);
 static int get_table_roomtype_opt(lua_State *, const char *, int);
 static int get_table_traptype_opt(lua_State *, const char *, int);
 static int get_traptype_byname(const char *);
-static void selection_recalc_bounds(struct selectionvar *);
 static lua_Integer get_table_intarray_entry(lua_State *, int, int);
 static struct sp_coder *sp_level_coder_init(void);
 
@@ -3558,7 +3557,7 @@ lspo_object(lua_State *L)
         tmpobj.lit = get_table_boolean_opt(L, "lit", 0);
         tmpobj.eroded = get_table_int_opt(L, "eroded", 0);
         tmpobj.locked = get_table_boolean_opt(L, "locked", -1);
-        tmpobj.trapped = get_table_int_opt(L, "trapped", -1);
+        tmpobj.trapped = get_table_boolean_opt(L, "trapped", -1);
         tmpobj.recharged = get_table_int_opt(L, "recharged", 0);
         tmpobj.greased = get_table_boolean_opt(L, "greased", 0);
         tmpobj.broken = get_table_boolean_opt(L, "broken", 0);
@@ -4562,7 +4561,7 @@ selection_getbounds(struct selectionvar *sel, NhRect *b)
 }
 
 /* recalc the boundary of selection, if necessary */
-static void
+void
 selection_recalc_bounds(struct selectionvar *sel)
 {
     coordxy x, y;
