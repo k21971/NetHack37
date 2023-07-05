@@ -41,12 +41,6 @@ extern const struct shclass shtypes[]; /* defined in shknam.c */
      || !gl.level.flags.deathdrops    \
      || (gl.level.flags.graveyard && is_undead(mdat) && rn2(3)))
 
-/* A specific combination of x_monnam flags for livelogging. The livelog
- * shouldn't show that you killed a hallucinatory monster and not what it
- * actually is. */
-#define livelog_mon_nam(mtmp) \
-    x_monnam(mtmp, ARTICLE_THE, (char *) 0,                 \
-             (SUPPRESS_IT | SUPPRESS_HALLUCINATION), FALSE)
 
 #if 0
 /* part of the original warning code which was replaced in 3.3.1 */
@@ -2769,8 +2763,6 @@ logdeadmon(struct monst *mtmp, int mndx)
         }
     }
 }
-
-#undef livelog_mon_nam
 
 /* monster 'mtmp' has died; maybe life-save, otherwise unshapeshift and
    update vanquished stats and update map */
