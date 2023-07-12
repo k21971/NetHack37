@@ -1,4 +1,4 @@
-HDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1201 $ $NHDT-Date: 1687036542 2023/06/17 21:15:42 $
+DT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1201 $ $NHDT-Date: 1687036542 2023/06/17 21:15:42 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -1219,6 +1219,9 @@ in wizard mode, #terrain has offers to view all map locations as single-
 	a legend showing letter-to-type correspondence; adding new type
 	"lava wall" didn't update that legend and misdescribed all the types
 	which have higher values
+restore the ability for trap creation via magic which creates pits to destroy
+	'furniture'
+allow #sit while flying over a squeaky board trap to trigger it
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -1637,6 +1640,12 @@ Lua selection operations 'subtract' and 'xor' didn't always work as intended
 accept 'true' or 'false' as value for des.object field 'trapped'
 special level loader didn't check for bad coordinates supplied by <level>.lua
 	file thorougnly enough
+hero might not be credited with "entered Mine Town" achievement for the town
+	variations which treat the whole level as the town if that level gets
+	entered via falling or level teleport
+in the theme room "water-surrounded vault", guarantee an item which can be
+	be used to escape from the room in one of the four chests
+pets capable of using items would pick up and wear cursed armor
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
@@ -1774,8 +1783,9 @@ curses: selecting a partial stack, unselecting it, and then selecting it
 macOS: Xcode project was failing to build if the path to the NetHack source
 	tree contained a space; the issue was within some shell script code
 	contained within the project
-msdos: add -DSTATUES_LOOK_LIKE_MONSTERS to Makefile1.cross so the VESA mode
+MS-DOS: add -DSTATUES_LOOK_LIKE_MONSTERS to Makefile1.cross so the VESA mode
 	can display statue glyphs
+MS-DOS: sample config file had same MENUCOLOR flaw as Windows (see below)
 Qt: quit if can't load tiles file instead of continuing and then segfaulting
 Qt: [later] tiles load failure at startup now continues using an ascii map
 Qt: use more columns for extended command selection dialog so that the number
@@ -1927,6 +1937,8 @@ Windows: When there was no interesting background in get_bk_glyph()
 	GLYPH_UNEXPLORED as a background tile to merge with the
 	foreground tile, so check for GLYPH_UNEXPLORED and bypass that
 Windows: fix range error detected by address sanitizer in plselInitDialog()
+Windows: the .nethackrc template contained a sample MENUCOLOR pattern for
+	"cursed .* (being worn)" which didn't work; parentheses need quotes
 X11: substantial overhaul of status display, both 'fancy' and 'tty-style'
 X11: extend fancy status one-turn inverse video status-change highlighting to
 	hunger, encumbrance, and conditions
@@ -2181,6 +2193,9 @@ include monster size in feedback for wand of probing and stethoscope
 crystal armor is now subject to cracking damage rather than outright breakage
 when a doppelganger takes on mplayer (fake hero) form, usually choose role
 	from the high scores file; name too if visable at the time
+can now write unknown spellbook without need of Luck when spell is known;
+	if spell becomes known without having read its book (potential divine
+	gift), writing the book while the spell is still fresh will succeed
 
 
 Platform- and/or Interface-Specific New Features
