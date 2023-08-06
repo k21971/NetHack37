@@ -1224,7 +1224,7 @@ eval_notify_windowport_field(int fld, boolean *valsetlist, int idx)
                 ? percentage(curr, &gb.blstats[idx][fldmax])
                 : 0; /* bullet proofing; can't get here */
         if (pc != prev->percent_value)
-            chg = 1;
+            chg = (pc < prev->percent_value) ? -1 : 1;
         curr->percent_value = pc;
     } else {
         pc = 0;
@@ -1475,7 +1475,7 @@ init_blstats(void)
  *
  */
 static int
-compare_blstats(struct istat_s *bl1, struct istat_s*bl2)
+compare_blstats(struct istat_s *bl1, struct istat_s *bl2)
 {
     int anytype, result = 0;
 
@@ -1486,8 +1486,8 @@ compare_blstats(struct istat_s *bl1, struct istat_s*bl2)
 
     anytype = bl1->anytype;
     if ((!bl1->a.a_void || !bl2->a.a_void)
-        && (anytype == ANY_IPTR || anytype == ANY_UPTR || anytype == ANY_LPTR
-            || anytype == ANY_ULPTR)) {
+        && (anytype == ANY_IPTR || anytype == ANY_UPTR
+            || anytype == ANY_LPTR || anytype == ANY_ULPTR)) {
         panic("compare_blstat: invalid pointer %s, %s",
               fmt_ptr((genericptr_t) bl1->a.a_void),
               fmt_ptr((genericptr_t) bl2->a.a_void));
@@ -1897,10 +1897,10 @@ fldname_to_bl_indx(const char *name)
 }
 
 static boolean
-hilite_reset_needed(struct istat_s *bl_p,
-                    long augmented_time) /* no longer augmented; it once
-                                          * encoded fractional amounts for
-                                          * multiple moves within same turn */
+hilite_reset_needed(
+    struct istat_s *bl_p,
+    long augmented_time) /* no longer augmented; it once encoded fractional
+                          * amounts for multiple moves within same turn */
 {
     /*
      * This 'multi' handling may need some tuning...
@@ -1925,13 +1925,13 @@ status_eval_next_unhilite(void)
     struct istat_s *curr;
     long next_unhilite, this_unhilite;
 
-    gb.bl_hilite_moves = gm.moves; /* simplified; at one point we used to try
-                                  * to encode fractional amounts for multiple
-                                  * moves within same turn */
+    gb.bl_hilite_moves = gm.moves; /* simplified; at one point we used to
+                                    * try to encode fractional amounts for
+                                    * multiple moves within same turn */
     /* figure out whether an unhilight needs to be performed now */
     next_unhilite = 0L;
     for (i = 0; i < MAXBLSTATS; ++i) {
-        curr = &gb.blstats[0][i]; /* blstats[0][*].time == blstats[1][*].time */
+        curr = &gb.blstats[0][i]; /* blstats[0][*].time==blstats[1][*].time */
 
         if (curr->chg) {
             struct istat_s *prev = &gb.blstats[1][i];
@@ -2004,8 +2004,11 @@ noneoftheabove(const char *hl_text)
  *     pointer to rule that applies; Null if no rule does.
  */
 static struct hilite_s *
-get_hilite(int idx, int fldidx, genericptr_t vp, int chg, int pc,
-           int *colorptr)
+get_hilite(
+    int idx, int fldidx,
+    genericptr_t vp,
+    int chg, int pc,
+    int *colorptr)
 {
     struct hilite_s *hl, *rule = 0;
     anything *value = (anything *) vp;
@@ -2025,11 +2028,20 @@ get_hilite(int idx, int fldidx, genericptr_t vp, int chg, int pc,
            ancient configurations; we don't need LONG_MIN */
         long max_lval = -LONG_MAX, min_lval = LONG_MAX;
         boolean exactmatch = FALSE, updown = FALSE, changed = FALSE,
-                perc_or_abs = FALSE;
+                perc_or_abs = FALSE, crit_hp = FALSE;
 
         /* min_/max_ are used to track best fit */
         for (hl = gb.blstats[0][fldidx].thresholds; hl; hl = hl->next) {
             dt = initblstats[fldidx].anytype; /* only needed for 'absolute' */
+            /* for HP, if we already have a critical-hp rule then we ignore
+               other HP rules unless we hit another critical-hp one (last
+               one found wins); critical-hp takes precedence over temporary
+               HP highlights, otherwise a hero with regeneration and an up
+               or changed rule for HP would always show that up or changed
+               highlight even when within the critical-hp threshold because
+               the value will go up by at least one on every move */
+            if (crit_hp && hl->behavior != BL_TH_CRITICALHP)
+                continue;
             /* if we've already matched a temporary highlight, it takes
                precedence over all persistent ones; we still process
                updown rules to get the last one which qualifies */
@@ -2183,8 +2195,10 @@ get_hilite(int idx, int fldidx, genericptr_t vp, int chg, int pc,
                 rule = hl;
                 break;
             case BL_TH_CRITICALHP:
-                if (critically_low_hp(FALSE)) {
+                if (fldidx == BL_HP && critically_low_hp(FALSE)) {
                     rule = hl;
+                    crit_hp = TRUE;
+                    updown = changed = perc_or_abs = FALSE;
                 }
                 break;
             case BL_TH_NONE:

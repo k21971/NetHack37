@@ -1225,6 +1225,8 @@ allow #sit while flying over a squeaky board trap to trigger it
 weight of statues of wraiths and of monsters which never leave a corpse was 0
 when a werecreature in human form attacked hero, it could transform to critter
 	despite hero having the Protection_from_shape_changers_attibute
+status highlighting for hit points didn't work as intended for up or down HP
+	changes; 'up' rule was used for both, 'down' rule was ignored
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -1652,6 +1654,9 @@ pets capable of using items would pick up and wear cursed armor
 if something breakable was set up as alternate weapon and the second of two
 	bare-handed hits succeeded, it would be broken and trigger impossible
 	"objfree: deleting worn obj"
+strength cap for hero poly'd into an orc captain was 18/50 even though it is
+	10/100 for Uruk-Hai and monster Uruk-Hai can grow into orc captains
+status_hilite rule for critical-hp takes precedence over up/down/changed HP
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
