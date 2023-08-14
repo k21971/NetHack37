@@ -32,7 +32,9 @@ static boolean modifiers_available = FALSE;
 
 static int modified(int ch);
 static void update_modifiers(void);
-static int parse_escape_sequence(boolean *);
+static int parse_escape_sequence(int, boolean *);
+
+#define SS3 M(C('O')) /* 8-bit escape sequence initiator for VT number pad */
 
 int
 curses_getch(void)
@@ -866,11 +868,12 @@ curses_convert_keys(int key)
     /* Handle arrow and keypad keys, but only when getting a command
        (or a command-like keystroke for getpos() or getdir()). */
     switch (key) {
+    case SS3: /* M-^O, 8-bit version of ESC 'O' c for keypad key */
     case '\033': /* ESC or ^[ */
         /* changes ESC c to M-c or number pad key to corresponding digit
            (but we only get here via key==ESC if curses' getch() didn't
            change the latter to KEY_xyz) */
-        ret = parse_escape_sequence(&numpad_esc);
+        ret = parse_escape_sequence(key, &numpad_esc);
         reject = ((uchar) ret < 1 || ret > 255);
         as_is = !numpad_esc; /* don't perform phonepad inversion */
         break;
@@ -1068,35 +1071,62 @@ curses_mouse_support(int mode) /* 0: off, 1: on, 2: alternate on */
 #endif
 }
 
-/* caller just got an input character of ESC;
+/* caller just got an input character of ESC or M-O;
    note: curses converts a lot of escape sequences to single values greater
    than 255 and those won't look like ESC to caller so won't get here */
 static int
-parse_escape_sequence(boolean *keypadnum)
+parse_escape_sequence(int key, boolean *keypadnum)
 {
 #ifndef PDCURSES
-    int ret;
+    int ret, keypadother = 0;
 
     *keypadnum = FALSE;
 
     timeout(10);
     ret = getch();
 
-    if (ret == 'O') {               /* Numeric keypad */
-        /* ESC O <something> */
-        ret = getch();
+    if (ret == 'O' || key == SS3) { /* handle numeric keypad */
+        /*
+         * ESC O <pending> or M-^O <something|nothing>.
+         *
+         * For the former, we don't have the next char yet so get it now.
+         * If there isn't one, treat ESC O as if user typed M-O (which
+         * is probably the case, via alt+shift+O combo sending two char
+         * "ESC O").
+         *
+         * For the latter, it there wasn't another char then 'ret' will
+         * be ERR and we'll treat the result as M-^O.  However, if there
+         * is another char and it is O meant as two characters "M-^O O"
+         * we'll be fooled, but that's not a valid escape sequence so
+         * don't worry about those two characters arriving together.
+         */
+        if (key == '\033')
+            ret = getch();
 
         if (ret == ERR) {
-            ret = 'O'; /* there was no third char; treat as M-O below */
+            /* there was no additional char; treat as M-O below */
+            ret = (key == '\033') ? 'O' : C('O');
         } else if (ret >= 112 && ret <= 121) { /* 'p'..'y' */
             *keypadnum = TRUE; /* convert 'p'..'y' to '0'..'9' below */
+        } else if (ret >= 108 && ret <= 110) { /* 'l'..'n' */
+            keypadother = 1;   /* convert 'l','m','n' to ',','.','-' below */
+        } else if (ret == 'M') {
+            keypadother = 2;   /* convert "ESC O M" or "SS3 M" to ^M */
         }
     }
 
     timeout(-1); /* reset to 'wait unlimited time for next input' */
 
     if (*keypadnum) {
-        ret -= (112 - '0');         /* Convert c from 'ESC O c' to digit */
+        /* 'p' -> '0', ..., 'y' -> '9' */
+        ret -= ('p' - '0');         /* Convert c from 'ESC O c' to digit */
+    } else if (keypadother > 0) {
+        /* conversion for VT keypad keys (no plus; ignore PF1 through PF4)
+           [typical PC keyboard has period and plus, no comma or minus] */
+        if (keypadother == 1)
+            ret -= ('l' - ',');     /* keypad comma, period, or minus */
+        else
+            ret = C('M');           /* keypad <enter> */
     } else if (ret != ERR && ret <= 255) {
         /* ESC <something>; effectively 'altmeta' behind player's back */
         ret = M(ret);               /* Meta key support for most terminals */
@@ -1106,10 +1136,13 @@ parse_escape_sequence(boolean *keypadnum)
 
     return ret;
 #else
+    nhUse(key);
     nhUse(keypadnum);
     return '\033';
 #endif /* !PDCURSES */
 }
+
+#undef SS3
 
 /* update_modifiers() and modified() will never be
    called if modifiers_available is FALSE */
