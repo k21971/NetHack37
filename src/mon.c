@@ -1,4 +1,4 @@
-/* NetHack 3.7	mon.c	$NHDT-Date: 1691877848 2023/08/12 22:04:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.514 $ */
+/* NetHack 3.7	mon.c	$NHDT-Date: 1693292534 2023/08/29 07:02:14 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.517 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -2617,7 +2617,7 @@ lifesaved_monster(struct monst* mtmp)
 
 DISABLE_WARNING_FORMAT_NONLITERAL
 
-/* when a ahape-shifted vampire is killed, it reverts to base form instead
+/* when a shape-shifted vampire is killed, it reverts to base form instead
    of dying; moved into separate routine to unclutter mondead() */
 static boolean
 vamprises(struct monst *mtmp)
@@ -2687,12 +2687,10 @@ vamprises(struct monst *mtmp)
 
 RESTORE_WARNING_FORMAT_NONLITERAL
 
-/* A specific combination of x_monnam flags for livelogging. The livelog
- * shouldn't show that you killed a hallucinatory monster and not what it
- * actually is. */
+/* specific combination of x_monnam flags for livelogging; show what was
+   actually killed even when unseen or hallucinated to be something else */
 #define livelog_mon_nam(mtmp) \
-    x_monnam(mtmp, ARTICLE_THE, (char *) 0,                 \
-             (SUPPRESS_IT | SUPPRESS_HALLUCINATION), FALSE)
+    x_monnam(mtmp, ARTICLE_THE, (char *) 0, EXACT_NAME, FALSE)
 
 /* when a mon has died, maybe record an achievement or issue livelog message;
    moved into separate routine to unclutter mondead() */
@@ -2703,7 +2701,8 @@ logdeadmon(struct monst *mtmp, int mndx)
 
     if (mndx == PM_MEDUSA && howmany == 1) {
         record_achievement(ACH_MEDU); /* also generates a livelog event */
-    } else if (unique_corpstat(mtmp->data)
+    } else if ((unique_corpstat(mtmp->data)
+                && (mndx != PM_HIGH_CLERIC || !mtmp->mrevived))
                || (mtmp->isshk && !mtmp->mrevived)) {
         char shkdetail[QBUFSZ];
         const char *mkilled;
@@ -2729,6 +2728,11 @@ logdeadmon(struct monst *mtmp, int mndx)
                      /* in case shk name doesn't include Mr or Ms honoric */
                      mtmp->female ? "proprietrix" : "proprietor",
                      herodidit ? "" : ",");
+        } else if (mndx == PM_HIGH_CLERIC) {
+            /* the high priest[ess] monster is not unique; we know that
+               this is the first death for this particular high priest
+               (because of the !mtmp->mrevived test above) */
+            howmany = 1;
         }
 
         /* killing a unique more than once doesn't get logged every time;

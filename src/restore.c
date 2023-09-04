@@ -1144,6 +1144,7 @@ getlev(NHFILE *nhfp, int pid, xint8 lev)
     restdamage(nhfp);
     rest_regions(nhfp);
     rest_bubbles(nhfp); /* for water and air; empty marker on other levels */
+    load_exclusions(nhfp);
 
     if (ghostly) {
         stairway *stway = gs.stairs;

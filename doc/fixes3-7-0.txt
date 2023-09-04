@@ -1,4 +1,4 @@
-DT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1222 $ $NHDT-Date: 1689448843 2023/07/15 19:20:43 $
+$NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1235 $ $NHDT-Date: 1693427872 2023/08/30 20:37:52 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -1228,6 +1228,12 @@ when a werecreature in human form attacked hero, it could transform to critter
 status highlighting for hit points didn't work as intended for up or down HP
 	changes; 'up' rule was used for both, 'down' rule was ignored
 unhide an unseen water monster using a polymorph trap on land
+allow defining random-teleport exclusion zones in lua
+if Magicbane cancelled a shapeshifter, forcing it to 'unshift', subsequent
+	messages continued to refer to the shifted form
+a pet that was poison resistant but not stoning resistant would eat Medusa's
+	corpse and be turned to stone
+ring of hunger prevents choking on your food
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -1658,6 +1664,12 @@ if something breakable was set up as alternate weapon and the second of two
 strength cap for hero poly'd into an orc captain was 18/50 even though it is
 	10/100 for Uruk-Hai and monster Uruk-Hai can grow into orc captains
 status_hilite rule for critical-hp takes precedence over up/down/changed HP
+livelog/#chronicle of multiple high priests reported their deaths as
+	"killed high priest" and "killed high priest (2nd time)" instead of
+	"killed high priest of Foo" and "killed high priest of Bar"
+using wizard mode #wizkill outside the endgame followed by m^V to enter the
+	endgame without any intervening moves would result in impossible
+	"dmonsfree: 0 removed doesn't match N pending on <endgame level>"
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository

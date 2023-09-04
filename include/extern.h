@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1689629242 2023/07/17 21:27:22 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1279 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1693292519 2023/08/29 07:01:59 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1282 $ */
 /* Copyright (c) Steve Creps, 1988.                               */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -746,6 +746,9 @@ extern char *stairs_description(stairway *, char *, boolean);
 extern schar print_dungeon(boolean, schar *, xint16 *);
 extern char *get_annotation(d_level *);
 extern int donamelevel(void);
+extern void free_exclusions(void);
+extern void save_exclusions(NHFILE *);
+extern void load_exclusions(NHFILE *);
 extern int dooverview(void);
 extern void show_overview(int, int);
 extern void rm_mapseen(int);
@@ -1700,7 +1703,9 @@ extern const char *msummon_environ(struct permonst *, const char **);
 extern const struct permonst *raceptr(struct monst *);
 extern boolean olfaction(struct permonst *);
 unsigned long cvt_adtyp_to_mseenres(uchar);
+unsigned long cvt_prop_to_mseenres(uchar);
 extern void monstseesu(unsigned long);
+extern void monstunseesu(unsigned long);
 extern boolean resist_conflict(struct monst *);
 extern boolean mon_knows_traps(struct monst *, int);
 extern void mon_learns_traps(struct monst *, int);
@@ -2296,7 +2301,7 @@ extern boolean inhistemple(struct monst *);
 extern int pri_move(struct monst *);
 extern void priestini(d_level *, struct mkroom *, int, int, boolean);
 extern aligntyp mon_aligntyp(struct monst *);
-extern char *priestname(struct monst *, int, char *);
+extern char *priestname(struct monst *, int, boolean, char *);
 extern boolean p_coaligned(struct monst *);
 extern struct monst *findpriest(char);
 extern void intemple(int);
