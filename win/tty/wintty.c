@@ -1,4 +1,4 @@
-/* NetHack 3.7	wintty.c	$NHDT-Date: 1661295670 2022/08/23 23:01:10 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.326 $ */
+/* NetHack 3.7	wintty.c	$NHDT-Date: 1695430217 2023/09/23 00:50:17 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.344 $ */
 /* Copyright (c) David Cohrs, 1991                                */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -234,6 +234,7 @@ static void tty_putsym(winid, int, int, char);
 #endif
 #ifdef STATUS_HILITES
 #define MAX_STATUS_ROWS 3
+#define StatusRows() ((iflags.wc2_statuslines <= 2) ? 2 : MAX_STATUS_ROWS)
 static boolean check_fields(boolean forcefields, int sz[MAX_STATUS_ROWS]);
 static void render_status(void);
 static void tty_putstatusfield(const char *, int, int);
@@ -314,7 +315,7 @@ print_vt_code(int i, int c, int d)
     }
 }
 #else
-# define print_vt_code(i, c, d) ;
+#define print_vt_code(i, c, d) /*empty*/
 #endif /* !TTY_TILES_ESCCODES */
 #define print_vt_code1(i)     print_vt_code((i), -1, -1)
 #define print_vt_code2(i,c)   print_vt_code((i), (c), -1)
@@ -334,9 +335,9 @@ print_vt_soundcode_idx(int idx, int v)
                    idx, VT_ANSI_COMMAND);
     }
 }
-#else
-# define print_vt_soundcode_idx(idx, v) ;
-#endif /* !TTY_SOUND_ESCCODES */
+#else /* !(USER_SOUNDS && TTY_SOUND_ESCCODES) */
+#define print_vt_soundcode_idx(idx, v) ;
+#endif /* ?(USER_SOUNDS && TTY_SOUND_ESCCODES) */
 
 /* clean up and quit */
 static void
@@ -541,7 +542,7 @@ tty_init_nhwindows(int *argcp UNUSED, char **argv UNUSED)
 
     /* 'statuslines' defaults to set_in_config, allowed but invisible;
        make it dynamically settable if feasible, otherwise visible */
-    if (tty_procs.wincap2 & WC2_STATUSLINES)
+    if ((tty_procs.wincap2 & WC2_STATUSLINES) != 0)
         set_wc2_option_mod_status(WC2_STATUSLINES,
 #ifndef CLIPPING
                                   (LI < 1 + ROWNO + 2) ? set_gameview :
@@ -1269,7 +1270,7 @@ process_menu_window(winid window, struct WinDesc *cw)
     gacc[0] = '\0';
     if (cw->how != PICK_NONE) {
         int i, gcnt[128];
-#define GSELIDX(c) (c & 127) /* guard against `signed char' */
+#define GSELIDX(c) ((c) & 127) /* guard against `signed char' */
 
         for (i = 0; i < SIZE(gcnt); i++)
             gcnt[i] = 0;
@@ -1293,6 +1294,7 @@ process_menu_window(winid window, struct WinDesc *cw)
                     *rp++ = curr->gselector;
                     *rp = '\0'; /* re-terminate for strchr() */
                 }
+#undef GSELIDX
     }
     resp_len = 0; /* lint suppression */
 
@@ -1650,6 +1652,7 @@ process_menu_window(winid window, struct WinDesc *cw)
     } /* while */
     cw->morestr = msave;
     free((genericptr_t) morestr);
+#undef MENU_EXPLICIT_CHOICE
 }
 
 static void
@@ -3518,7 +3521,7 @@ tty_print_glyph(
     }   /* iflags.use_color aka iflags.wc_color */
 
     /* must be after color check; term_end_color may turn off inverse too;
-       BW_LAVA and BW_ICE won't ever be set when color is on;
+       BW_LAVA, BW_ICE, BW_SINK, BW_ENGR won't ever be set when color is on;
        (tried bold for ice but it didn't look very good; inverse is easier
        to see although the Valkyrie quest ends up being hard on the eyes) */
     if (iflags.use_color
@@ -3527,11 +3530,12 @@ tty_print_glyph(
         ttyDisplay->framecolor = bkglyphinfo->framecolor;
         term_start_bgcolor(bkglyphinfo->framecolor);
 #endif
-    } else if (((special & MG_PET) != 0 && iflags.hilite_pet)
-        || ((special & MG_OBJPILE) != 0 && iflags.hilite_pile)
-        || ((special & MG_FEMALE) != 0 && wizard && iflags.wizmgender)
-        || ((special & (MG_DETECT | MG_BW_LAVA | MG_BW_ICE | MG_BW_SINK)) != 0
-            && iflags.use_inverse)) {
+    } else if ((((special & MG_PET) != 0 && iflags.hilite_pet)
+                || ((special & MG_OBJPILE) != 0 && iflags.hilite_pile)
+                || ((special & MG_FEMALE) != 0 && wizard && iflags.wizmgender)
+                || ((special & (MG_DETECT | MG_BW_LAVA | MG_BW_ICE
+                                | MG_BW_SINK | MG_BW_ENGR)) != 0))
+               && iflags.use_inverse) {
         term_start_attr(ATR_INVERSE);
         inverse_on = TRUE;
     }
@@ -3837,7 +3841,7 @@ static struct tty_status_fields tty_status[2][MAXBLSTATS]; /* 2: NOW,BEFORE */
 static int hpbar_percent, hpbar_color;
 extern const struct conditions_t conditions[CONDITION_COUNT];
 
-static const char *encvals[3][6] = {
+static const char *const encvals[3][6] = {
     { "", "Burdened", "Stressed", "Strained", "Overtaxed", "Overloaded" },
     { "", "Burden",   "Stress",   "Strain",   "Overtax",   "Overload"   },
     { "", "Brd",      "Strs",     "Strn",     "Ovtx",      "Ovld"       }
@@ -3867,6 +3871,8 @@ static const enum statusfields
       blPAD, blPAD, blPAD, blPAD, blPAD, blPAD, blPAD, blPAD, blPAD }
 };
 static const enum statusfields (*fieldorder)[MAX_PER_ROW];
+#undef MAX_PER_ROW
+#undef blPAD
 
 static int finalx[3][2];    /* [rows][NOW or BEFORE] */
 static boolean windowdata_init = FALSE;
@@ -3905,7 +3911,7 @@ tty_status_init(void)
 #ifdef STATUS_HILITES
     int i, num_rows;
 
-    num_rows = (iflags.wc2_statuslines < 3) ? 2 : 3;
+    num_rows = StatusRows(); /* 2 or 3 */
     fieldorder = (num_rows != 3) ? twolineorder : threelineorder;
 
     for (i = 0; i < MAXBLSTATS; ++i) {
@@ -3928,8 +3934,11 @@ tty_status_init(void)
 }
 
 void
-tty_status_enablefield(int fieldidx, const char *nm, const char *fmt,
-                       boolean enable)
+tty_status_enablefield(
+    int fieldidx,
+    const char *nm,
+    const char *fmt,
+    boolean enable)
 {
     genl_status_enablefield(fieldidx, nm, fmt, enable);
 }
@@ -4147,8 +4156,7 @@ make_things_fit(boolean force_update)
     int trycnt, fitting = 0, requirement;
     int rowsz[MAX_STATUS_ROWS], num_rows, condrow, otheroptions = 0;
 
-    num_rows = (iflags.wc2_statuslines < MAX_STATUS_ROWS)
-                    ? 2 : MAX_STATUS_ROWS;
+    num_rows = StatusRows();
     condrow = num_rows - 1; /* always last row, 1 for 0..1 or 2 for 0..2 */
     cond_shrinklvl = 0;
     if (enc_shrinklvl > 0 && num_rows == 2)
@@ -4214,9 +4222,7 @@ check_fields(boolean forcefields, int sz[MAX_STATUS_ROWS])
     if (!windowdata_init && !check_windowdata())
         return FALSE;
 
-    num_rows = (iflags.wc2_statuslines < MAX_STATUS_ROWS)
-                    ? 2 : MAX_STATUS_ROWS;
-
+    num_rows = StatusRows(); /* 2 or 3 */
     for (row = 0; row < num_rows; ++row) {
         sz[row] = 0;
         col = 1;
@@ -4310,15 +4316,15 @@ check_fields(boolean forcefields, int sz[MAX_STATUS_ROWS])
 static void
 status_sanity_check(void)
 {
-    int i;
-    static boolean in_sanity_check = FALSE;
     static const char *const idxtext[] = {
-        "BL_TITLE", "BL_STR", "BL_DX", "BL_CO", "BL_IN", "BL_WI", /* 0.. 5   */
-        "BL_CH","BL_ALIGN", "BL_SCORE", "BL_CAP", "BL_GOLD",     /* 6.. 10  */
-        "BL_ENE", "BL_ENEMAX", "BL_XP", "BL_AC", "BL_HD",       /* 11.. 15 */
-        "BL_TIME", "BL_HUNGER", "BL_HP", "BL_HPMAX",           /* 16.. 19 */
-        "BL_LEVELDESC", "BL_EXP", "BL_CONDITION"              /* 20.. 22 */
+        "BL_TITLE", "BL_STR", "BL_DX", "BL_CO", "BL_IN", "BL_WI", /*  0.. 5 */
+        "BL_CH","BL_ALIGN", "BL_SCORE", "BL_CAP", "BL_GOLD",      /*  6..10 */
+        "BL_ENE", "BL_ENEMAX", "BL_XP", "BL_AC", "BL_HD",         /* 11..15 */
+        "BL_TIME", "BL_HUNGER", "BL_HP", "BL_HPMAX",              /* 16..19 */
+        "BL_LEVELDESC", "BL_EXP", "BL_CONDITION",                 /* 20..22 */
     };
+    static boolean in_sanity_check = FALSE;
+    int i;
 
     if (in_sanity_check)
         return;
@@ -4329,9 +4335,15 @@ status_sanity_check(void)
      */
     for (i = 0; i < MAXBLSTATS; ++i) {
         if (tty_status[NOW][i].sanitycheck) {
-            char panicmsg[BUFSZ];
+            char panicmsg[BUFSZ], indxtxt[40];
 
-            Sprintf(panicmsg, "failed on tty_status[NOW][%s].", idxtext[i]);
+            /* guard against an increase in MAXBLSTATS in botl.h without
+               a corresponding expansion of idxtext[] here */
+            if (i < SIZE(idxtext))
+                Strcpy(indxtxt, idxtext[i]);
+            else
+                Sprintf(indxtxt, "%d", i);
+            Sprintf(panicmsg, "failed on tty_status[NOW][%s].", indxtxt);
             paniclog("status_sanity_check", panicmsg);
             tty_status[NOW][i].sanitycheck = FALSE;
             /*
@@ -4559,7 +4571,7 @@ render_status(void)
         return;
     }
 
-    num_rows = (iflags.wc2_statuslines < MAX_STATUS_ROWS) ? 2 : MAX_STATUS_ROWS;
+    num_rows = StatusRows(); /* 2 or 3 */
     for (row = 0; row < num_rows; ++row) {
         HUPSKIP();
         y = row;
@@ -4767,16 +4779,61 @@ render_status(void)
     return;
 }
 
+#undef Begin_Attr
+#undef End_Attr
+#ifdef condcolor
+#undef condcolor
+#endif
+#ifdef term_start_color
+#undef term_start_color
+#undef term_end_color
+#endif
+#undef FORCE_RESET
+#undef NO_RESET
+#undef MAX_STATUS_ROWS
+#undef StatusRows
+
 #endif /* STATUS_HILITES */
 
 #if defined(USER_SOUNDS) && defined(TTY_SOUND_ESCCODES)
 void
 play_usersound_via_idx(int idx, int volume)
 {
-     print_vt_soundcode_idx(idx, volume);
+    print_vt_soundcode_idx(idx, volume);
 }
 #endif /* USER_SOUNDS && TTY_SOUND_ESCCODES */
 
+#ifdef VT_ANSI_COMMAND
+#undef VT_ANSI_COMMAND
+#endif
+#ifdef AVTC_GLYPH_START /* TTY_TILES_ESCCODES */
+#undef AVTC_GLYPH_START
+#undef AVTC_GLYPH_END
+#undef AVTC_SELECT_WINDOW
+#undef AVTC_INLINE_SYNC
+#endif
+#ifdef AVTC_SOUND_PLAY /* TTY_SOUND_ESCCODES */
+#undef AVTC_SOUND_PLAY
+#endif
+
+#ifdef print_vt_code
+#undef print_vt_code
+#endif
+#undef print_vt_code1
+#undef print_vt_code2
+#undef print_vt_code3
+#ifdef print_vt_soundcode_idx
+#undef print_vt_soundcode_idx
+#endif
+
+#ifdef getret
+#undef getret
+#endif
+#undef HUPSKIP
+#undef HUPSKIP_RESULT
+
 #endif /* TTY_GRAPHICS */
+
+#undef H2344_BROKEN
 
 /*wintty.c*/

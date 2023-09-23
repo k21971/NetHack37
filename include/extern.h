@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1693292519 2023/08/29 07:01:59 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1282 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1695159584 2023/09/19 21:39:44 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1287 $ */
 /* Copyright (c) Steve Creps, 1988.                               */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -24,7 +24,7 @@ extern unsigned FITSuint_(unsigned long long, const char *, int);
 
 /* ### allmain.c ### */
 
-extern void early_init(void);
+extern void early_init(int, char *[]);
 extern void moveloop_core(void);
 extern void moveloop(boolean);
 extern void stop_occupation(void);
@@ -311,6 +311,7 @@ extern char readchar_poskey(coordxy *, coordxy *, int *);
 extern void sanity_check(void);
 extern char* key2txt(uchar, char *);
 extern char yn_function(const char *, const char *, char, boolean);
+extern char paranoid_ynq(boolean, const char *, boolean);
 extern boolean paranoid_query(boolean, const char *);
 extern void makemap_prepost(boolean, boolean);
 
@@ -354,6 +355,7 @@ extern int monster_detect(struct obj *, int);
 extern int trap_detect(struct obj *);
 extern const char *level_distance(d_level *);
 extern void use_crystal_ball(struct obj **);
+extern void show_map_spot(coordxy, coordxy, boolean);
 extern void do_mapping(void);
 extern void do_vicinity_map(struct obj *);
 extern void cvt_sdoor_to_door(struct rm *);
@@ -818,6 +820,11 @@ extern struct kinfo *find_delayed_killer(int);
 extern void dealloc_killer(struct kinfo *);
 extern void save_killers(NHFILE *);
 extern void restore_killers(NHFILE *);
+#ifdef CRASHREPORT
+extern boolean submit_web_report(const char *, char *);
+extern void crashreport_init(int, char *[]);
+extern void crashreport_bidshow(void);
+#endif
 extern char *build_english_list(char *);
 #if defined(PANICTRACE) && !defined(NO_SIGNAL)
 extern void panictrace_setsignals(boolean);
@@ -933,7 +940,7 @@ extern void paniclog(const char *, const char *);
 extern void testinglog(const char *, const char *, const char *);
 extern int validate_prefix_locations(char *);
 #ifdef SELECTSAVED
-extern char *plname_from_file(const char *);
+extern char *plname_from_file(const char *, boolean);
 #endif
 extern char **get_saved_games(void);
 extern void free_saved_games(char **);
@@ -1150,6 +1157,7 @@ extern void addinv_core1(struct obj *);
 extern void addinv_core2(struct obj *);
 extern struct obj *addinv(struct obj *);
 extern struct obj *addinv_before(struct obj *, struct obj *);
+extern struct obj *addinv_nomerge(struct obj *);
 extern struct obj *hold_another_object(struct obj *, const char *,
                                        const char *, const char *);
 extern void useupall(struct obj *);
@@ -2422,7 +2430,7 @@ extern int restore_menu(winid);
 #endif
 extern void minit(void);
 extern boolean lookup_id_mapping(unsigned, unsigned *);
-extern int validate(NHFILE *, const char *);
+extern int validate(NHFILE *, const char *, boolean);
 extern void reset_restpref(void);
 extern void set_restpref(const char *);
 extern void set_savepref(const char *);
@@ -2920,6 +2928,7 @@ extern struct monst *animate_statue(struct obj *, coordxy, coordxy,
                                     int, int *);
 extern struct monst *activate_statue_trap(struct trap *, coordxy, coordxy,
                                           boolean);
+extern int immune_to_trap(struct monst *, unsigned);
 extern void set_utrap(unsigned, unsigned);
 extern void reset_utrap(boolean);
 extern void dotrap(struct trap *, unsigned);

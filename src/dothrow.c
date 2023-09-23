@@ -1,4 +1,4 @@
-/* NetHack 3.7	dothrow.c	$NHDT-Date: 1683334246 2023/05/06 00:50:46 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.266 $ */
+/* NetHack 3.7	dothrow.c	$NHDT-Date: 1695159620 2023/09/19 21:40:20 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.269 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1834,9 +1834,9 @@ return_throw_to_inv(
     /* if 'obj' wasn't from a stack split or if it wouldn't merge back
        (maybe new erosion damage?) then it needs to be added to invent;
        don't merge with any other stack even if there is a compatible one
-       (others with similar erosion?) */
+       (others with similar erosion?); can't use addinv_nomerge() here */
     if (!otmp) {
-        obj->nomerge = 1;
+        obj->nomerge = 1; /* redundant unless 'oldslot' somehow went away */
         obj = addinv_before(obj, oldslot);
         obj->nomerge = 0;
 
@@ -1920,8 +1920,9 @@ tmiss(struct obj *obj, struct monst *mon, boolean maybe_wakeup)
     return;
 }
 
-#define quest_arti_hits_leader(obj, mon)      \
-    (obj->oartifact && is_quest_artifact(obj) \
+#define special_obj_hits_leader(obj, mon) \
+    ((is_quest_artifact(obj) || objects[obj->otyp].oc_unique    \
+      || (obj->otyp == FAKE_AMULET_OF_YENDOR && !obj->known))   \
      && mon->m_id == gq.quest_status.leader_m_id)
 
 /*
@@ -2024,29 +2025,47 @@ thitmonst(
     /* don't make game unwinnable if naive player throws artifact
        at leader... (kicked artifact is ok too; HMON_APPLIED could
        occur if quest artifact polearm or grapnel ever gets added) */
-    if (hmode != HMON_APPLIED && quest_arti_hits_leader(obj, mon)) {
+    if (hmode != HMON_APPLIED && special_obj_hits_leader(obj, mon)) {
         /* AIS: changes to wakeup() means that it's now less inappropriate
            here than it used to be, but manual version works just as well */
         mon->msleeping = 0;
         mon->mstrategy &= ~STRAT_WAITMASK;
 
         if (mon->mcanmove) {
-            pline("%s catches %s.", Monnam(mon), the(xname(obj)));
-            if (mon->mpeaceful) {
+            pline("%s catches %s.", Some_Monnam(mon), the(xname(obj)));
+            /* leader will keep tossed invocation item after you've done the
+               invocation and it's become unnecessary for completion.. */
+            if ((u.uevent.invoked && objects[obj->otyp].oc_unique
+                 && obj->otyp != AMULET_OF_YENDOR)
+                /* ...or any special item, if you've made him angry */
+                || !mon->mpeaceful) {
+                /* give an explanation for keeping the item only if leader is
+                   not doing it out of anger */ 
+                if (mon->mpeaceful && !Deaf) {
+                    /* just in case, identify the object so its name will
+                       appear in the message */
+                    fully_identify_obj(obj);
+                    verbalize("%s part in this is finished.",
+                              s_suffix(The(xname(obj))));
+                    verbalize(
+               "We will guard it in case it is ever needed again, %s forbid.",
+                              align_gname(u.ualignbase[A_ORIGINAL]));
+                }
+                if (*u.ushops || obj->unpaid) /* not very likely... */
+                    check_shop_obj(obj, mon->mx, mon->my, FALSE);
+                (void) mpickobj(mon, obj);
+            } else {
+                /* under normal circumstances, leader will say something and
+                   then return the item to the hero */ 
                 boolean next2u = monnear(mon, u.ux, u.uy);
 
                 finish_quest(obj); /* acknowledge quest completion */
-                pline("%s %s %s back to you.", Monnam(mon),
+                pline("%s %s %s back to you.", Some_Monnam(mon),
                       (next2u ? "hands" : "tosses"), the(xname(obj)));
                 if (!next2u)
                     sho_obj_return_to_u(obj);
                 obj = addinv(obj); /* back into your inventory */
                 (void) encumber_msg();
-            } else {
-                /* angry leader caught it and isn't returning it */
-                if (*u.ushops || obj->unpaid) /* not very likely... */
-                    check_shop_obj(obj, mon->mx, mon->my, FALSE);
-                (void) mpickobj(mon, obj);
             }
             return 1; /* caller doesn't need to place it */
         }
@@ -2229,6 +2248,8 @@ thitmonst(
 
     return 0;
 }
+
+#undef special_obj_hits_leader
 
 static int
 gem_accept(register struct monst *mon, register struct obj *obj)
@@ -2645,5 +2666,7 @@ throw_gold(struct obj *obj)
     newsym(gb.bhitpos.x, gb.bhitpos.y);
     return ECMD_TIME;
 }
+
+#undef AutoReturn
 
 /*dothrow.c*/

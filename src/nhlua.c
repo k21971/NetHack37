@@ -1,4 +1,4 @@
-/* NetHack 3.7	nhlua.c	$NHDT-Date: 1673740532 2023/01/14 23:55:32 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.95 $ */
+/* NetHack 3.7	nhlua.c	$NHDT-Date: 1695159626 2023/09/19 21:40:26 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.115 $ */
 /*      Copyright (c) 2018 by Pasi Kallinen */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -1230,6 +1230,7 @@ restore_luadata(NHFILE *nhfp)
     if (!gl.luacore)
         l_nhcore_init();
     luaL_loadstring(gl.luacore, lua_data);
+    free(lua_data);
     nhl_pcall(gl.luacore, 0, 0);
 }
 
@@ -1583,7 +1584,7 @@ nhl_gamestate(lua_State *L)
             wornmask = otmp->owornmask;
             otmp->owornmask = 0L;
             extract_nobj(otmp, &gmst_invent);
-            addinv(otmp);
+            addinv_nomerge(otmp);
             if (wornmask)
                 setworn(otmp, wornmask);
         }

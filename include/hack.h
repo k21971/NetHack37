@@ -1,4 +1,4 @@
-/* NetHack 3.7	hack.h	$NHDT-Date: 1689629241 2023/07/17 21:27:21 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.222 $ */
+/* NetHack 3.7	hack.h	$NHDT-Date: 1693359531 2023/08/30 01:38:51 $  $NHDT-Branch: keni-crashweb2 $:$NHDT-Revision: 1.223 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Pasi Kallinen, 2017. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -417,6 +417,9 @@ enum earlyarg {
 #ifdef WIN32
     , ARG_WINDOWS
 #endif
+#ifdef CRASHREPORT
+    , ARG_BIDSHOW
+#endif
 };
 
 struct early_opt {
@@ -828,6 +831,7 @@ typedef struct {
 #define UTD_CHECKFIELDCOUNTS           0x02
 #define UTD_SKIP_SANITY1               0x04
 #define UTD_SKIP_SAVEFILEINFO          0x08
+#define UTD_WITHOUT_WAITSYNCH_PERFILE  0x10
 
 #define ENTITIES 2
 struct valuable_data {

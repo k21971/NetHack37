@@ -1,4 +1,4 @@
-/* NetHack 3.7  botl.h  $NHDT-Date: 1596498528 2020/08/03 23:48:48 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.34 $ */
+/* NetHack 3.7  botl.h  $NHDT-Date: 1694893330 2023/09/16 19:42:10 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.37 $ */
 /* Copyright (c) Michael Allison, 2003                            */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -44,9 +44,11 @@ enum statusfields {
     MAXBLSTATS /* [23] */
 };
 
-enum relationships { NO_LTEQGT = -1,
-                     EQ_VALUE, LT_VALUE, LE_VALUE,
-                     GE_VALUE, GT_VALUE, TXT_VALUE };
+enum relationships {
+    NO_LTEQGT = -1,
+    EQ_VALUE, LT_VALUE, LE_VALUE,
+    GE_VALUE, GT_VALUE, TXT_VALUE
+};
 
 enum blconditions {
     bl_bareh,
@@ -219,16 +221,18 @@ extern int cond_idx[CONDITION_COUNT];
 #define HL_ATTCLR_BOLD    CLR_MAX + 4
 #define BL_ATTCLR_MAX     CLR_MAX + 5
 
-enum hlattribs { HL_UNDEF   = 0x00,
-                 HL_NONE    = 0x01,
-                 HL_BOLD    = 0x02,
-                 HL_INVERSE = 0x04,
-                 HL_ULINE   = 0x08,
-                 HL_BLINK   = 0x10,
-                 HL_DIM     = 0x20 };
+enum hlattribs {
+    HL_UNDEF   = 0x00,
+    HL_NONE    = 0x01,
+    HL_BOLD    = 0x02,
+    HL_INVERSE = 0x04,
+    HL_ULINE   = 0x08,
+    HL_BLINK   = 0x10,
+    HL_DIM     = 0x20
+};
 
 #define MAXVALWIDTH 80 /* actually less, but was using 80 to allocate title
-                       * and leveldesc then using QBUFSZ everywhere else   */
+                        * and leveldesc then using QBUFSZ everywhere else   */
 #ifdef STATUS_HILITES
 struct hilite_s {
     enum statusfields fld;
@@ -243,6 +247,11 @@ struct hilite_s {
 };
 #endif
 
+/*
+ * Note: If you add/change/remove fields in istat_s, you need to
+ * update the initialization of the istat_s struct blstats[][]
+ * array in instance_globals_b (decl.c).
+ */
 struct istat_s {
     const char *fldname;
     const char *fldfmt;
@@ -251,7 +260,7 @@ struct istat_s {
     boolean percent_matters;
     short percent_value;
     unsigned anytype;
-    anything a;
+    anything a, rawval;
     char *val;
     int valwidth;
     enum statusfields idxmax;

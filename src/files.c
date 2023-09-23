@@ -1,4 +1,4 @@
-/* NetHack 3.7	files.c	$NHDT-Date: 1680625799 2023/04/04 16:29:59 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.373 $ */
+/* NetHack 3.7	files.c	$NHDT-Date: 1693083234 2023/08/26 20:53:54 $  $NHDT-Branch: keni-crashweb2 $:$NHDT-Revision: 1.378 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -212,6 +212,7 @@ static boolean cnf_line_PANICTRACE_LIBC(char *);
 static boolean cnf_line_PANICTRACE_GDB(char *);
 static boolean cnf_line_GDBPATH(char *);
 static boolean cnf_line_GREPPATH(char *);
+static boolean cnf_line_CRASHREPORTURL(char *);
 static boolean cnf_line_SAVEFORMAT(char *);
 static boolean cnf_line_BONESFORMAT(char *);
 static boolean cnf_line_ACCESSIBILITY(char *);
@@ -1331,7 +1332,7 @@ restore_saved_game(void)
 
     nh_uncompress(fq_save);
     if ((nhfp = open_savefile()) != 0) {
-        if (validate(nhfp, fq_save) != 0) {
+        if (validate(nhfp, fq_save, FALSE) != 0) {
             close_nhfile(nhfp);
             nhfp = (NHFILE *)0;
             (void) delete_savefile();
@@ -1341,8 +1342,9 @@ restore_saved_game(void)
 }
 
 #if defined(SELECTSAVED)
+
 char *
-plname_from_file(const char *filename)
+plname_from_file(const char *filename, boolean without_wait_synch_per_file)
 {
     NHFILE *nhfp = (NHFILE *) 0;
     char *result = 0;
@@ -1360,7 +1362,7 @@ plname_from_file(const char *filename)
 #endif
     nh_uncompress(gs.SAVEF);
     if ((nhfp = open_savefile()) != 0) {
-        if (validate(nhfp, filename) == 0) {
+        if (validate(nhfp, filename, without_wait_synch_per_file) == 0) {
             char tplname[PL_NSIZ];
 
             get_plname_from_file(nhfp, tplname);
@@ -1403,6 +1405,9 @@ plname_from_file(const char *filename)
 }
 #endif /* defined(SELECTSAVED) */
 
+#define SUPPRESS_WAITSYNCH_PERFILE TRUE
+#define ALLOW_WAITSYNCH_PERFILE FALSE
+
 char **
 get_saved_games(void)
 {
@@ -1412,6 +1417,7 @@ get_saved_games(void)
 #endif
     int j = 0;
     char **result = 0;
+
 #ifdef WIN32
     {
         char *foundfile;
@@ -1419,7 +1425,7 @@ get_saved_games(void)
         const char *fq_new_save;
         const char *fq_old_save;
         char **files = 0;
-        int i;
+        int i, count_failures = 0;
 
         Strcpy(gp.plname, "*");
         set_savefile_name(FALSE);
@@ -1452,10 +1458,9 @@ get_saved_games(void)
             (void) memset((genericptr_t) result, 0, (n + 1) * sizeof(char *));
             for(i = 0; i < n; i++) {
                 char *r;
-                r = plname_from_file(files[i]);
+                r = plname_from_file(files[i], SUPPRESS_WAITSYNCH_PERFILE);
 
                 if (r) {
-
                     /* rename file if it is not named as expected */
                     Strcpy(gp.plname, r);
                     set_savefile_name(TRUE);
@@ -1467,12 +1472,15 @@ get_saved_games(void)
                         (void) rename(fq_old_save, fq_new_save);
 
                     result[j++] = r;
+                } else {
+                    count_failures++;
                 }
             }
         }
 
         free_saved_games(files);
-
+        if (count_failures)
+            wait_synch();
     }
 #endif
 #ifdef UNIX
@@ -1504,7 +1512,7 @@ get_saved_games(void)
                         char *r;
 
                         Sprintf(filename, "save/%d%s", uid, name);
-                        r = plname_from_file(filename);
+                        r = plname_from_file(filename, ALLOW_WAITSYNCH_PERFILE);
                         if (r)
                             result[j++] = r;
                     }
@@ -1529,8 +1537,11 @@ get_saved_games(void)
         free_saved_games(result);
     }
 #endif /* SELECTSAVED */
+
     return 0;
 }
+#undef SUPPRESS_WAITSYNCH_PERFILE
+#undef ALLOW_WAITSYNCH_PERFILE
 
 void
 free_saved_games(char **saved)
@@ -3166,6 +3177,15 @@ cnf_line_GREPPATH(char *bufp)
 }
 
 static boolean
+cnf_line_CRASHREPORTURL(char *bufp)
+{
+    if (sysopt.crashreporturl)
+        free((genericptr_t) sysopt.crashreporturl);
+    sysopt.crashreporturl = dupstr(bufp);
+    return TRUE;
+}
+
+static boolean
 cnf_line_SAVEFORMAT(char *bufp)
 {
     parseformat(sysopt.saveformat, bufp);
@@ -3409,6 +3429,7 @@ static const struct match_config_line_stmt {
     CNFL_S(LIVELOG, 7),
     CNFL_S(PANICTRACE_LIBC, 15),
     CNFL_S(PANICTRACE_GDB, 14),
+    CNFL_S(CRASHREPORTURL, 13),
     CNFL_S(GDBPATH, 7),
     CNFL_S(GREPPATH, 7),
     CNFL_S(SAVEFORMAT, 10),

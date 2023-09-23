@@ -30,8 +30,12 @@ extern glyph_info mesg_gi;
 #define USE_CURSES_PUTMIXED
 #else  /* WIDE */
 #ifdef NH_PRAGMA_MESSAGE
+#ifdef _MSC_VER
+#pragma message ("Curses wide support not defined so NetHack curses message window functionality reduced")
+#else
 #pragma message "Curses wide support not defined so NetHack curses message window functionality reduced"
-#endif
+#endif /* _MSC_VER */
+#endif /* NH_PRAGMA_MESSAGE */
 #endif /* WIDE */
 #endif /* CURSES_GENL_PUTMIXED */
 
@@ -882,9 +886,12 @@ curses_print_glyph(
             else /* if (iflags.use_inverse) */
                 attr = A_REVERSE;
         }
-        /* water and lava look the same except for color; when color is off,
-           render lava in inverse video so that they look different */
-        if ((special & (MG_BW_LAVA | MG_BW_ICE)) != 0 && iflags.use_inverse) {
+        /* water and lava look the same except for color; when color is off
+           (checked by core), render lava in inverse video so that it looks
+           different from water; similar for floor vs ice, fountain vs sink,
+           and corridor vs engranving-in-corridor */
+        if ((special & (MG_BW_LAVA | MG_BW_ICE | MG_BW_SINK | MG_BW_ENGR))
+            != 0 && iflags.use_inverse) {
             /* reset_glyphmap() only sets MG_BW_foo if color is off */
             attr = A_REVERSE;
         }

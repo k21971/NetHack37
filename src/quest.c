@@ -219,19 +219,48 @@ expulsion(boolean seal)
    artifact or you've just thrown it to/at him or her.  If quest
    completion text hasn't been given yet, give it now.  Otherwise
    give another message about the character keeping the artifact
-   and using the magic portal to return to the dungeon. */
+   and using the magic portal to return to the dungeon.  Also called
+   if hero throws or kicks an invocation item (probably the Bell)
+   at the leader. */
 void
-finish_quest(struct obj *obj) /* quest artifact; possibly null if carrying
-                                 Amulet */
+finish_quest(struct obj *obj) /* quest artifact or thrown unique item or faux
+                               * AoY; possibly null if carrying the Amulet */
 {
     struct obj *otmp;
 
-    if (u.uhave.amulet) { /* unlikely but not impossible */
+    if (obj && !is_quest_artifact(obj)) {
+        /* tossed an invocation item (or [fake] AoY) at the quest leader */
+        if (Deaf)
+            return; /* optional (unlike quest completion) so skip if deaf */
+        /* do ID first so that the message identifying the item will refer to
+           it by name (and so justify the ID we already gave...) */
+        fully_identify_obj(obj);
+        /* update_inventory() is not necessary or helpful here because item
+           was thrown, so isn't currently in inventory anyway */
+        if (obj->otyp == AMULET_OF_YENDOR) {
+            qt_pager("hasamulet");
+        } else if (obj->otyp == FAKE_AMULET_OF_YENDOR) {
+            verbalize(
+      "Sorry to say, this is a mere imitation of the true Amulet of Yendor.");
+        } else {
+            verbalize("Ah, I see you've found %s.", the(xname(obj)));
+        }
+        return;
+    }
+
+    if (u.uhave.amulet) {
+        /* has the amulet in inventory -- most likely the player has already
+           completed the quest and stopped in on her way back up, but it's not
+           impossible to have gotten the amulet before formally presenting the
+           quest artifact to the leader. */
         qt_pager("hasamulet");
         /* leader IDs the real amulet but ignores any fakes */
-        if ((otmp = carrying(AMULET_OF_YENDOR)) != 0)
+        if ((otmp = carrying(AMULET_OF_YENDOR)) != (struct obj *) 0) {
             fully_identify_obj(otmp);
+            update_inventory();
+        }
     } else {
+        /* normal quest completion; threw artifact or walked up carrying it */
         qt_pager(!Qstat(got_thanks) ? "offeredit" : "offeredit2");
         /* should have obtained bell during quest;
            if not, suggest returning for it now */
@@ -471,8 +500,10 @@ void
 quest_stat_check(struct monst *mtmp)
 {
     if (mtmp->data->msound == MS_NEMESIS)
-        Qstat(in_battle) = (!helpless(mtmp)
-                            && monnear(mtmp, u.ux, u.uy));
+        Qstat(in_battle) = (!helpless(mtmp) && monnear(mtmp, u.ux, u.uy));
 }
+
+#undef Not_firsttime
+#undef Qstat
 
 /*quest.c*/
