@@ -36,9 +36,10 @@ extern void msmsg(const char *, ...);
 
 #include "wintty.h"
 
-#ifdef CLIPPING /* might want SIGWINCH */
-#if defined(BSD) || defined(ULTRIX) || defined(AIX_31) || defined(_BULL_SOURCE)
+#if defined(CLIPPING) && !defined(NO_SIGNAL)
 #include <signal.h>
+#ifdef SIGWINCH
+#define RESIZABLE
 #endif
 #endif
 
@@ -80,7 +81,7 @@ extern void msmsg(const char *, ...);
  */
 #define HUPSKIP() \
     do {                                        \
-        if (gp.program_state.done_hup) {         \
+        if (gp.program_state.done_hup) {        \
             morc = '\033';                      \
             return;                             \
         }                                       \
@@ -88,7 +89,7 @@ extern void msmsg(const char *, ...);
     /* morc=ESC - in case we bypass xwaitforspace() which sets that */
 #define HUPSKIP_RESULT(RES) \
     do {                                        \
-        if (gp.program_state.done_hup)           \
+        if (gp.program_state.done_hup)          \
             return (RES);                       \
     } while (0)
 #else /* !HANGUPHANDLING */
@@ -177,6 +178,8 @@ struct DisplayDesc *ttyDisplay; /* the tty display descriptor */
 extern void cmov(int, int);   /* from termcap.c */
 extern void nocmov(int, int); /* from termcap.c */
 
+static volatile int erasing_tty_screen; /* volatile: SIGWINCH */
+
 #if defined(UNIX) || defined(VMS)
 static char obuf[BUFSIZ]; /* BUFSIZ is defined in stdio.h */
 #endif
@@ -212,6 +215,7 @@ static const char to_continue[] = "to continue";
 static void getret(void);
 #endif
 static void bail(const char *); /* __attribute__((noreturn)) */
+static void newclipping(coordxy, coordxy);
 static void new_status_window(void);
 static void erase_menu_or_text(winid, struct WinDesc *, boolean);
 static void free_window_info(struct WinDesc *, boolean);
@@ -269,6 +273,7 @@ static long last_glyph_reset_when;
 #endif
 static boolean calling_from_update_inventory = FALSE;
 static int ttyinv_create_window(int, struct WinDesc *);
+static void ttyinv_remove_data(boolean);
 static void ttyinv_add_menu(winid, struct WinDesc *, char ch, int attr,
                             int clr, const char *str);
 static void ttyinv_render(winid window, struct WinDesc *cw);
@@ -349,84 +354,141 @@ bail(const char *mesg)
     /*NOTREACHED*/
 }
 
-#if defined(SIGWINCH) && defined(CLIPPING) && !defined(NO_SIGNAL)
+#ifdef RESIZABLE
 static void winch_handler(int);
+static void resize_tty(void);
 
-    /*
-     * This really ought to just set a flag like the hangup handler does,
-     * then check the flag at "safe" times, in case the signal arrives
-     * while something fragile is executing.  Better to have a brief period
-     * where display updates don't fit the new size than for tty internals
-     * to become corrupted.
-     *
-     * 'winch_seen' has been "notyet" for a long time....
-     */
+static volatile int resize_mesg = 0;
+
 /* signal handler is called with at least 1 arg */
 /*ARGUSED*/
 static void
 winch_handler(int sig_unused UNUSED)
 {
-    int oldLI = LI, oldCO = CO, i;
-    register struct WinDesc *cw;
-
 #ifdef WINCHAIN
     {
 #define WINCH_MESSAGE "(SIGWINCH)"
         if (wc_tracelogf)
             (void) write(fileno(wc_tracelogf), WINCH_MESSAGE,
-                         strlen(WINCH_MESSAGE));
+                         sizeof WINCH_MESSAGE - sizeof "");
 #undef WINCH_MESSAGE
     }
 #endif
-#ifndef VMS
-    getwindowsz();
+
+    gp.program_state.resize_pending++; /* resize_tty() will reset it */
+    /* if nethack is waiting for input, which is the most likely scenario,
+       we will go ahead and respond to the resize immediately; otherwise,
+       tty_nhgetch() will do so the next time it's called */
+    if (gp.program_state.getting_char) {
+        resize_tty();
+#if 0   /* [this doesn't work as intended and seems to be unnecessary] */
+        if (resize_mesg) {
+            /* resize_tty() put "Press a key to continue: " on top line */
+            (void) tty_nhgetch(); /* recursion... */
+        }
 #endif
-    /* For long running events such as multi-page menus and
-     * display_file(), we note the signal's occurance and
-     * hope the code there decides to handle the situation
-     * and reset the flag. There will be race conditions
-     * when handling this - code handlers so it doesn't matter.
-     */
-#ifdef notyet
-    winch_seen = TRUE;
+    }
+    return;
+}
+
+/* query the system for tty size (vis getwindowsz()), and adapt the game's
+   windows to match */
+static void
+resize_tty(void)
+{
+    int oldLI = LI, oldCO = CO, mapx, mapy, oldtoplin, i;
+    boolean map_active;
+    struct WinDesc *cw;
+
+    /* reset to 0 rather than just decrement */
+    gp.program_state.resize_pending = 0;
+    resize_mesg = 0;
+
+    getwindowsz(); /* update LI and CO */
+    if (!ttyDisplay || (LI == oldLI && CO == oldCO))
+        return;
+
+    ttyDisplay->rows = LI;
+    ttyDisplay->cols = CO;
+
+    cw = wins[BASE_WINDOW];
+    cw->rows = ttyDisplay->rows;
+    cw->cols = ttyDisplay->cols;
+
+    if (!iflags.window_inited)
+        return;
+
+    /* try to figure out where we'll want to leave the cursor */
+    cw = (WIN_MAP != WIN_ERR) ? wins[WIN_MAP] : NULL;
+    map_active = (cw && cw->active);
+    if (!map_active)
+        mapx = 1, mapy = 0;
+    else if (gg.getposx < 1)
+        mapx = u.ux, mapy = u.uy;
+    else
+        mapx = gg.getposx, mapy = gg.getposy;
+
+    oldtoplin = ttyDisplay->toplin;
+    ttyDisplay->toplin = TOPLINE_EMPTY; /* (before term_clear_screen()) */
+    /* whatever used to be on the screen has become suspect;
+       blank it all out, then redo the display */
+    term_clear_screen();
+    new_status_window();
+
+    /* if the map window is shown, redisplay it (also status, perminv) */
+    if (map_active) {
+        docrt_flags(docrtRefresh);
+        bot(); /* context.botlx=1 gets set by docrt() */
+        for (i = 0; i < MAXWIN; ++i) {
+            if (i == BASE_WINDOW
+                || i == WIN_MAP /* docrt() updates it */
+                || i == WIN_STATUS /* docrt()+bot() updates it */
+#ifdef TTY_PERM_INVENT
+                || i == WIN_INVEN /* docrt() again */
 #endif
-    if ((oldLI != LI || oldCO != CO) && ttyDisplay) {
-        ttyDisplay->rows = LI;
-        ttyDisplay->cols = CO;
-
-        cw = wins[BASE_WINDOW];
-        cw->rows = ttyDisplay->rows;
-        cw->cols = ttyDisplay->cols;
-
-        if (iflags.window_inited) {
-            cw = wins[WIN_MESSAGE];
-            cw->curx = cw->cury = 0;
-
-            new_status_window();
-            if (u.ux) {
-                i = ttyDisplay->toplin;
-                ttyDisplay->toplin = TOPLINE_EMPTY;
-                docrt();
-                bot();
-                ttyDisplay->toplin = i;
-                flush_screen(1);
-                if (i) {
-                    addtopl(gt.toplines);
-                } else
-                    for (i = WIN_INVEN; i < MAXWIN; i++)
-                        if (wins[i] && wins[i]->active) {
-                            /* cop-out */
-                            addtopl("Press Return to continue: ");
-                            break;
-                        }
-                (void) fflush(stdout);
-                if (i < 2)
-                    flush_screen(1);
+                || i == WIN_MESSAGE) /* we fake it here */
+                continue;
+            if (wins[i] && wins[i]->active) {
+                /* cop-out */
+                oldtoplin = TOPLINE_EMPTY; /* don't restore it below */
+                ttyDisplay->toplin = TOPLINE_NON_EMPTY;
+                addtopl("Press a key to continue: ");
+                resize_mesg++;
+                break;
             }
         }
+    } /* wins[WIN_MAP].active */
+
+    if (oldtoplin != TOPLINE_EMPTY) {
+        ttyDisplay->toplin = oldtoplin;
+        addtopl(gt.toplines);
     }
+    if (map_active) {
+        newclipping(mapx, mapy);
+        tty_curs(WIN_MAP, mapx, mapy);
+        tty_display_nhwindow(WIN_MAP, FALSE); /*fflush(stdout)*/
+    }
+    return;
 }
-#endif /* SIGWINCH && CLIPPING && !NO_SIGNAL */
+#endif /* RESIZABLE */
+
+static void
+newclipping(coordxy x, coordxy y)
+{
+#ifdef CLIPPING
+    if (CO < COLNO || LI < 1 + ROWNO + iflags.wc2_statuslines) {
+        setclipped(); /* sets clipping=TRUE */
+        if (x)
+            tty_cliparound(x, y);
+    } else {
+        clipping = FALSE;
+        clipx = clipy = 0;
+    }
+#else
+    nhUse(x + y);
+#endif
+    return;
+}
 
 /* destroy and recreate status window; extracted from winch_handler()
    and augmented for use by tty_preference_update() */
@@ -434,11 +496,9 @@ static void
 new_status_window(void)
 {
     if (WIN_STATUS != WIN_ERR) {
-        /* if it's shrinking, clear it before destroying so that
+        /* in case it's shrinking, clear it before destroying so that
            dropped portion won't show anything that's now becoming stale */
-        if (wins[WIN_STATUS]->maxrow > iflags.wc2_statuslines)
-            tty_clear_nhwindow(WIN_STATUS);
-
+        tty_clear_nhwindow(WIN_STATUS);
         tty_destroy_nhwindow(WIN_STATUS), WIN_STATUS = WIN_ERR;
     }
     /* frees some status tracking data */
@@ -448,18 +508,6 @@ new_status_window(void)
     tty_clear_nhwindow(WIN_STATUS); /* does some init, sets context.botlx */
 #ifdef STATUS_HILITES
     status_initialize(REASSESS_ONLY);
-#endif
-
-#ifdef CLIPPING
-    if (u.ux) {
-        if (LI < 1 + ROWNO + iflags.wc2_statuslines) {
-            setclipped();
-            tty_cliparound(u.ux, u.uy);
-        } else {
-            clipping = FALSE;
-            clipx = clipy = 0;
-        }
-    }
 #endif
 }
 
@@ -511,7 +559,7 @@ tty_init_nhwindows(int *argcp UNUSED, char **argv UNUSED)
 
     ttyDisplay->lastwin = WIN_ERR;
 
-#if defined(SIGWINCH) && defined(CLIPPING) && !defined(NO_SIGNAL)
+#ifdef RESIZABLE
     (void) signal(SIGWINCH, (SIG_RET_TYPE) winch_handler);
 #endif
 
@@ -555,6 +603,7 @@ tty_preference_update(const char *pref)
 {
     if (!strcmp(pref, "statuslines") && iflags.window_inited) {
         new_status_window();
+        newclipping(u.ux, u.uy);
     }
 
 #if defined(WIN32CON)
@@ -983,10 +1032,13 @@ tty_clear_nhwindow(winid window)
     switch (cw->type) {
     case NHW_MESSAGE:
         if (ttyDisplay->toplin != TOPLINE_EMPTY) {
-            home();
-            cl_end();
-            if (cw->cury)
-                docorner(1, cw->cury + 1, 0);
+            if (!erasing_tty_screen) {
+                home();
+                cl_end();
+                if (cw->cury)
+                    docorner(1, cw->cury + 1, 0);
+            }
+            cw->curx = cw->cury = 0;
             ttyDisplay->toplin = TOPLINE_EMPTY;
         }
         break;
@@ -994,9 +1046,10 @@ tty_clear_nhwindow(winid window)
         m = cw->maxrow;
         n = cw->cols;
         for (i = 0; i < m; ++i) {
-            tty_curs(window, 1, i);
-            cl_end();
-
+            if (!erasing_tty_screen) {
+                tty_curs(window, 1, i);
+                cl_end();
+            }
             for (j = 0; j < n - 1; ++j)
                 cw->data[i][j] = ' ';
             cw->data[i][n - 1] = '\0';
@@ -1009,17 +1062,33 @@ tty_clear_nhwindow(winid window)
         gc.context.botlx = 1;
         /*FALLTHRU*/
     case NHW_BASE:
-        term_clear_screen();
-        /* [this should reset state for MESSAGE, MAP, and STATUS] */
+        /* if erasing_tty_screen is True, calling sequence is
+           term_clear_screen -> erase_tty_screen -> tty_clear_nhwindow
+           so we don't call term_clear_screen again */
+        if (!erasing_tty_screen) {
+            term_clear_screen();
+        }
+        /*
+         * Neither map nor base window tracks what is currently shown so
+         * there's no stale data that would need to be changed to spaces.
+         */
         break;
     case NHW_MENU:
     case NHW_TEXT:
         if (cw->active)
             erase_menu_or_text(window, cw, TRUE);
-        free_window_info(cw, FALSE);
+        if (!erasing_tty_screen) {
+            free_window_info(cw, FALSE);
+        }
         break;
+#ifdef TTY_PERM_INVENT
+    case NHW_PERMINVENT:
+        ttyinv_remove_data(FALSE);
+        break;
+#endif
     }
     cw->curx = cw->cury = 0;
+    /* cw->blanked = TRUE; -- this isn't used */
 }
 
 RESTORE_WARNING_FORMAT_NONLITERAL
@@ -1424,11 +1493,15 @@ process_menu_window(winid window, struct WinDesc *cw)
                 }
             }
             /* set extra chars.. */
-            Strcat(resp, default_menu_cmds);
+            if (*gacc) {
+                Strcat(resp, gacc);             /* group accelerators */
+                if (cw->how == PICK_ONE)
+                    resp_len = (int) strlen(resp);
+            }
             Strcat(resp, " ");                  /* next page or end */
             Strcat(resp, "0123456789\033\n\r"); /* counts, quit */
-            Strcat(resp, gacc);                 /* group accelerators */
             Strcat(resp, gm.mapped_menu_cmds);
+            Strcat(resp, default_menu_cmds);
 
             if (cw->npages > 1)
                 Sprintf(cw->morestr, "(%d of %d)", curr_page + 1,
@@ -1896,8 +1969,11 @@ tty_destroy_nhwindow(winid window)
 {
     register struct WinDesc *cw = 0;
 
-    if (window == WIN_ERR || (cw = wins[window]) == (struct WinDesc *) 0)
+    if (window == WIN_ERR || (cw = wins[window]) == (struct WinDesc *) 0) {
+        if (window == WIN_INVEN) /* Null wins[WIN_INVEN] is tolerated */
+            return;
         panic(winpanicstr, window);
+    }
 
     if (cw->active)
         tty_dismiss_nhwindow(window);
@@ -1906,40 +1982,39 @@ tty_destroy_nhwindow(winid window)
     if (cw->type == NHW_MAP)
         term_clear_screen();
 #ifdef TTY_PERM_INVENT
-    if (cw->type == NHW_PERMINVENT) {
-        int r, c;
-
-        if (cw->cells) {
-            for (r = 0; r < cw->maxrow; r++) {
-                if (cw->cells[r]) {
-                    for (c = 0; c < cw->maxcol; c++) {
-                        /* glyph is a flag indicating whether content union
-                           contains a glyph_info structure or just a char */
-                        if (cw->cells[r][c].glyph)
-                            free((genericptr_t) cw->cells[r][c].content.gi);
-                        cw->cells[r][c] = zerottycell;
-                        cw->cells[r][c].glyph = 0;
-                    }
-                    free((genericptr_t) cw->cells[r]);
-                    cw->cells[r] = (struct tty_perminvent_cell *) 0;
-                }
-            }
-            free((genericptr_t) cw->cells);
-            cw->cells = (struct tty_perminvent_cell **) 0;
-            cw->rows = cw->cols = 0;
-        }
-        cw->maxrow = cw->maxcol = 0;
-        WIN_INVEN = WIN_ERR;
-        done_tty_perm_invent_init = FALSE;
-    }
+    if (cw->type == NHW_PERMINVENT)
+        ttyinv_remove_data(TRUE);
 #endif
     free_window_info(cw, TRUE);
     free((genericptr_t) cw);
     wins[window] = 0; /* available for re-use */
 }
 
+/* when screen is cleared, reset stored data to spaces */
 void
-tty_curs(winid window,
+erase_tty_screen(void)
+{
+    struct WinDesc *cw;
+    int i;
+
+    if (erasing_tty_screen++)
+        return;
+#if 0   /* originally we called term_clear_screen() but now it calls us */
+    term_clear_screen(); /* erase the screen */
+#endif
+    /* update window data to reflect that each active window is all blanks */
+    for (i = 0; i < MAXWIN; ++i) {
+        cw = wins[i];
+        if (cw && cw->active)
+            tty_clear_nhwindow(i);
+    }
+    tty_curs(BASE_WINDOW, 1, 0);
+    erasing_tty_screen = 0;
+}
+
+void
+tty_curs(
+    winid window,
     register int x, register int y) /* not xchar: perhaps xchar is unsigned
                                      * then curx-x would be unsigned too */
 {
@@ -2330,9 +2405,6 @@ tty_display_file(
             nh_terminate(EXIT_FAILURE);
         }
         (void) close(fd);
-#ifdef notyet
-        winch_seen = 0;
-#endif
     }
 #else /* DEF_PAGER */
     {
@@ -2406,11 +2478,12 @@ tty_start_menu(winid window, unsigned long mbehavior)
         return;
     }
     if (mbehavior == MENU_BEHAVE_PERMINV
-             && (iflags.perm_invent
-                 || gp.perm_invent_toggling_direction == toggling_on)) {
+        && (iflags.perm_invent
+            || gp.perm_invent_toggling_direction == toggling_on)) {
         winid w = ttyinv_create_window(window, wins[window]);
+
         if (w == WIN_ERR) {
-            /* something went wrong, so add clean up code here */
+            ; /* something went wrong, so add clean up code here */
         } else {
             cw->mbehavior = mbehavior;
         }
@@ -2537,7 +2610,8 @@ tty_end_menu(winid window,       /* menu to use */
     }
 #ifdef TTY_PERM_INVENT
     if (cw->mbehavior == MENU_BEHAVE_PERMINV
-        && (iflags.perm_invent || gp.perm_invent_toggling_direction == toggling_on)
+        && (iflags.perm_invent
+            || gp.perm_invent_toggling_direction == toggling_on)
         && window == WIN_INVEN) {
         if (gp.program_state.in_moveloop)
             ttyinv_render(window, cw);
@@ -2807,7 +2881,6 @@ ttyinv_create_window(int newid, struct WinDesc *newwin)
     newwin->datlen = (short *) 0;
     newwin->cells = (struct tty_perminvent_cell **) 0;
 
-
     if (!assesstty(ttyinvmode, &newwin->offx, &newwin->offy, &newwin->rows,
                    &newwin->cols, &newwin->maxcol, &minrow,
                    &newwin->maxrow)) {
@@ -2861,27 +2934,71 @@ ttyinv_create_window(int newid, struct WinDesc *newwin)
     return newid;
 }
 
+/* discard perminvent window or erase it and set remembered data to spaces */
+static void
+ttyinv_remove_data(boolean destroy)
+{
+    struct WinDesc *cw = (WIN_INVEN != WIN_ERR) ? wins[WIN_INVEN] : NULL;
+
+    if (!cw) {
+        impossible("Removing ttyinv data for nonexistent perm invent window?");
+        return;
+    }
+
+    if (cw->cells) {
+        int r, c;
+
+        for (r = 0; r < cw->maxrow; r++) {
+            if (cw->cells[r]) {
+                for (c = 0; c < cw->maxcol; c++) {
+                    struct tty_perminvent_cell *invcell = &cw->cells[r][c];
+
+                    /* glyph is a flag indicating whether content union
+                       contains a glyph_info structure or just a char */
+                    if (invcell->glyph)
+                        free((genericptr_t) invcell->content.gi);
+                    *invcell = zerottycell; /* sets glyph flag to 0 */
+                    if (!destroy) { /* erasing */
+                        invcell->content.ttychar = ' ';
+                        invcell->text = 1;
+                        invcell->refresh = 1; /* full redraw wanted */
+                    }
+                }
+                if (destroy)
+                    free((genericptr_t) cw->cells[r]),
+                        cw->cells[r] = (struct tty_perminvent_cell *) 0;
+            }
+        }
+        if (destroy) {
+            free((genericptr_t) cw->cells),
+                cw->cells = (struct tty_perminvent_cell **) 0;
+            cw->rows = cw->cols = 0;
+        }
+    }
+    if (destroy) {
+        cw->maxrow = cw->maxcol = 0;
+        /*WIN_INVEN = WIN_ERR;*/ /* caller's responsibility */
+        done_tty_perm_invent_init = FALSE;
+    }
+}
+
 static void
 ttyinv_add_menu(winid window UNUSED, struct WinDesc *cw, char ch,
                 int attr UNUSED, int clr UNUSED, const char *str)
 {
     char invbuf[BUFSZ];
     const char *text;
-    boolean inuse_only = (ttyinvmode & InvInUse) != 0,
-            show_gold = (ttyinvmode & InvShowGold) != 0,
-            /* sparse = (ttyinvmode & InvSparse) != 0, */
+    boolean show_gold = (ttyinvmode & InvShowGold) != 0,
             ignore = FALSE;
-    int row, side, slot = 0, rows_per_side = (!show_gold ? 26 : 27);
+    int row, side, slot,
+        rows_per_side = (!show_gold ? 26 : 27);
 
     if (!gp.program_state.in_moveloop)
         return;
     slot = selector_to_slot(ch, ttyinvmode, &ignore);
     if (!ignore) {
-        /* inuse_only = ((ttyinvmode & InvInUse) != 0); */
         slot_tracker[slot] = TRUE;
-        text = Empty; /* lint suppression */
-        /*            maxslot = ((int) cw->maxrow - 2) * (!inuse_only ? 2 :
-         * 1); */
+        /* maxslot = ((int) cw->maxrow - 2) * (!inuse_only ? 2 : 1); */
 
         /* TODO: check for MENUCOLORS match */
         text = str; /* 'text' will switch to invbuf[] below */
@@ -2902,47 +3019,63 @@ ttyinv_add_menu(winid window UNUSED, struct WinDesc *cw, char ch,
         text = invbuf;
         row = (slot % rows_per_side) + 1; /* +1: top border */
         /* side: left side panel or right side panel, not a window column */
-        side = slot < rows_per_side ? 0 : 1;
-        if (!(inuse_only && side == 1))
-            ttyinv_populate_slot(cw, row, side, text, 0);
+        side = slot / rows_per_side;
+        ttyinv_populate_slot(cw, row, side, text, 0);
     }
     return;
 }
+
+/* convert a..zA..Z to 0..51 or for 'show_gold' $a..zA..Z# to 0..53 */
 static int
 selector_to_slot(char ch, const int invflags, boolean *ignore)
 {
     int slot = 0;
     boolean show_gold = (invflags & InvShowGold) != 0,
             inuse_only = (invflags & InvInUse) != 0;
-#if 0
-            sparse = (invflags & InvSparse) != 0,
-#endif
 
     *ignore = FALSE;
-    switch (ch) {
-    case '$':
-        if (!show_gold)
+    if (inuse_only) {
+        /*
+         * Inuse_only uses slots 0 to N-1 instead of fixed positions.
+         * Caller--or caller's caller's ... caller--only passes us
+         * relevant items so no filtering is necessary here; '!show_gold'
+         * gets ignored here since gold might be quivered or wielded and
+         * become an in-use item.
+         * Inuse_only items might include one (or more than one) with
+         * invlet '#' but it isn't special for Inuse_only.
+         */
+        slot = inuse_only_start++;
+    } else {
+        /* normal perminv */
+        switch (ch) {
+        case '$':
+            if (!show_gold)
+                *ignore = TRUE;
+            else
+                slot = 0;
+            break;
+        case '#':
+            /* overflow item won't be gold but there is only room allocated
+               for it when gold is also eligible to be shown (hero doesn't
+               have to be carrying any, we just need the extra row it gets) */
+            if (!show_gold)
+                *ignore = TRUE;
+            else
+                /* fixed location, bottom of right-hand panel; if there is
+                   more than 1 overflow item, we are only able to show 1 */
+                slot = 0 + 52 + 1; /* 0 for gold, 2 * 26 letters, then '#' */
+            break;
+        case '\0':
             *ignore = TRUE;
-        slot = 0;
-        break;
-    case '#':
-        slot = 52 + (show_gold ? 1 : 0);
-        break;
-    case 0:
-        *ignore = TRUE;
-        break;
-    default:
-        if (!inuse_only) {
+            break;
+        default:
             if (ch >= 'a' && ch <= 'z')
                 slot = (ch - 'a') + (show_gold ? 1 : 0);
-            if (ch >= 'A' && ch <= 'Z')
+            else if (ch >= 'A' && ch <= 'Z')
                 slot = (ch - 'A') + (show_gold ? 1 : 0) + 26;
-        } else {
-            if ((ch >= 'a' && ch <= 'z')
-                || (ch >= 'A' && ch <= 'Z'))
-                slot = (show_gold ? 1 : 0) + inuse_only_start++;
+            break;
         }
-    }
+    } /* normal vs inuse_only */
     return slot;
 }
 
@@ -2960,6 +3093,10 @@ ttyinv_render(winid window, struct WinDesc *cw)
     slot_limit = SIZE(slot_tracker);
     if (inuse_only) {
         rows_per_side = cw->maxrow - 2; /* -2 top and bottom borders */
+        slot_limit = rows_per_side;
+    } else if (!show_gold) {
+        slot_limit -= 2; /* slots [52] and [53] would wrap back row 0 and 1,
+                          * attempting to use a non-existent third side */
     }
     for (slot = 0; slot < slot_limit; ++slot)
         if (slot_tracker[slot])
@@ -2968,6 +3105,10 @@ ttyinv_render(winid window, struct WinDesc *cw)
         if (slot_tracker[slot])
            continue;
         if (slot == 0 && !filled_count) {
+            /* FIXME: this isn't correct; it shows "empty" if hero has gold
+               and player hasn't set ttyinvmode to display it; it can also
+               be drawn and briefly seen while other stuff (that player
+               just dropped or used up) hasn't been erased yet */
             Sprintf(invbuf, "%-4s[%s]", "",
                     !filled_count ? "empty"
                     : inuse_only  ? "no items are in use"
@@ -2978,9 +3119,8 @@ ttyinv_render(winid window, struct WinDesc *cw)
         }
         row = (slot % rows_per_side) + 1; /* +1: top border */
         /* side: left side panel or right side panel, not a window column */
-        side = slot < rows_per_side ? 0 : 1;
-        if (!(inuse_only && side == 1))
-            ttyinv_populate_slot(cw, row, side, text, 0);
+        side = slot / rows_per_side;
+        ttyinv_populate_slot(cw, row, side, text, 0);
     }
     /* has there been a glyph reset since we last got here? */
     if (gg.glyph_reset_timestamp > last_glyph_reset_when) {
@@ -3063,13 +3203,14 @@ ttyinv_populate_slot(
     struct tty_perminvent_cell *cell;
     char c;
     int ccnt, col, endcol;
+    boolean inuse_only = (ttyinvmode & InvInUse) != 0;
 
-    /* FIXME: this needs a review. Crashed under InvInUse without */
-    if ((ttyinvmode & InvInUse) != 0)
-        col = bordercol[0] + 1;
-    else
-        col = bordercol[side] + 1;
+    if (inuse_only && side == 1) /* there might be more in use than fits */
+        return;
+    if (row < 0 || (long) row >= cw->maxrow || side < 0 || side > 1)
+        panic("ttyinv_populate_slot row=%d, size=%d", row, side);
 
+    col = bordercol[side] + 1;
     endcol = bordercol[side + 1] - 1;
     cell = &cw->cells[row][col];
     if (cell->color != color)
@@ -3084,16 +3225,13 @@ ttyinv_populate_slot(
             cell->glyph = 0; /* cell->content.gi is gone */
         }
 
-        if ((c = *text) != '\0') {
-            if (cell->content.ttychar != c)
-                cell->refresh = 1;
-            cell->content.ttychar = c;
+        if ((c = *text) != '\0')
             ++text;
-        } else {
-            if (cell->content.ttychar != ' ')
-                cell->refresh = 1;
-            cell->content.ttychar = ' ';
-        }
+        else
+            c = ' ';
+        if (cell->content.ttychar != c)
+            cell->refresh = 1;
+        cell->content.ttychar = c;
         cell->text = 1; /* cell->content.ttychar is current */
     }
 }
@@ -3216,6 +3354,7 @@ tty_invent_box_glyph_init(struct WinDesc *cw)
         }
     done_tty_perm_invent_init = TRUE;
 }
+
 #endif  /* TTY_PERM_INVENT */
 
 /* update persistent inventory window */
@@ -3260,7 +3399,9 @@ tty_wait_synch(void)
 }
 
 void
-docorner(register int xmin, register int ymax, int ystart_between_menu_pages)
+docorner(
+    register int xmin, register int ymax,
+    int ystart_between_menu_pages)
 {
     register int y;
     register struct WinDesc *cw = wins[WIN_MAP];
@@ -3274,7 +3415,7 @@ docorner(register int xmin, register int ymax, int ystart_between_menu_pages)
 
     HUPSKIP();
 #if 0   /* this optimization is not valuable enough to justify
-           abusing core internals... */
+         * abusing core internals... */
     if (u.uswallow) { /* Can be done more efficiently */
         swallowed(1);
         /* without this flush, if we happen to follow --More-- displayed in
@@ -3285,7 +3426,7 @@ docorner(register int xmin, register int ymax, int ystart_between_menu_pages)
     }
 #endif /*0*/
 
-#if defined(SIGWINCH) && defined(CLIPPING)
+#ifdef RESIZABLE
     if (ymax > LI)
         ymax = LI; /* can happen if window gets smaller */
 #endif
@@ -3438,7 +3579,7 @@ tty_cliparound(int x, int y)
         clipy = clipymax - (LI - 1 - iflags.wc2_statuslines);
     }
     if (clipx != oldx || clipy != oldy) {
-        redraw_map(); /* ask the core to resend the map window's data */
+        redraw_map(TRUE); /* ask the core to resend the map window's data */
     }
 }
 #endif /* CLIPPING */
@@ -3633,12 +3774,10 @@ tty_nhgetch(void)
 {
     int i;
 #ifdef UNIX
-    /* kludge alert: Some Unix variants return funny values if getc()
-     * is called, interrupted, and then called again.  There
-     * is non-reentrant code in the internal _filbuf() routine, called by
-     * getc().
+    /* kludge alert: Some Unix variants return funny values if getc() is
+     * called, interrupted, and then called again.  There is non-reentrant
+     * code in the internal _filbuf() routine, called by getc().
      */
-    static volatile int nesting = 0;
     char nestbuf;
 #endif
 
@@ -3655,21 +3794,33 @@ tty_nhgetch(void)
     if (iflags.debug_fuzzer) {
         i = randomkey();
     } else {
+#ifdef RESIZABLE
+        if (gp.program_state.resize_pending)
+            resize_tty();
+#endif
+        gp.program_state.getting_char++;
 #ifdef UNIX
-        i = (++nesting == 1)
+        i = (gp.program_state.getting_char == 1)
               ? tgetch()
-              : (read(fileno(stdin), (genericptr_t) &nestbuf, 1) == 1)
-                  ? (int) nestbuf : EOF;
-        --nesting;
+              : ((read(fileno(stdin), (genericptr_t) &nestbuf, 1) == 1)
+                 ? (int) nestbuf : EOF);
 #else
         i = tgetch();
+#endif
+        gp.program_state.getting_char--;
+#ifdef RESIZABLE
+        if (resize_mesg) {
+            resize_mesg = 0;
+            tty_clear_nhwindow(WIN_MESSAGE);
+            i = '\033';
+        }
 #endif
     }
     if (!i)
         i = '\033'; /* map NUL to ESC since nethack doesn't expect NUL */
     else if (i == EOF)
         i = '\033'; /* same for EOF */
-    /* topline has been seen - we can clear need for more */
+    /* topline has been seen - we can clear the need for --More-- */
     if (ttyDisplay && ttyDisplay->toplin == TOPLINE_NEED_MORE)
         ttyDisplay->toplin = TOPLINE_NON_EMPTY;
 #ifdef TTY_TILES_ESCCODES
@@ -4826,6 +4977,7 @@ play_usersound_via_idx(int idx, int volume)
 #undef print_vt_soundcode_idx
 #endif
 
+#undef RESIZABLE
 #ifdef getret
 #undef getret
 #endif

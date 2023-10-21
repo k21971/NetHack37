@@ -3251,6 +3251,7 @@ cnf_line_HILITE_STATUS(char *bufp)
 #ifdef STATUS_HILITES
     return parse_status_hl1(bufp, TRUE);
 #else
+    nhUse(bufp);
     return TRUE;
 #endif
 }

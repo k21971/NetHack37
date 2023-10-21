@@ -370,7 +370,7 @@ extern void sokoban_detect(void);
 #if defined(DUMPLOG) || defined(DUMPHTML)
 extern void dump_map(void);
 #endif
-extern void reveal_terrain(int, int);
+extern void reveal_terrain(unsigned);
 extern int wiz_mgender(void);
 
 /* ### dig.c ### */
@@ -446,7 +446,8 @@ extern void see_traps(void);
 extern void curs_on_u(void);
 extern int doredraw(void);
 extern void docrt(void);
-extern void redraw_map(void);
+extern void docrt_flags(int);
+extern void redraw_map(boolean);
 extern void show_glyph(coordxy, coordxy, int);
 extern void clear_glyph_buffer(void);
 extern void row_refresh(coordxy, coordxy, coordxy);
@@ -631,6 +632,7 @@ extern boolean cursed_object_at(coordxy, coordxy);
 extern struct obj *droppables(struct monst *);
 extern int dog_nutrition(struct monst *, struct obj *);
 extern int dog_eat(struct monst *, struct obj *, coordxy, coordxy, boolean);
+extern int pet_ranged_attk(struct monst *);
 extern int dog_move(struct monst *, int);
 extern boolean could_reach_item(struct monst *, coordxy, coordxy);
 extern void finish_meating(struct monst *);
@@ -2105,6 +2107,7 @@ extern char *monhealthdescr(struct monst *mon, boolean, char *);
 extern void mhidden_description(struct monst *, boolean, char *);
 extern boolean object_from_map(int, coordxy, coordxy, struct obj **);
 extern const char *waterbody_name(coordxy, coordxy);
+extern boolean ia_checkfile(struct obj *);
 extern int do_screen_description(coord, boolean, int, char *, const char **,
                                  struct permonst **);
 extern int do_look(int, coord *);
@@ -3154,7 +3157,6 @@ extern int hide_privileges(boolean);
 #ifdef ENHANCED_SYMBOLS
 extern int glyphrep(const char *);
 extern char *mixed_to_utf8(char *buf, size_t bufsz, const char *str, int *);
-extern const char *mixed_to_glyphinfo(const char *str, glyph_info *gip);
 extern int match_glyph(char *);
 extern void dump_all_glyphids(FILE *fp);
 extern void fill_glyphid_cache(void);
@@ -3288,6 +3290,9 @@ extern void introff(void);
 ATTRNORETURN extern void error (const char *, ...) PRINTF_F(1, 2) NORETURN;
 #ifdef TIMED_DELAY
 extern void msleep(unsigned);
+#endif
+#ifdef SIGWINCH
+extern void getwindowsz(void);
 #endif
 #ifdef ENHANCED_SYMBOLS
 extern void tty_utf8graphics_fixup(void);
@@ -3436,6 +3441,7 @@ extern char *decode_mixed(char *, const char *);
 extern void genl_putmixed(winid, int, const char *);
 extern void genl_display_file(const char *, boolean);
 extern boolean menuitem_invert_test(int, unsigned, boolean);
+extern const char *mixed_to_glyphinfo(const char *str, glyph_info *gip);
 
 /* ### windows.c ### */
 

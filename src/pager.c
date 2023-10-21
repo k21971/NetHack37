@@ -15,7 +15,7 @@ static void trap_description(char *, int, coordxy, coordxy);
 static void look_at_object(char *, coordxy, coordxy, int);
 static void look_at_monster(char *, char *, struct monst *, coordxy, coordxy);
 static struct permonst *lookat(coordxy, coordxy, char *, char *);
-static void checkfile(char *, struct permonst *, boolean, boolean, char *);
+static boolean checkfile(char *, struct permonst *, unsigned, char *);
 static int add_cmap_descr(int, int, int, int, coord,
                           const char *, const char *,
                           boolean *, const char **, char *);
@@ -44,6 +44,13 @@ extern void port_help(void);
 #endif
 static char *setopt_cmd(char *);
 static boolean add_quoted_engraving(coordxy, coordxy, char *);
+
+enum checkfileflags {
+    chkfilNone     = 0,
+    chkfilUsrTyped = 1,
+    chkfilDontAsk  = 2,
+    chkfilIaCheck  = 4,
+};
 
 static const char invisexplain[] = "remembered, unseen, creature",
            altinvisexplain[] = "unseen creature"; /* for clairvoyance */
@@ -680,6 +687,19 @@ lookat(coordxy x, coordxy y, char *buf, char *monbuf)
     return (pm && !Hallucination) ? pm : (struct permonst *) 0;
 }
 
+/* used to decide whether the context-sensitive inventory action menu for
+   item 'otmp' should include the "/ - look up this item" choice */
+boolean
+ia_checkfile(struct obj *otmp)
+{
+    char itemnam[BUFSZ];
+
+    /* singular() of xname() of otmp is what "/i" looks up */
+    Strcpy(itemnam, singular(otmp, xname));
+    return checkfile(itemnam, (struct permonst *) 0,
+                     chkfilIaCheck | chkfilDontAsk, (char *) 0);
+}
+
 /*
  * Look in the "data" file for more info.  Called if the user typed in the
  * whole name (user_typed_name == TRUE), or we've found a possible match
@@ -689,21 +709,30 @@ lookat(coordxy x, coordxy y, char *buf, char *monbuf)
  *       must not be changed directly, e.g. via lcase(). We want to force
  *       lcase() for data.base lookup so that we can have a clean key.
  *       Therefore, we create a copy of inp _just_ for data.base lookup.
+ *
+ * Returns True if an entry is found, False otherwise.
  */
-static void
-checkfile(char *inp, struct permonst *pm, boolean user_typed_name,
-          boolean without_asking, char *supplemental_name)
+static boolean
+checkfile(
+    char *inp, /* string to look up */
+    struct permonst *pm, /* monster type to look up (overrides 'inp') */
+    unsigned chkflags,
+    char *supplemental_name)
 {
     dlb *fp;
     char buf[BUFSZ], newstr[BUFSZ], givenname[BUFSZ];
     char *ep, *dbase_str;
+    boolean user_typed_name = (chkflags & chkfilUsrTyped) != 0,
+            without_asking = (chkflags & chkfilDontAsk) != 0,
+            ia_checking = (chkflags & chkfilIaCheck) != 0;
     unsigned long txt_offset = 0L;
     winid datawin = WIN_ERR;
+    boolean res = FALSE;
 
     fp = dlb_fopen(DATAFILE, "r");
     if (!fp) {
         pline("Cannot open 'data' file!");
-        return;
+        return res;
     }
     /* If someone passed us garbage, prevent fault. */
     if (!inp || strlen(inp) > (BUFSZ - 1)) {
@@ -831,6 +860,12 @@ checkfile(char *inp, struct permonst *pm, boolean user_typed_name,
         if (alt && (ap = strstri(alt, " (")) != 0 && ap > alt)
             *ap = '\0';
 
+        /* If the object's name matches the player-specified fruitname,
+           then "fruit" is the alternate description. We do this here so that
+           if the fruit name is an extant object, looking at the fruit yields
+           that object's description. */
+        if (!alt && !strncmpi(dbase_str, gp.pl_fruit, PL_FSIZ))
+            alt = strcpy(newstr, obj_descr[SLIME_MOLD].oc_name);
         /*
          * If the object is named, then the name is the alternate description;
          * otherwise, the result of makesingular() applied to the name is.
@@ -838,7 +873,7 @@ checkfile(char *inp, struct permonst *pm, boolean user_typed_name,
          * user will usually be found under their name, rather than under
          * their object type, so looking for a singular form is pointless.
          */
-        if (!alt)
+        else if (!alt)
             alt = makesingular(dbase_str);
 
         pass1found_in_file = FALSE;
@@ -924,6 +959,10 @@ checkfile(char *inp, struct permonst *pm, boolean user_typed_name,
                         pline("? Seek error on 'data' file!");
                         goto checkfile_done;
                     }
+                    res = TRUE;
+                    if (ia_checking)
+                        goto checkfile_done;
+
                     datawin = create_nhwindow(NHW_MENU);
                     for (i = 0; i < entry_count; i++) {
                         /* room for 1-tab or 8-space prefix + BUFSZ-1 + \0 */
@@ -959,8 +998,9 @@ checkfile(char *inp, struct permonst *pm, boolean user_typed_name,
                     display_nhwindow(datawin, FALSE);
                     destroy_nhwindow(datawin), datawin = WIN_ERR;
                 }
-            } else if (user_typed_name && pass == 0 && !pass1found_in_file)
-                pline("I don't have any information on those things.");
+            } else if (user_typed_name && pass == 0 && !pass1found_in_file) {
+                pline("You don't have any information on those things.");
+            }
         }
     }
     goto checkfile_done; /* skip error feedback */
@@ -971,7 +1011,7 @@ checkfile(char *inp, struct permonst *pm, boolean user_typed_name,
     if (datawin != WIN_ERR)
         destroy_nhwindow(datawin);
     (void) dlb_fclose(fp);
-    return;
+    return res;
 }
 
 /* extracted from do_screen_description() */
@@ -1075,9 +1115,11 @@ add_cmap_descr(
 }
 
 int
-do_screen_description(coord cc, boolean looked, int sym, char *out_str,
-                      const char **firstmatch,
-                      struct permonst **for_supplement)
+do_screen_description(
+    coord cc, boolean looked,
+    int sym, char *out_str,
+    const char **firstmatch,
+    struct permonst **for_supplement)
 {
     static const char mon_interior[] = "the interior of a monster",
                       unreconnoitered[] = "unreconnoitered";
@@ -1450,6 +1492,7 @@ do_look(int mode, coord *click_cc)
     boolean quick = (mode == 1); /* use cursor; don't search for "more info" */
     boolean clicklook = (mode == 2); /* right mouse-click method */
     char out_str[BUFSZ] = DUMMY;
+    struct _cmd_queue cq, *cmdq;
     const char *firstmatch = 0;
     struct permonst *pm = 0, *supplemental_pm = 0;
     int i = '\0', ans = 0;
@@ -1462,6 +1505,16 @@ do_look(int mode, coord *click_cc)
 
     cc.x = 0;
     cc.y = 0;
+
+    if ((cmdq = cmdq_pop()) != 0) {
+        cq = *cmdq;
+        free((genericptr_t) cmdq);
+        if (cq.typ == CMDQ_KEY)
+            i = cq.key;
+        else
+            cmdq_clear(CQ_CANNED);
+        goto dowhatiscmd;
+    }
 
     if (!clicklook) {
         if (quick) {
@@ -1505,23 +1558,23 @@ do_look(int mode, coord *click_cc)
                          clr, "nearby monsters", MENU_ITEMFLAGS_NONE);
                 any.a_char = 'M';
                 add_menu(win, &nul_glyphinfo, &any,
-                         flags.lootabc ? 0 : any.a_char, 0, ATR_NONE,
-                         clr, "all monsters shown on map", MENU_ITEMFLAGS_NONE);
+                         flags.lootabc ? 0 : any.a_char, 0, ATR_NONE, clr,
+                         "all monsters shown on map", MENU_ITEMFLAGS_NONE);
                 any.a_char = 'o';
                 add_menu(win, &nul_glyphinfo, &any,
                          flags.lootabc ? 0 : any.a_char, 0, ATR_NONE,
                          clr, "nearby objects", MENU_ITEMFLAGS_NONE);
                 any.a_char = 'O';
                 add_menu(win, &nul_glyphinfo, &any,
-                         flags.lootabc ? 0 : any.a_char, 0, ATR_NONE,
-                         clr, "all objects shown on map", MENU_ITEMFLAGS_NONE);
-                any.a_char = '^';
+                         flags.lootabc ? 0 : any.a_char, 0, ATR_NONE, clr,
+                         "all objects shown on map", MENU_ITEMFLAGS_NONE);
+                any.a_char = 't';
                 add_menu(win, &nul_glyphinfo, &any,
-                         flags.lootabc ? 0 : any.a_char, 0, ATR_NONE,
+                         flags.lootabc ? 0 : any.a_char, '^', ATR_NONE,
                          clr, "nearby traps", MENU_ITEMFLAGS_NONE);
-                any.a_char = '\"';
+                any.a_char = 'T';
                 add_menu(win, &nul_glyphinfo, &any,
-                         flags.lootabc ? 0 : any.a_char, 0, ATR_NONE,
+                         flags.lootabc ? 0 : any.a_char, '\"', ATR_NONE,
                          clr, "all seen or remembered traps",
                          MENU_ITEMFLAGS_NONE);
             }
@@ -1533,6 +1586,7 @@ do_look(int mode, coord *click_cc)
             destroy_nhwindow(win);
         }
 
+ dowhatiscmd:
         switch (i) {
         default:
         case 'q':
@@ -1555,11 +1609,12 @@ do_look(int mode, coord *click_cc)
             *out_str = '\0';
             for (invobj = gi.invent; invobj; invobj = invobj->nobj)
                 if (invobj->invlet == invlet) {
-                    strcpy(out_str, singular(invobj, xname));
+                    Strcpy(out_str, singular(invobj, xname));
                     break;
                 }
             if (*out_str)
-                checkfile(out_str, pm, TRUE, TRUE, (char *) 0);
+                (void) checkfile(out_str, pm, chkfilUsrTyped | chkfilDontAsk,
+                                 (char *) 0);
             return ECMD_OK;
           }
         case '?':
@@ -1573,7 +1628,8 @@ do_look(int mode, coord *click_cc)
                 return ECMD_OK;
 
             if (out_str[1]) { /* user typed in a complete string */
-                checkfile(out_str, pm, TRUE, TRUE, (char *) 0);
+                (void) checkfile(out_str, pm,  chkfilUsrTyped | chkfilDontAsk,
+                                 (char *) 0);
                 return ECMD_OK;
             }
             sym = out_str[0];
@@ -1590,10 +1646,10 @@ do_look(int mode, coord *click_cc)
         case 'O':
             look_all(FALSE, FALSE); /* list all objects */
             return ECMD_OK;
-        case '^':
+        case 't':
             look_traps(TRUE); /* list nearby traps */
             return ECMD_OK;
-        case '\"':
+        case 'T':
             look_traps(FALSE); /* list all traps (visible or remembered) */
             return ECMD_OK;
         }
@@ -1674,8 +1730,10 @@ do_look(int mode, coord *click_cc)
 
                 supplemental_name[0] = '\0';
                 Strcpy(temp_buf, firstmatch);
-                checkfile(temp_buf, pm, FALSE,
-                          (boolean) (ans == LOOK_VERBOSE), supplemental_name);
+                (void) checkfile(temp_buf, pm,
+                                 (ans == LOOK_VERBOSE) ? chkfilDontAsk
+                                                       : chkfilNone,
+                                 supplemental_name);
                 if (supplemental_pm)
                     do_supplemental_info(supplemental_name, supplemental_pm,
                                          (boolean) (ans == LOOK_VERBOSE));

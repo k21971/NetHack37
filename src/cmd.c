@@ -960,6 +960,9 @@ domonability(void)
             aggravate();
     } else if (is_vampire(uptr) || is_vampshifter(&gy.youmonst)) {
         return dopoly();
+    } else if (u.usteed && can_breathe(u.usteed->data)) {
+        (void) pet_ranged_attk(u.usteed);
+        return ECMD_TIME;
     } else if (Upolyd) {
         pline("Any special ability you may have is purely reflexive.");
     } else {
@@ -2238,16 +2241,16 @@ doterrain(void)
 
     switch (which) {
     case 1: /* known map */
-        reveal_terrain(0, TER_MAP);
+        reveal_terrain(TER_MAP);
         break;
     case 2: /* known map with known traps */
-        reveal_terrain(0, TER_MAP | TER_TRP);
+        reveal_terrain(TER_MAP | TER_TRP);
         break;
     case 3: /* known map with known traps and objects */
-        reveal_terrain(0, TER_MAP | TER_TRP | TER_OBJ);
+        reveal_terrain(TER_MAP | TER_TRP | TER_OBJ);
         break;
     case 4: /* full map */
-        reveal_terrain(1, TER_MAP);
+        reveal_terrain(TER_MAP | TER_FULL);
         break;
     case 5: /* map internals */
         wiz_map_levltyp();
@@ -5341,7 +5344,8 @@ getdir(const char *s)
                 break;
             }
         }
-        iflags.getdir_click = mod;
+        if (iflags.getdir_click)
+            iflags.getdir_click = mod;
         return (pos >= 0);
     } else if (!(is_mov = movecmd(dirsym, MV_ANY)) && !u.dz) {
         boolean did_help = FALSE, help_requested;
@@ -5604,6 +5608,7 @@ dotherecmdmenu(void)
         else
             ch = there_cmd_menu(x, y, iflags.getdir_click);
         gc.clicklook_cc.x = gc.clicklook_cc.y = -1;
+        iflags.getdir_click = 0;
         return (ch && ch != '\033') ? ECMD_TIME : ECMD_OK;
     }
 

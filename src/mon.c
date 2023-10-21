@@ -1015,6 +1015,13 @@ movemon_singlemon(struct monst *mtmp)
     if (mon_offmap(mtmp))
         return FALSE;
 
+    if (mtmp->data == &mons[PM_FOG_CLOUD]) {
+        NhRegion *reg = visible_region_at(mtmp->mx, mtmp->my);
+
+        if (!reg)
+            create_gas_cloud(mtmp->mx, mtmp->my, 1, 0); /* harmless vapor */
+    }
+
     /* Find a monster that we have not treated yet. */
     if (mtmp->movement < NORMAL_SPEED)
         return FALSE;
@@ -2793,6 +2800,9 @@ mondead(struct monst *mtmp)
     if (be_sad)
         You("have a sad feeling for a moment, then it passes.");
 
+    if (mtmp->data == &mons[PM_STEAM_VORTEX])
+        create_gas_cloud(mtmp->mx, mtmp->my, rn2(10) + 5, 0); /* harmless */
+
     /* dead vault guard is actually kept at coordinate <0,0> until
        his temporary corridor to/from the vault has been removed;
        need to do this after life-saving and before m_detach() */
@@ -4092,8 +4102,8 @@ normal_shape(struct monst *mon)
     }
 }
 
-/* iterate all monsters on the level, even dead ones, calling func
-   for each monster. if func returns TRUE, stop iterating.
+/* iterate all monsters on the level, even dead or off-map ones,
+   calling func for each monster. if func returns TRUE, stop iterating.
    safe for list deletions and insertions, and guarantees
    calling func once per monster in the list. */
 void
@@ -4128,7 +4138,7 @@ iter_mons(void (*func)(struct monst *))
     struct monst *mtmp;
 
     for (mtmp = fmon; mtmp; mtmp = mtmp->nmon) {
-        if (DEADMONSTER(mtmp))
+        if (DEADMONSTER(mtmp) || mon_offmap(mtmp))
             continue;
         func(mtmp);
     }
@@ -4143,7 +4153,7 @@ get_iter_mons(boolean (*func)(struct monst *))
     struct monst *mtmp;
 
     for (mtmp = fmon; mtmp; mtmp = mtmp->nmon) {
-        if (DEADMONSTER(mtmp))
+        if (DEADMONSTER(mtmp) || mon_offmap(mtmp))
             continue;
         if (func(mtmp))
             return mtmp;
@@ -4161,7 +4171,7 @@ get_iter_mons_xy(boolean (*func)(struct monst *, coordxy, coordxy),
     struct monst *mtmp;
 
     for (mtmp = fmon; mtmp; mtmp = mtmp->nmon) {
-        if (DEADMONSTER(mtmp))
+        if (DEADMONSTER(mtmp) || mon_offmap(mtmp))
             continue;
         if (func(mtmp, x, y))
             return mtmp;

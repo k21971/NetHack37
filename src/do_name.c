@@ -730,9 +730,20 @@ enum hilite_states {
 static void
 getpos_refresh(int *hilite_statep)
 {
-    if (*hilite_statep == Hilite_Active)
+    int redrawflags = docrtRefresh;
+
+    if (*hilite_statep == Hilite_Active) {
+        /* removing SHOWVALID markers; just redraw the map */
         (*getpos_hilitefunc)(2); /* tmp_at(DISP_END) */
-    docrt(); /* redraw everything */
+        redrawflags |= docrtMapOnly;
+    } else {
+        /* ^R: player requested that the screen be redrawn; maybe something
+         * outside of nethack has clobbered it; clear it, redisplay what we
+         * think the map already shows rather than recalculate that, do a
+         * full status update, and show perminv, if applicable */
+        ; /* just docrtRefresh */
+    }
+    docrt_flags(redrawflags);
     *hilite_statep = Hilite_Inactive;
 }
 
@@ -815,8 +826,8 @@ getpos(coord *ccp, boolean force, const char *goal)
               visctrl(gc.Cmd.spkeys[NHKF_GETPOS_HELP]));
         msg_given = TRUE;
     }
-    cx = ccp->x;
-    cy = ccp->y;
+    cx = gg.getposx = ccp->x;
+    cy = gg.getposy = ccp->y;
 #ifdef CLIPPING
     cliparound(cx, cy);
 #endif
@@ -928,6 +939,7 @@ getpos(coord *ccp, boolean force, const char *goal)
                 getpos_help(force, goal);
             /* ^R: docrt(), hilite_state = Hilite_Inactive */
             getpos_refresh(&hilite_state);
+            curs(WIN_MAP, cx, cy);
             /* update message window to reflect that we're still targeting */
             show_goal_msg = TRUE;
         } else if (c == gc.Cmd.spkeys[NHKF_GETPOS_SHOWVALID]) {
@@ -1122,7 +1134,7 @@ getpos(coord *ccp, boolean force, const char *goal)
             break;
         }
  nxtc:
-        ;
+        gg.getposx = cx, gg.getposy = cy;
 #ifdef CLIPPING
         cliparound(cx, cy);
 #endif
@@ -1138,6 +1150,7 @@ getpos(coord *ccp, boolean force, const char *goal)
         clear_nhwindow(WIN_MESSAGE);
     ccp->x = cx;
     ccp->y = cy;
+    gg.getposx = gg.getposy = 0;
     for (i = 0; i < NUM_GLOCS; i++)
         if (garr[i])
             free((genericptr_t) garr[i]);

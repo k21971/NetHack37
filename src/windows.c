@@ -2459,4 +2459,33 @@ menuitem_invert_test(
     return TRUE;
 }
 
+/*
+ * helper routine if a window port wants to extract the glyph
+ * information from a glyph number representation in the string;
+ * the returned string is the remainder of the string after
+ * extracting the \GNNNNNNNN information. The glyph details,
+ * including the utf8 representation under ENHANCED_SYMBOLS,
+ * will be stored in the glyph_info struct pointed to by gip.
+ */
+const char *
+mixed_to_glyphinfo(const char *str, glyph_info *gip)
+{
+    int dcount, ggv;
+
+    if (!str || !gip)
+        return " ";
+
+    *gip = nul_glyphinfo;
+    if (*str == '\\' && *(str + 1) == 'G') {
+        if ((dcount = decode_glyph(str + 2, &ggv))) {
+            map_glyphinfo(0, 0, ggv, 0, gip);
+            /* 'str' is ready for the next loop iteration and
+                '*str' should not be copied at the end of this
+                iteration */
+            str += (dcount + 2);
+        }
+    }
+    return str;
+}
+
 /*windows.c*/

@@ -806,10 +806,10 @@ peffect_invisibility(struct obj *otmp)
     } else {
         self_invis_message();
     }
-    if (otmp->blessed)
+    if (otmp->blessed && !rn2(HInvis ? 15 : 30))
         HInvis |= FROMOUTSIDE;
     else
-        incr_itimeout(&HInvis, rn1(15, 31));
+        incr_itimeout(&HInvis, d(6 - 3 * bcsign(otmp), 100) + 100);
     newsym(u.ux, u.uy); /* update position */
     if (otmp->cursed) {
         pline("For some reason, you feel your presence is known.");
@@ -901,8 +901,10 @@ peffect_monster_detection(struct obj *otmp)
         /* after a while, repeated uses become less effective */
         if ((HDetect_monsters & TIMEOUT) >= 300L)
             i = 1;
-        else
+        else if (otmp->oclass == SPBOOK_CLASS)
             i = rn1(40, 21);
+        else /* potion */
+            i = rn2(100) + 100;
         incr_itimeout(&HDetect_monsters, i);
         for (x = 1; x < COLNO; x++) {
             for (y = 0; y < ROWNO; y++) {

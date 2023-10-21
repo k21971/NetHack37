@@ -1,4 +1,4 @@
-$NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1235 $ $NHDT-Date: 1693427872 2023/08/30 20:37:52 $
+$NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1247 $ $NHDT-Date: 1695932713 2023/09/28 20:25:13 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -976,6 +976,7 @@ wielding a bec de corbin makes ravens generate peaceful
 moving with 'm' prefix allows hero to enter a known pit carefully
 rangers always succeed in disarming bear traps, unless impaired
 bigroom variant 2 may have ice floor in unlit areas
+bigroom variant 3 may have some walls replaced with other terrain
 bigroom variant 4 may have two large squares of terrain in the middle
 bigroom variant 5 may have patches of ice or clouds
 some large monsters can knock back smaller monsters with a hit
@@ -1236,12 +1237,32 @@ a pet that was poison resistant but not stoning resistant would eat Medusa's
 ring of hunger prevents choking on your food
 paranoid_confirm:pray can be changed to require yes/no response instead of y/n
 	by also setting paranoid_confirm:Confirm
-wand of probing reveals map locations in the ray path
+wand of probing reveals map locations and traps in the ray path; also reveals
+	secret doors and secret corridors if the ray hits such
 applying a wielded, lit potion of oil to unlight it while other unlit
 	potion(s) of oil were quivered would trigger panic
 	"addinv: null obj after quiver merge otyp=N" where N is POT_OIL
 casting stone-to-flesh at self turned wielded or quivered rocks into unwielded,
 	unquivered meatballs, merging stacks if there were some in each slot
+the throne room on the Samurai quest home level lacked a throne but gave
+	"You enter an opulent throne room!" message the first time it was
+	entered; vary the message rather than add a throne
+coughing due to stinking cloud wakes up nearby monsters
+stop occupation when timed levitation or choking issues a message
+use #monster to make dragon steed breathe
+wand of probing reveals tin and egg contents
+steam vortices and fog clouds leave steam clouds behind
+fog clouds maintain any clouds they are in, even poisonous ones
+bone devils summon skeletons
+adjust wand of make invisible and potion of invisibility effects
+barbed devils have an attack that sticks you to them
+balrogs prefer bullwhip if hero is wielding a weapon
+ice devils have an additional attack, a slowing touch
+buff scroll of confuse monster and blessed potion of monster detection
+if a temple was entered while blind, #overview could show a line of just "."
+	when describing altars if no other interesting features on that level
+	were known
+rolling boulders ignored walls and trees
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -1758,6 +1779,8 @@ tty: changes to support TTY_PERM_INVENT resulted in blank inventory menu when
 tty: for the !DEF_PAGER configuration, redraw screen properly if attempting
 	to display a file fails and tty_display_file()'s caller requests
 	feedback for that situation
+tty: if a group accelerator matched a menu command ('^' in menu for '/')
+	it wouldn't work to select, just to manipulate the menu
 Unix: after lua changes to Makefiles, 'make spotless' for dat subdirectory
 	left some generated data files which should have been deleted
 Windows: new tile additions in win/share did not trigger the creation of a new
@@ -1783,6 +1806,8 @@ X11: use visctrl(response) when X11_yn_function() echoes prompt+response in
 X11: when trying to lookup scrollbars in order to handle scrolling via keys,
 	menu handling always ended up finding the top window
 X11: enable horizontal scrollbar for persistent inventory window
+X11: if a group accelerator matched a menu command ('^' in menu for '/')
+	it wouldn't work to select, just to manipulate the menu
 X11+macOS: after the "bad Atom" fix (below), the persistent inventory window
 	crept downward every time it got updated
 
@@ -2252,6 +2277,10 @@ answering '?<return>' at the "genocide what?" prompt (for either monster class
 	monsters have already been genocided and then re-prompts
 throwing the silver bell (or other invocation item, or the Amulet) to the
 	quest leader will identify it instead of being treated as an attack
+applying gold pieces will flip one and report "heads" or "tails"; with a stack
+	of more than one, normally the flipped coin will rejoin the stack
+during enlightenment and end-of-game disclosure, use contraction "<verb>n't"
+	for "<verb> not"
 
 
 Platform- and/or Interface-Specific New Features
