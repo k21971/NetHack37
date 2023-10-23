@@ -1,4 +1,4 @@
-/* NetHack 3.7	invent.c	$NHDT-Date: 1695159625 2023/09/19 21:40:25 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.449 $ */
+/* NetHack 3.7	invent.c	$NHDT-Date: 1698017900 2023/10/22 23:38:20 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.455 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -2500,12 +2500,7 @@ update_inventory(void)
      */
     save_suppress_price = iflags.suppress_price;
     iflags.suppress_price = 0;
-#if defined(TTY_PERM_INVENT)
-    if (WINDOWPORT(tty))
-        sync_perminvent();
-    else
-#endif
-        (*windowprocs.win_update_inventory)(0);
+    (*windowprocs.win_update_inventory)(0);
     iflags.suppress_price = save_suppress_price;
 }
 
@@ -3301,7 +3296,7 @@ display_pickinv(
     Loot *sortedinvent, *srtinv;
     boolean wizid = (wizard && iflags.override_ID), gotsomething = FALSE;
     int clr = 0, menu_behavior = MENU_BEHAVE_STANDARD;
-    boolean show_gold = TRUE, sparse = FALSE, inuse_only = FALSE,
+    boolean show_gold = TRUE, inuse_only = FALSE,
             skipped_gold = FALSE, skipped_noninuse = FALSE,
             doing_perm_invent = FALSE, save_flags_sortpack = flags.sortpack;
 
@@ -3329,10 +3324,8 @@ display_pickinv(
         menu_behavior = MENU_BEHAVE_PERMINV;
         prepare_perminvent(win);
         show_gold = ((wri_info.fromcore.invmode & InvShowGold) != 0);
-        sparse = ((wri_info.fromcore.invmode & InvSparse) != 0);
         inuse_only = ((wri_info.fromcore.invmode & InvInUse) != 0);
         doing_perm_invent = TRUE;
-        nhUse(sparse);
     }
     /*
      * Exit early if no inventory -- but keep going if we are doing
@@ -3353,7 +3346,7 @@ display_pickinv(
         : lets ? (int) strlen(lets)
                : !gi.invent ? 0 : !gi.invent->nobj ? 1 : 2;
     /* for xtra_choice, there's another 'item' not included in initial 'n';
-       for !lets (full gi.invent) and for override_ID (wizard mode identify),
+       for !lets (full invent) and for override_ID (wizard mode identify),
        skip message_menu handling of single item even if item count was 1 */
     if (xtra_choice || (n == 1 && (!lets || wizid)))
         ++n;
@@ -3447,7 +3440,7 @@ display_pickinv(
         if (flags.sortpack)
             add_menu(win, &nul_glyphinfo, &any, 0, 0,
                      iflags.menu_headings, clr,
-                    "Miscellaneous", MENU_ITEMFLAGS_NONE);
+                     "Miscellaneous", MENU_ITEMFLAGS_NONE);
         any.a_char = HANDS_SYM; /* '-' */
         add_menu(win, &nul_glyphinfo, &any, HANDS_SYM, 0, ATR_NONE,
                  clr, xtra_choice, MENU_ITEMFLAGS_NONE);
@@ -4753,10 +4746,15 @@ dopramulet(void)
 static boolean
 tool_being_used(struct obj *obj)
 {
+    /*
+     * [Should this also include lit potions of oil?  They're not tools
+     *  but they are "in use" without being noticeable via obj->oworkmask.]
+     */
     if ((obj->owornmask & (W_TOOL | W_SADDLE)) != 0L)
         return TRUE;
     if (obj->oclass != TOOL_CLASS)
         return FALSE;
+    /* [don't actually need to check uwep here; caller catches it] */
     return (boolean) (obj == uwep || obj->lamplit
                       || (obj->otyp == LEASH && obj->leashmon));
 }
