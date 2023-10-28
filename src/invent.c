@@ -1,4 +1,4 @@
-/* NetHack 3.7	invent.c	$NHDT-Date: 1698090922 2023/10/23 19:55:22 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.456 $ */
+/* NetHack 3.7	invent.c	$NHDT-Date: 1698264784 2023/10/25 20:13:04 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.457 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -4224,7 +4224,7 @@ dfeature_at(coordxy x, coordxy y, char *buf)
     else if (is_lava(x, y))
         cmap = S_lava; /* "molten lava" */
     else if (is_ice(x, y))
-        cmap = S_ice; /* "ice" */
+        dfeature = ice_descr(x, y, altbuf), cmap = -1; /* "ice" */
     else if (is_pool(x, y))
         dfeature = "pool of water";
     else if (IS_SINK(ltyp))
@@ -4330,19 +4330,28 @@ look_here(
         if (dfeature && !strncmp(dfeature, "altar ", 6)) {
             /* don't say "altar" twice, dfeature has more info */
             You("try to feel what is here.");
+        } else if (SURFACE_AT(u.ux, u.uy) == ICE) {
+            /* using describe_decor() to handle ice is simpler than
+               replicating it in the conditional message construction */
+            if (!flags.mention_decor || iflags.prev_decor == ICE)
+                force_decor(FALSE);
+            /* plain "ice" if blind and levitating, otherwise "solid ice" &c;
+              "There is [thin ]ice here.  You try to feel what is on it." */
+            You("try to feel what is on it.");
+            skip_dfeature = TRUE; /* ice already described */
         } else {
-            const char *where = (Blind && !can_reach_floor(TRUE))
-                                    ? "lying beneath you"
-                                    : "lying here on the ",
-                       *onwhat = (Blind && !can_reach_floor(TRUE))
-                                     ? ""
-                                     : surface(u.ux, u.uy);
+            boolean cant_reach = !can_reach_floor(TRUE);
+            const char *surf = surface(u.ux, u.uy),
+                       *where = cant_reach ? "lying beneath you"
+                                           : "lying here on the ",
+                       *onwhat = cant_reach ? "" : surf;
 
             You("try to feel what is %s%s.", drift ? "floating here" : where,
                 drift ? "" : onwhat);
+
+            if (dfeature && !drift && !strcmp(dfeature, surf))
+                skip_dfeature = TRUE; /* terrain feature already identified */
         }
-        if (dfeature && !drift && !strcmp(dfeature, surface(u.ux, u.uy)))
-            dfeature = 0; /* ice already identified */
         trap = t_at(u.ux, u.uy);
         if (!can_reach_floor(trap && is_pit(trap->ttyp))) {
             pline("But you can't reach it!");
@@ -4350,8 +4359,26 @@ look_here(
         }
     }
 
-    if (dfeature && !skip_dfeature)
-        Sprintf(fbuf, "There is %s here.", an(dfeature));
+    if (dfeature && !skip_dfeature) {
+        const char *p;
+        int article = 1; /* 0 => none, 1 => a/an, 2 => the (not used here) */
+
+        /* "molten lava", "iron bars", and plain "ice" are handled as special
+           cases in an() but probably shouldn't be; don't rely on that */
+        if (!strcmp(dfeature, "molten lava")
+            || !strcmp(dfeature, "iron bars")
+            || !strcmp(dfeature, "ice")
+            || !strncmp(dfeature, "frozen ", 7) /* ice while hallucinating */
+            /* thawing ice ("solid ice", "thin ice", &c) */
+            || ((p = strchr(dfeature, ' ')) != 0 && !strcmpi(p, " ice")))
+            article = 0;
+        if (article == 1)
+            dfeature = an(dfeature);
+
+        /* hardcoded "is" worked here because "iron bars" is actually
+           "set of iron bars"; use vtense() instead of relying on that */
+        Sprintf(fbuf, "There %s %s here.", vtense(dfeature, "are"), dfeature);
+    }
 
     if (!otmp || is_lava(u.ux, u.uy)
         || (is_pool(u.ux, u.uy) && !Underwater)) {
@@ -4748,7 +4775,7 @@ tool_being_used(struct obj *obj)
 {
     /*
      * [Should this also include lit potions of oil?  They're not tools
-     *  but they are "in use" without being noticeable via obj->oworkmask.]
+     *  but they are "in use" without being noticeable via obj->owornmask.]
      */
     if ((obj->owornmask & (W_TOOL | W_SADDLE)) != 0L)
         return TRUE;

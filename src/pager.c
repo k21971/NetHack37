@@ -1,4 +1,4 @@
-/* NetHack 3.7	pager.c	$NHDT-Date: 1655120486 2022/06/13 11:41:26 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.225 $ */
+/* NetHack 3.7	pager.c	$NHDT-Date: 1698264788 2023/10/25 20:13:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.252 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2018. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -482,16 +482,12 @@ const char *
 waterbody_name(coordxy x, coordxy y)
 {
     static char pooltype[40];
-    struct rm *lev;
     schar ltyp;
     boolean hallucinate = Hallucination && !gp.program_state.gameover;
 
     if (!isok(x, y))
         return "drink"; /* should never happen */
-    lev = &levl[x][y];
-    ltyp = lev->typ;
-    if (ltyp == DRAWBRIDGE_UP)
-        ltyp = db_under_typ(lev->drawbridgemask);
+    ltyp = SURFACE_AT(x, y);
 
     if (ltyp == LAVAPOOL) {
         Snprintf(pooltype, sizeof pooltype, "molten %s", hliquid("lava"));
@@ -533,6 +529,43 @@ waterbody_name(coordxy x, coordxy y)
     }
     /* default; should be unreachable */
     return "water"; /* don't hallucinate this as some other liquid */
+}
+
+const char *
+ice_descr(coordxy x, coordxy y, char *outbuf)
+{
+    static const char *const icetyp[] = {
+        "solid",    /* 0: not melting */
+        "sturdy",   /* 1: more than 1000 turns left */
+        "steady",   /* 2: 101..1000 turns left */
+        "unsteady", /* 3:  51..100 turns left */
+        "thin",     /* 4:  15..50 turns left */
+        "slushy",   /* 5:   1..14 turns left; matches Warning on ice */
+    };
+    /* same formula as is used in distant_name() for objects */
+    int r = (u.xray_range > 2) ? u.xray_range : 2,
+        neardist = (r * r) * 2 - r; /* same as r*r + r*(r-1) */
+
+    iflags.ice_rating = -1; /* secondary output, for 'mention_decor' */
+    if (levl[x][y].typ != ICE) {
+        Sprintf(outbuf, "[ice:%d?]", (int) levl[x][y].typ);
+    } else if ((distu(x, y) > neardist
+                || (!cansee(x, y) && (!u_at(x, y) || Levitation)))
+               && !gd.decor_levitate_override) { /* probe_decor(pickup.c) */
+        Strcpy(outbuf, waterbody_name(x, y)); /* "ice" or "frozen <liquid>" */
+    } else {
+        long time_left = spot_time_left(x, y, MELT_ICE_AWAY);
+
+        iflags.ice_rating = !time_left ? 0                /* solid */
+                            : (time_left > 1000L) ? 1     /* sturdy */
+                              : (time_left > 100L) ? 2    /* steady */
+                                : (time_left > 50L) ? 3   /* unsteady */
+                                  : (time_left > 14L) ? 4 /* thin */
+                                    : 5;                  /* slushy */
+        Sprintf(outbuf, "%s %s", icetyp[(int) iflags.ice_rating],
+                waterbody_name(x, y));
+    }
+    return outbuf;
 }
 
 /*
@@ -1029,7 +1062,7 @@ add_cmap_descr(
     const char **firstmatch, /* output: pointer to 1st matching description */
     char *out_str)      /* input/output: current description gets appended */
 {
-    char *mbuf = NULL;
+    char *mbuf = NULL, *p;
     int absidx = abs(idx);
 
     if (glyph == NO_GLYPH) {
@@ -1078,11 +1111,17 @@ add_cmap_descr(
             Strcpy(mbuf, "lava");
         x_str = mbuf;
         article = !(!strncmp(x_str, "water", 5)
+                    || !strncmp(x_str, "ice", 3)
                     || !strncmp(x_str, "lava", 4)
                     || !strncmp(x_str, "swamp", 5)
                     || !strncmp(x_str, "molten", 6)
                     || !strncmp(x_str, "shallow", 7)
-                    || !strncmp(x_str, "limitless", 9));
+                    || !strncmp(x_str, "limitless", 9)
+                    /* ice while hallucinating */
+                    || !strncmp(x_str, "frozen", 6)
+                    /* thawing ice ("solid ice", "thin ice", &c) */
+                    || ((p = strchr(x_str, ' ')) != 0 && !strcmpi(p, " ice"))
+                    );
     }
 
     if (!found) {
@@ -1091,9 +1130,9 @@ add_cmap_descr(
             Sprintf(out_str, "%sa trap", prefix);
             *hit_trap = TRUE;
         } else {
-            Sprintf(out_str, "%s%s", prefix,
-                    article == 2 ? the(x_str)
-                    : article == 1 ? an(x_str) : x_str);
+            Sprintf(out_str, "%s%s", prefix, (article == 2) ? the(x_str)
+                                             : (article == 1) ? an(x_str)
+                                               : x_str);
         }
         *firstmatch = x_str;
         found = 1;
@@ -1193,6 +1232,7 @@ do_screen_description(
         if (x_str == unreconnoitered)
             goto didlook;
     }
+
  check_monsters:
     /* Check for monsters */
     if (!iflags.terrainmode || (iflags.terrainmode & TER_MON) != 0) {
@@ -1249,8 +1289,8 @@ do_screen_description(
     if (sym == DEF_INVISIBLE) {
         /* for active clairvoyance, use alternate "unseen creature" */
         boolean usealt = (EDetect_monsters & I_SPECIAL) != 0L;
-        const char *unseen_explain = usealt ? altinvisexplain
-                                    : Blind ? altinvisexplain : invisexplain;
+        const char *unseen_explain = (usealt || Blind) ? altinvisexplain
+                                                       : invisexplain;
 
         if (!found) {
             Sprintf(out_str, "%s%s", prefix, an(unseen_explain));
@@ -1442,6 +1482,8 @@ do_screen_description(
             pm = lookat(cc.x, cc.y, look_buf, monbuf);
             if (pm && for_supplement)
                 *for_supplement = pm;
+            if (!strcmp(look_buf, "ice"))
+                (void) ice_descr(cc.x, cc.y, look_buf);
 
             if (look_buf[0] != '\0')
                 *firstmatch = look_buf;

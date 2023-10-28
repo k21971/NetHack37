@@ -1,4 +1,4 @@
-/* NetHack 3.7	objnam.c	$NHDT-Date: 1686386790 2023/06/10 08:46:30 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.392 $ */
+/* NetHack 3.7	objnam.c	$NHDT-Date: 1698264786 2023/10/25 20:13:06 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.398 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2011. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1865,8 +1865,13 @@ just_an(char *outbuf, const char *str)
     if (!str[1] || str[1] == ' ') {
         /* single letter; might be used for named fruit or a musical note */
         Strcpy(outbuf, strchr("aefhilmnosx", c0) ? "an " : "a ");
-    } else if (!strncmpi(str, "the ", 4) || !strcmpi(str, "molten lava")
-               || !strcmpi(str, "iron bars") || !strcmpi(str, "ice")) {
+    } else if (!strncmpi(str, "the ", 4)
+               /* these probably shouldn't be handled here because doing so
+                  impacts inventory when using them for named fruit */
+               || !strcmpi(str, "molten lava")
+               || !strcmpi(str, "iron bars")
+               || !strcmpi(str, "ice")
+               ) {
         ; /* no article */
     } else {
         /* normal case is "an <vowel>" or "a <consonant>" */
@@ -2262,7 +2267,7 @@ static const char *const special_subjs[] = {
 
 /* return form of the verb (input plural) for present tense 3rd person subj */
 char *
-vtense(const char* subj, const char* verb)
+vtense(const char *subj, const char *verb)
 {
     char *buf = nextobuf(), *bspot;
     int len, ltmp;
