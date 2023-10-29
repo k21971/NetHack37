@@ -4135,9 +4135,10 @@ iter_mons_safe(boolean (*func)(struct monst *))
 void
 iter_mons(void (*func)(struct monst *))
 {
-    struct monst *mtmp;
+    struct monst *mtmp, *mtmp2;
 
-    for (mtmp = fmon; mtmp; mtmp = mtmp->nmon) {
+    for (mtmp = fmon; mtmp; mtmp = mtmp2) {
+        mtmp2 = mtmp->nmon;
         if (DEADMONSTER(mtmp) || mon_offmap(mtmp))
             continue;
         func(mtmp);
@@ -4150,9 +4151,10 @@ iter_mons(void (*func)(struct monst *))
 struct monst *
 get_iter_mons(boolean (*func)(struct monst *))
 {
-    struct monst *mtmp;
+    struct monst *mtmp, *mtmp2;
 
-    for (mtmp = fmon; mtmp; mtmp = mtmp->nmon) {
+    for (mtmp = fmon; mtmp; mtmp = mtmp2) {
+        mtmp2 = mtmp->nmon;
         if (DEADMONSTER(mtmp) || mon_offmap(mtmp))
             continue;
         if (func(mtmp))
@@ -4168,9 +4170,10 @@ struct monst *
 get_iter_mons_xy(boolean (*func)(struct monst *, coordxy, coordxy),
                 coordxy x, coordxy y)
 {
-    struct monst *mtmp;
+    struct monst *mtmp, *mtmp2;
 
-    for (mtmp = fmon; mtmp; mtmp = mtmp->nmon) {
+    for (mtmp = fmon; mtmp; mtmp = mtmp2) {
+        mtmp2 = mtmp->nmon;
         if (DEADMONSTER(mtmp) || mon_offmap(mtmp))
             continue;
         if (func(mtmp, x, y))
