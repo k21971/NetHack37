@@ -200,7 +200,7 @@ extern int stat_hunger_indx(void);
 extern const char *bl_idx_to_fldname(int);
 extern void condopt(int, boolean *, boolean);
 extern int parse_cond_option(boolean, char *);
-extern void cond_menu(void);
+extern boolean cond_menu(void);
 extern boolean opt_next_cond(int, char *);
 #ifdef STATUS_HILITES
 extern void status_eval_next_unhilite(void);
@@ -366,7 +366,7 @@ extern void find_trap(struct trap *);
 extern void warnreveal(void);
 extern int dosearch0(int);
 extern int dosearch(void);
-extern void sokoban_detect(void);
+extern void premap_detect(void);
 #if defined(DUMPLOG) || defined(DUMPHTML)
 extern void dump_map(void);
 #endif

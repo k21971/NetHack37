@@ -1250,12 +1250,12 @@ use_crystal_ball(struct obj **optr)
     }
 
     /* read a single character */
-    if (Verbose(0, use_crystal_ball1))
+    if (flags.verbose)
         You("may look for an object, monster, or special map symbol.");
     ch = yn_function("What do you look for?", (char *) 0, '\0', TRUE);
     /* Don't filter out ' ' here; it has a use */
     if ((ch != def_monsyms[S_GHOST].sym) && strchr(quitchars, ch)) {
-        if (Verbose(0, use_crystal_ball2))
+        if (flags.verbose)
             pline1(Never_mind);
         return;
     }
@@ -1973,9 +1973,9 @@ warnreveal(void)
         }
 }
 
-/* Pre-map the sokoban levels */
+/* Pre-map (the sokoban) levels */
 void
-sokoban_detect(void)
+premap_detect(void)
 {
     register coordxy x, y;
     register struct trap *ttmp;
@@ -1997,9 +1997,6 @@ sokoban_detect(void)
     for (ttmp = gf.ftrap; ttmp; ttmp = ttmp->ntrap) {
         ttmp->tseen = 1;
         map_trap(ttmp, 1);
-        /* set sokoban_rules when there is at least one pit or hole */
-        if (ttmp->ttyp == PIT || ttmp->ttyp == HOLE)
-            Sokoban = 1;
     }
 }
 

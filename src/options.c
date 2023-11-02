@@ -361,9 +361,6 @@ static int handler_whatis_filter(void);
 static int handler_autopickup_exception(void);
 static int handler_menu_colors(void);
 static int handler_msgtype(void);
-#ifndef NO_VERBOSE_GRANULARITY
-static int handler_verbose(int optidx);
-#endif
 static int handler_windowborders(void);
 
 static boolean is_wc_option(const char *);
@@ -4702,7 +4699,7 @@ optfn_windowtype(int optidx, int req, boolean negated UNUSED,
 
 static int
 pfxfn_cond_(
-    int optidx,
+    int optidx UNUSED,
     int req,
     boolean negated,
     char *opts,
@@ -4717,7 +4714,7 @@ pfxfn_cond_(
 
         switch (reslt) {
         case 0:
-            opt_set_in_config[optidx] = TRUE;
+            opt_set_in_config[pfx_cond_] = TRUE;
             break;
         case 3:
             config_error_add("Ambiguous condition option %s", opts);
@@ -4740,8 +4737,8 @@ pfxfn_cond_(
         opts[0] = '\0';
         return optn_ok;
     }
-    if (req == do_handler) {
-        cond_menu();    /* in botl.c */
+    if (req == do_handler) { /* not used */
+        (void) cond_menu();    /* in botl.c */
         return optn_ok;
     }
     return optn_ok;
@@ -4895,74 +4892,6 @@ pfxfn_IBM_(int optidx UNUSED, int req, boolean negated UNUSED,
             return optn_err;
         opts[0] = '\0';
         return optn_ok;
-    }
-    return optn_ok;
-}
-#endif
-
-#ifndef NO_VERBOSE_GRANULARITY
-int
-pfxfn_verbose(
-    int optidx UNUSED,
-    int req,
-     boolean negated,
-    char *opts,
-    char *op)
-{
-    long ltmp = 0;
-    int reslt;
-    char *p;
-    boolean param_optional = FALSE;
-
-    if (req == do_init) {
-        flags.verbose = allopt[optidx].opt_in_out;
-        return optn_ok;
-    }
-    if (req == do_set) {
-        if (opts) {
-            if (!strncmp(opts, "verbose", 7)) {
-                p = strchr("01234", *(opts + 7));
-                if (p && *p == '\0')  /* plain verbose, not verboseN */
-                    param_optional = TRUE;
-                if ((op = string_for_opt(opts, param_optional)) != empty_optstr) {
-                    ltmp = atol(op);
-                    int idx;
-
-                    if (p && (*p != '\0')) {
-                        idx = *p - '0';
-                        if (idx >= 0 && idx < vb_elements)
-                            verbosity_suppressions[idx] = ltmp;
-                        return optn_ok;
-                    }
-                } else {
-                    if (param_optional) {
-                        /* indicates plain verbose, not verboseN */
-                        flags.verbose = (negated ? 0 : 1);
-                        return optn_ok;
-                    }
-                }
-            }
-        }
-        return optn_err;
-    }
-    if (req == get_cnf_val) {
-        if (!opts)
-            return optn_err;
-        opts[0] = '\0';
-        return optn_ok;
-    }
-    if (req == get_val) {
-        if (!opts)
-            return optn_err;
-        Sprintf(opts, "%s,%ld,%ld,%ld,%ld,%ld", flags.verbose ? "On" : "Off",
-                verbosity_suppressions[0], verbosity_suppressions[1],
-                verbosity_suppressions[2], verbosity_suppressions[3],
-                verbosity_suppressions[4]);
-        return optn_ok;
-    }
-    if (req == do_handler) {
-        reslt = handler_verbose(optidx);
-        return reslt;
     }
     return optn_ok;
 }
@@ -5286,7 +5215,7 @@ handler_menustyle(void)
     }
     destroy_nhwindow(tmpwin);
     chngd = (flags.menu_style != old_menu_style);
-    if (chngd || Verbose(2, handler_menustyle))
+    if (chngd || flags.verbose)
         pline("'menustyle' %s \"%s\".", chngd ? "changed to" : "is still",
               menutype[(int) flags.menu_style][0]);
     return optn_ok;
@@ -5373,7 +5302,7 @@ handler_autounlock(int optidx)
     }
     destroy_nhwindow(tmpwin);
     chngd = (flags.autounlock != oldflags);
-    if ((chngd || Verbose(2, handler_autounlock)) && give_opt_msg) {
+    if ((chngd || flags.verbose) && give_opt_msg) {
         optfn_autounlock(optidx, get_val, FALSE, buf, (char *) NULL);
         pline("'%s' %s '%s'.", optname,
               chngd ? "changed to" : "is still", buf);
@@ -5548,7 +5477,7 @@ handler_msg_window(void)
         }
         destroy_nhwindow(tmpwin);
         chngd = (iflags.prevmsg_window != old_prevmsg_window);
-        if (chngd || Verbose(2, handler_msg_window)) {
+        if (chngd || flags.verbose) {
             (void) optfn_msg_window(opt_msg_window, get_val,
                                     FALSE, buf, empty_optstr);
             pline("'msg_window' %.20s \"%.20s\".",
@@ -5830,8 +5759,7 @@ handler_whatis_coord(void)
              "", MENU_ITEMFLAGS_NONE);
     Sprintf(buf, "map: upper-left: <%d,%d>, lower-right: <%d,%d>%s",
             1, 0, COLNO - 1, ROWNO - 1,
-            Verbose(2, handler_whatis_coord1)
-                ? "; column 0 unused, off left edge" : "");
+            flags.verbose ? "; column 0 unused, off left edge" : "");
     add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
              ATR_NONE, clr, buf, MENU_ITEMFLAGS_NONE);
     if (strcmp(windowprocs.name, "tty")) /* only show for non-tty */
@@ -5839,8 +5767,7 @@ handler_whatis_coord(void)
    "screen: row is offset to accommodate tty interface's use of top line",
                  MENU_ITEMFLAGS_NONE);
 #if COLNO == 80
-#define COL80ARG \
-    (Verbose(2, handler_whatis_coord2) ? "; column 80 is not used" : "")
+#define COL80ARG flags.verbose ? "; column 80 is not used" : ""
 #else
 #define COL80ARG ""
 #endif
@@ -6161,75 +6088,6 @@ handler_msgtype(void)
     return optn_ok;
 }
 
-#ifndef NO_VERBOSE_GRANULARITY
-
-DISABLE_WARNING_FORMAT_NONLITERAL
-
-static int
-handler_verbose(int optidx)
-{
-    winid tmpwin;
-    anything any;
-    char buf[BUFSZ];
-    int pick_cnt;
-    int i;
-    menu_item *picks = (menu_item *) 0;
-    static const char *const vbstrings[] = {
-        " verbose toggle (currently %s)",
-        " verbose_suppressor[%d] =%08X",
-    };
-    char vbbuf[QBUFSZ];
-    int clr = 0;
-
-    tmpwin = create_nhwindow(NHW_MENU);
-    start_menu(tmpwin, MENU_BEHAVE_STANDARD);
-    any = cg.zeroany;
-    Snprintf(vbbuf, sizeof vbbuf, vbstrings[0], flags.verbose ? "On" : "Off");
-    any.a_int = 1;
-    add_menu(tmpwin, &nul_glyphinfo, &any, 'a', 0, ATR_NONE, clr,
-             vbbuf, MENU_ITEMFLAGS_NONE);
-    for (i = 0; i < vb_elements; i++) {
-        Snprintf(vbbuf, sizeof vbbuf, vbstrings[1], i,
-                 verbosity_suppressions[i]);
-        any.a_int = i + 2;
-        add_menu(tmpwin, &nul_glyphinfo, &any, 'b' + i, 0,
-                 ATR_NONE, clr, vbbuf, MENU_ITEMFLAGS_NONE);
-    }
-    end_menu(tmpwin, "Select verbosity choices:");
-
-    pick_cnt = select_menu(tmpwin, PICK_ANY, &picks);
-    destroy_nhwindow(tmpwin);
-    if (pick_cnt > 0) {
-        int j;
-        /* PICK_ANY, with one preselected entry (ATR_NONE) which
-           should be excluded if any other choices were picked */
-        for (i = 0; i < pick_cnt; ++i) {
-            char abuf[BUFSZ];
-            j = picks[i].item.a_int - 2;
-            if (j < 0) {
-                flags.verbose = !flags.verbose;
-            } else {
-                Sprintf(buf,
-               "Set verbose_suppressor[%d] (%ld) to what new decimal value ?",
-                        j, verbosity_suppressions[j]);
-                abuf[0] = '\0';
-                getlin(buf, abuf);
-                if (abuf[0] == '\033')
-                    continue;
-                Sprintf(buf, "%s%d:", allopt[optidx].name, j);
-                (void) strncat(eos(buf), abuf, (sizeof buf - 1 - strlen(buf)));
-                /* pass the buck */
-                (void) parseoptions(buf, TRUE, TRUE);
-            }
-        }
-        free((genericptr_t) picks), picks = (menu_item *) 0;
-    }
-    return optn_ok;
-}
-
-RESTORE_WARNING_FORMAT_NONLITERAL
-
-#endif
 
 static int
 handler_windowborders(void)
@@ -8483,7 +8341,8 @@ optfn_o_status_cond(
         ; /* handled inline by all_options_strbuf() via all_options_conds() */
     }
     if (req == do_handler) {
-        cond_menu();
+        if (cond_menu())
+            opt_set_in_config[pfx_cond_] = TRUE;
         return optn_ok;
     }
     return optn_ok;
@@ -8718,7 +8577,7 @@ doset_simple_menu(void)
                 reslt = (*allopt[k].optfn)(allopt[k].idx, do_handler, FALSE,
                                            empty_optstr, empty_optstr);
                 /* if player eventually saves options, include this one */
-                if (reslt == optn_ok)
+                if (reslt == optn_ok && allopt[k].idx != pfx_cond_)
                     opt_set_in_config[k] = TRUE;
             } else {
                 Sprintf(buf, "Set %s to what?", allopt[k].name);
@@ -9564,11 +9423,16 @@ option_help(void)
     return;
 }
 
+/* gather all non-default cond_xyz options into one OPTIONS=cond_foo,!cond_bar
+   entry spread across multiple lines with backslash+newline if needed;
+   conditions with their default settings (cond_blind, !cond_glowhands, &c)
+   are excluded */
 static void
 all_options_conds(strbuf_t *sbuf)
 {
     char buf[BUFSZ], nextcond[BUFSZ];
     int idx = 0;
+    boolean gotone = FALSE;
 
     buf[0] = '\0';
     while (opt_next_cond(idx, nextcond)) {
@@ -9582,15 +9446,23 @@ all_options_conds(strbuf_t *sbuf)
             strbuf_append(sbuf, buf);
             /* indent continuation line */
             Sprintf(buf, "%8s", " "); /* 8: strlen("OPTIONS=") */
-        } else {
+        } else if (nextcond[0] && gotone) {
             Strcat(buf, ",");
         }
-        Strcat(buf, nextcond);
+        if (nextcond[0]) {
+            gotone = TRUE;
+            Strcat(buf, nextcond);
+        }
         ++idx;
     }
-    /* finish off final line */
-    Strcat(buf, "\n");
-    strbuf_append(sbuf, buf);
+    /* finish off final line; value might be empty if one or more cond_xyz
+       options were changed in such a manner that they're all back to their
+       default values--which will produce "OPTIONS=" with nothing after the
+       equals sign; only add to the output when there is more present */
+    if (strcmp(buf, "OPTIONS=")) {
+        Strcat(buf, "\n");
+        strbuf_append(sbuf, buf);
+    }
 }
 
 /* append menucolor lines to strbuf */
@@ -9691,10 +9563,7 @@ all_options_strbuf(strbuf_t *sbuf)
                 break;
             /* FIXME: get_option_value for:
                - menu_deselect_all &c menu control keys,
-               - mouse_support
-               - pettype
-               - term_cols, term_rows
-               - verbose */
+               - term_cols, term_rows */
             buf2 = get_option_value(name, TRUE);
             if (buf2) {
                 Snprintf(tmp, sizeof tmp - 1, "OPTIONS=%s:%s", name, buf2);
@@ -9708,8 +9577,10 @@ all_options_strbuf(strbuf_t *sbuf)
     }
 
     /* cond_xyz are closer to regular options than the other 'other opts'
-       so put them next */
-    if (opt_set_in_config[opt_o_status_cond])
+       so put them next; [pfx_cond_] will be set if any cond_Foo were
+       present when RC file was read in or if player made any changes via
+       status conditions menu; ignore opt_set_in_config[opt_o_status_cond] */
+    if (opt_set_in_config[pfx_cond_])
         all_options_conds(sbuf);
 
     get_changed_key_binds(sbuf);
