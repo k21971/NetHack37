@@ -177,6 +177,8 @@ extern boolean bones_include_name(const char *);
 
 /* ### botl.c ### */
 
+extern void add_menu_heading(winid, const char *);
+extern void add_menu_str(winid, const char *);
 extern char *do_statusline1(void);
 extern void check_gold_symbol(void);
 extern char *do_statusline2(void);
@@ -1002,7 +1004,8 @@ extern boolean test_move(coordxy, coordxy, coordxy, coordxy, int);
 extern int wiz_debug_cmd_traveldisplay(void);
 #endif
 extern boolean u_rooted(void);
-extern void check_buried_zombies(coordxy, coordxy);
+extern void impact_disturbs_zombies(struct obj *, boolean);
+extern void disturb_buried_zombies(coordxy, coordxy);
 extern boolean u_maybe_impaired(void);
 extern const char *u_locomotion(const char *);
 extern void handle_tip(int);
@@ -2129,6 +2132,7 @@ extern int dohistory(void);
 extern void chdirx(char *, boolean);
 #endif /* CHDIR */
 extern boolean authorize_wizard_mode(void);
+extern boolean authorize_explore_mode(void);
 #endif
 #if defined(WIN32)
 extern int getlock(void);
@@ -2957,7 +2961,8 @@ extern void acid_damage(struct obj *);
 extern int water_damage(struct obj *, const char *, boolean);
 extern void water_damage_chain(struct obj *, boolean);
 extern boolean rnd_nextto_goodpos(coordxy *, coordxy *, struct monst *);
-extern void back_on_ground(int);
+extern void back_on_ground(boolean);
+extern void rescued_from_terrain(int);
 extern boolean drown(void);
 extern void drain_en(int, boolean);
 extern int dountrap(void);
@@ -3109,6 +3114,7 @@ extern void port_help(void);
 #endif
 extern void sethanguphandler(void(*)(int));
 extern boolean authorize_wizard_mode(void);
+extern boolean authorize_explore_mode(void);
 extern void append_slash(char *);
 extern boolean check_user_string(const char *);
 extern char *get_login_name(void);
@@ -3273,6 +3279,7 @@ extern void chdirx(const char *, boolean);
 #endif /* CHDIR */
 extern void sethanguphandler(void(*)(int));
 extern boolean authorize_wizard_mode(void);
+extern boolean authorize_explore_mode(void);
 
 /* ### vmsmisc.c ### */
 

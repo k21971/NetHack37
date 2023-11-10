@@ -4587,6 +4587,7 @@ water_damage_chain(
 {
     struct obj *otmp;
     coordxy x, y;
+    coord save_bhitpos;
 
     if (!obj)
         return;
@@ -4595,7 +4596,10 @@ water_damage_chain(
        acid nor unseen have exploded during this water damage sequence */
     ga.acid_ctx.dkn_boom = ga.acid_ctx.unk_boom = 0;
     ga.acid_ctx.ctx_valid = TRUE;
-
+    /* we don't want to permanently overwrite bhitpos below, since we can get
+       here from scenarios where it was in use up the call stack (e.g. thrown
+       item hurtling the levitating hero into a wall of water) */
+    save_bhitpos = gb.bhitpos;
     /* erode_obj() relies on bhitpos if target objects aren't carried by
        the hero or a monster, to check visibility controlling feedback */
     if (get_obj_location(obj, &x, &y, CONTAINED_TOO))
@@ -4606,9 +4610,10 @@ water_damage_chain(
         water_damage(obj, (char *) 0, FALSE);
     }
 
-    /* reset acid context */
+    /* reset acid context and bhitpos */
     ga.acid_ctx.dkn_boom = ga.acid_ctx.unk_boom = 0;
     ga.acid_ctx.ctx_valid = FALSE;
+    gb.bhitpos = save_bhitpos;
 }
 
 /*
@@ -4694,11 +4699,46 @@ rnd_nextto_goodpos(coordxy *x, coordxy *y, struct monst *mtmp)
     return FALSE;
 }
 
+/* print a message about being back on the ground after leaving a pool */
+void
+back_on_ground(boolean rescued)
+{
+    const char *preposit = (Levitation || Flying) ? "over" : "on", 
+               *surf = surface(u.ux, u.uy), *you_are_back;
+    char icebuf[QBUFSZ];
+
+    if (is_ice(u.ux, u.uy)) {
+        /* "on ice" */
+        surf = ice_descr(u.ux, u.uy, icebuf);
+    } else if (!strcmpi(surf, "floor") || !strcmpi(surf, "ground")) {
+        /* "on solid ground" */
+        surf = "solid ground";
+    } else if (!strcmpi(surf, "bridge") || !strcmpi(surf, "altar")
+               || !strcmpi(surf, "headstone")) {
+        /* "on a bridge" */
+        surf = an(surf);
+    } else if (!strcmpi(surf, "stairs") || !strcmpi(surf, "lava")
+               || !strcmpi(surf, "bottom")) {
+        /* "on the stairs" */
+        surf = the(surf);
+    } else { /* "cloud", "air", "air bubble", "wall", "fountain", "doorway" */
+        /* "in a cloud", "in the air" */
+        surf = !strcmp(surf, "air") ? the(surf) : an(surf);
+        preposit = "in";
+    }
+    if (rescued) {
+        you_are_back = "You find yourself";
+    } else {
+        you_are_back = flags.verbose ? "You are back" : "Back";
+    }
+    pline("%s %s %s.", you_are_back, preposit, surf);
+}
+
 /* life-saving or divine rescue has attempted to get the hero out of hostile
    terrain and put hero in an unexpected spot or failed due to overfull level
    and just prevented death so "back on solid ground" may be inappropriate */
 void
-back_on_ground(int how)
+rescued_from_terrain(int how)
 {
     static const char find_yourself[] = "find yourself";
     struct rm *lev = &levl[u.ux][u.uy];
@@ -4733,7 +4773,7 @@ back_on_ground(int how)
         break;
     }
     if (!mesggiven)
-        You("%s back on solid %s.", find_yourself, surface(u.ux, u.uy));
+        back_on_ground(TRUE);
 
     iflags.last_msg = PLNMSG_BACK_ON_GROUND; /* for describe_decor() */
     /* feedback just disclosed this */
@@ -4877,7 +4917,7 @@ drown(void)
 
     if (u.uinwater)
         set_uinwater(0); /* u.uinwater = 0 */
-    back_on_ground(DROWNING);
+    rescued_from_terrain(DROWNING);
     return TRUE;
 }
 
@@ -6500,7 +6540,7 @@ lava_effects(void)
                 set_itimeout(&HWwalking, 5L);
             goto burn_stuff;
         }
-        back_on_ground(BURNING);
+        rescued_from_terrain(BURNING);
 
         /* normally done via safe_teleds() -> teleds() -> spoteffects() but
            spoteffects() was no-op when called with nonzero in_lava_effects */

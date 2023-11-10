@@ -234,6 +234,24 @@ static NEARDATA const char *runmodes[] = {
 static NEARDATA const char *sortltype[] = {
     "none",         "loot",         "full"
 };
+/* second column is an alias for the first; third is brief explanation;
+   entries 5 and 6 are 1|4 and 2|4 (tty only) */
+static NEARDATA const char *perminv_modes[][3] = {
+  /*0*/ { "none",      "off",        "no permanent inventory window" },
+  /*1*/ { "all" ,      "on",         "all inventory except for gold" },
+  /*2*/ { "full",      "gold",       "full inventory including gold" },
+  /*3*/ { NULL,        NULL,         NULL },
+  /*4*/ { NULL,        NULL,         NULL },
+#ifdef TTY_PERM_INVENT
+  /*5*/ { "on+grid",   "all+grid",   "all except gold, plus unused letters" },
+  /*6*/ { "gold+grid", "full+grid",  "full inventory, plus unused letters" },
+#else
+  /*5*/ { NULL,        NULL,         NULL },
+  /*6*/ { NULL,        NULL,         NULL },
+#endif
+  /*7*/ { NULL,        NULL,         NULL },
+  /*8*/ { "in-use",    "inuse-only", "subset: items currently in use" },
+};
 
 /*
  * Default menu manipulation command accelerators.  These may _not_ be:
@@ -340,7 +358,7 @@ static int count_apes(void);
 static int count_cond(void);
 static void enhance_menu_text(char *, size_t, int, boolean *,
                               struct allopt_t *);
-
+static boolean can_set_perm_invent(void);
 static int handler_align_misc(int);
 static int handler_autounlock(int);
 static int handler_disclose(void);
@@ -349,6 +367,7 @@ static int handler_menustyle(void);
 static int handler_msg_window(void);
 static int handler_number_pad(void);
 static int handler_paranoid_confirmation(void);
+static int handler_perminv_mode(void);
 static int handler_pickup_burden(void);
 static int handler_pickup_types(void);
 static int handler_runmode(void);
@@ -409,15 +428,10 @@ ask_do_tutorial(void)
             add_menu(win, &nul_glyphinfo, &any, any.a_char, 0,
                      ATR_NONE, 0, "No, just start play", MENU_ITEMFLAGS_NONE);
 
-            any = cg.zeroany;
-            add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                     ATR_NONE, 0, "", MENU_ITEMFLAGS_NONE);
-            add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                     ATR_NONE, 0, buf, MENU_ITEMFLAGS_NONE);
+            add_menu_str(win, "");
+            add_menu_str(win, buf);
             if (pass++) /* we'll get here after <space> or <return> */
-                add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                         ATR_NONE, 0, "(Please choose 'y' or 'n'.)",
-                         MENU_ITEMFLAGS_NONE);
+                add_menu_str(win, "(Please choose 'y' or 'n'.)");
 
             end_menu(win, "Do you want a tutorial?");
 
@@ -2861,6 +2875,98 @@ optfn_paranoid_confirmation(
 }
 
 static int
+optfn_perminv_mode(
+    int optidx, int req, boolean negated,
+    char *opts, char *op)
+{
+    boolean old_perm_invent = iflags.perm_invent;
+    uchar old_perminv_mode = iflags.perminv_mode;
+    int retval = optn_ok;
+
+    if (req == do_init) {
+#if 0
+        /* old, TEMPORARY method of controlling 'perm_invent';
+           note: the bits used now have been changed, hence 'n << 1' */
+        char *envtmp = nh_getenv("TTYINV") : 0;
+        int invmode = envtmp ? (atoi(envtmp) << 1) : 0;
+
+        iflags.perminv_mode = (uchar) invmode;
+        iflags.perm_invent = iflags.perminv_mode != 0;
+#endif
+        return optn_ok;
+    } else if (req == do_set) {
+        op = string_for_opt(opts, negated);
+        if (op != empty_optstr && negated) { /* reject "!perminv_mode=foo" */
+            bad_negation(allopt[optidx].name, TRUE);
+            retval = optn_silenterr;
+        } else if (op != empty_optstr) { /* "perminv_mode=foo" */
+            const char *pi0, *pi1;
+            int i;
+            unsigned ln = (unsigned) strlen(op); /* guaranteed > 0 */
+
+            for (i = 0; i < SIZE(perminv_modes); ++i) {
+                if (!(pi0 = perminv_modes[i][0]))
+                    continue;
+                pi1 = perminv_modes[i][1];
+                if (!strncmpi(op, pi0, ln) || !strncmpi(op, pi1, ln)
+                    || op[0] == i + '0') { /* also accept '0'..'8' */
+#if 1 /*#ifdef TTY_PERM_INVENT*/
+                    if (strstri(pi0, "+grid") && !WINDOWPORT(tty)) {
+                        i &= ~InvSparse;
+                        config_error_add(
+                          "%s: unavailable perm_invent mode '%s', using '%s'",
+                                         allopt[optidx].name, pi0,
+                                         perminv_modes[i][0]);
+                    }
+#endif
+                    iflags.perminv_mode = (uchar) i;
+                    iflags.perm_invent = TRUE;
+                    break;
+                }
+            }
+            if (i == SIZE(perminv_modes)) {
+                config_error_add("Unknown %s parameter '%s'",
+                                 allopt[optidx].name, op);
+                iflags.perminv_mode = InvOptNone;
+                iflags.perm_invent = FALSE;
+                retval = optn_silenterr;
+            }
+        } else if (negated) { /* "!perminv_mode" */
+            iflags.perminv_mode = InvOptNone;
+            iflags.perm_invent = FALSE;
+        }
+        if (!go.opt_initial) {
+            if (iflags.perminv_mode != old_perminv_mode
+                || iflags.perm_invent != old_perm_invent)
+                go.opt_need_redraw = TRUE;
+        }
+    } else if (req == do_handler) {
+        /* use a menu to choose new value for perminv_mode */
+        retval = handler_perminv_mode();
+    } else if (req == get_val) {
+        /* value shown when examining current option settings; exclosed
+           within square brackets for 'O', shown as-is when setting value */
+        Sprintf(opts, "%s", perminv_modes[iflags.perminv_mode][2]);
+        if (iflags.perminv_mode != InvOptNone && !iflags.perm_invent
+            /* 'op' is Null when called by handler_perminv_mode() while
+               setting, non-Null when 'm O' shows current option values */
+            && op) {
+            /* perminv_mode is set but isn't useful because perm_invent is
+               Off; say so after squeezing out enough for it to barely fit */
+            if (iflags.perminv_mode == InvOptInUse)
+                (void) strsubst(opts, " currently", "");
+            else
+                (void) strsubst(opts, " inventory", " invent");
+            Strcat(opts, (((iflags.perminv_mode & InvSparse) != 0) ? " (Off)"
+                          : " ('perm_invent' is Off)"));
+        }
+    } else if (req == get_cnf_val) {
+        Sprintf(opts, "%s", perminv_modes[iflags.perminv_mode][0]);
+    }
+    return retval;
+}
+
+static int
 optfn_petattr(
     int optidx, int req, boolean negated,
     char *opts, char *op)
@@ -3040,7 +3146,10 @@ optfn_pickup_burden(
 }
 
 static int
-optfn_pickup_types(int optidx, int req, boolean negated, char *opts, char *op)
+optfn_pickup_types(
+    int optidx, int req,
+    boolean negated,
+    char *opts, char *op)
 {
     char ocl[MAXOCLASSES + 1], tbuf[MAXOCLASSES + 1], qbuf[QBUFSZ],
         abuf[BUFSZ];
@@ -3136,7 +3245,10 @@ optfn_pickup_types(int optidx, int req, boolean negated, char *opts, char *op)
 }
 
 static int
-optfn_pile_limit(int optidx, int req, boolean negated, char *opts, char *op)
+optfn_pile_limit(
+    int optidx, int req,
+    boolean negated,
+    char *opts, char *op)
 {
     if (req == do_init) {
         return optn_ok;
@@ -4976,23 +5088,9 @@ optfn_boolean(int optidx, int req, boolean negated, char *opts, char *op)
             }
             break;
         case opt_perm_invent:
-#ifdef TTY_PERM_INVENT
-            /* if attempting to enable perm_invent fails, say so and return
-               before "'perm_invent' option toggled on" would be given below;
-               perm_invent_toggled() and routines it calls don't check
-               iflags.perm_invent so it doesn't matter that 'SET IT HERE'
-               hasn't been executed yet */
-            if (WINDOWPORT(tty) && !go.opt_initial && !negated) {
-                perm_invent_toggled(FALSE);
-                /* perm_invent_toggled()
-                   -> sync_perminvent()
-                          -> tty_create_nhwindow(NHW_PERMINVENT)
-                   gives feedback for failure (terminal too small) */
-                if (WIN_INVEN == WIN_ERR)
-                    return optn_silenterr;
-            }
-#endif
-            break; /* from opt_perm_invent */
+            if (!negated && !can_set_perm_invent())
+                return optn_silenterr;
+            break;
         default:
             break;
         }
@@ -5177,6 +5275,40 @@ spcfn_misc_menu_cmd(int midx, int req, boolean negated, char *opts, char *op)
  **********************************
  */
 
+/* test whether 'perm_invent' can be toggled On */
+static boolean
+can_set_perm_invent(void)
+{
+    /*
+     * Assumption: only called when iflags.perm_invent is False
+     * and is about to be changed to True.
+     */
+    uchar old_perminv_mode = iflags.perminv_mode;
+
+    if (!(windowprocs.wincap & WC_PERM_INVENT))
+        return FALSE; /* should never happen */
+
+    if (iflags.perminv_mode == InvOptNone)
+        iflags.perminv_mode = InvOptOn;
+
+#ifdef TTY_PERM_INVENT
+    if (WINDOWPORT(tty) && !go.opt_initial) {
+        perm_invent_toggled(FALSE);
+        /* perm_invent_toggled()
+           -> sync_perminvent()
+              -> tty_create_nhwindow(NHW_PERMINVENT)
+           gives feedback for failure (terminal too small) */
+        if (WIN_INVEN == WIN_ERR) {
+            iflags.perminv_mode = old_perminv_mode;
+            return FALSE;
+        }
+    }
+#else
+    nhUse(old_perminv_mode);
+#endif
+    return TRUE;
+}
+
 static int
 handler_menustyle(void)
 {
@@ -5199,9 +5331,7 @@ handler_menustyle(void)
                                          : MENU_ITEMFLAGS_NONE);
         /* second line is prefixed by spaces that "c - " would use */
         Sprintf(buf, "%4s%-12.12s%c%.60s", "", "", sep, menutype[i][2]);
-        any.a_int = 0;
-        add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr, buf,
-                 MENU_ITEMFLAGS_NONE);
+        add_menu_str(tmpwin, buf);
     }
     end_menu(tmpwin, "Select menustyle:");
     n = select_menu(tmpwin, PICK_ONE, &style_pick);
@@ -5461,9 +5591,7 @@ handler_msg_window(void)
                                                   : MENU_ITEMFLAGS_NONE);
             /* second line is prefixed by spaces that "c - " would use */
             Sprintf(buf, "%4s%-12.12s%c%.60s", "", "", sep, msgwind[i][2]);
-            any.a_char = '\0';
-            add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr, buf,
-                     MENU_ITEMFLAGS_NONE);
+            add_menu_str(tmpwin, buf);
         }
         end_menu(tmpwin, "Select message history display type:");
         n = select_menu(tmpwin, PICK_ONE, &window_pick);
@@ -5605,6 +5733,80 @@ handler_paranoid_confirmation(void)
         }
     }
     destroy_nhwindow(tmpwin);
+    return optn_ok;
+}
+
+static int
+handler_perminv_mode(void)
+{
+    winid tmpwin;
+    anything any;
+    char let, buf[BUFSZ], sepbuf[10];
+    const char *pi0, *pi1;
+    menu_item *pi_pick = (menu_item *) 0;
+    boolean old_perm_invent = iflags.perm_invent;
+    int i, n, old_pi = (int) iflags.perminv_mode, new_pi = old_pi,
+        widest = !WINDOWPORT(tty) ? 8 : 11; /* "in-use__" or "full+grid__" */
+
+    tmpwin = create_nhwindow(NHW_MENU);
+    start_menu(tmpwin, MENU_BEHAVE_STANDARD);
+    any = cg.zeroany;
+    for (i = 0; i < SIZE(perminv_modes); ++i) {
+        if (!(pi0 = perminv_modes[i][0]))
+            continue;
+#ifdef TTY_PERM_INVENT
+        if (strstri(pi0, "+grid") != 0 && !WINDOWPORT(tty))
+            continue;
+#endif
+        pi1 = perminv_modes[i][1];
+        if (!iflags.menu_tab_sep) {
+            int numspaces = widest - (int) strlen(pi0);
+
+            Sprintf(sepbuf, "%*s", max(numspaces, 1), " ");
+        } else {
+            Strcpy(sepbuf, "\t");
+        }
+        Sprintf(buf, "%s%s%s", pi0, sepbuf, perminv_modes[i][2]);
+        let = ((i & (int) InvSparse) != 0) ? highc(pi1[0]) : pi0[0];
+        any.a_int = i + 1;
+        add_menu(tmpwin, &nul_glyphinfo, &any, let, '0' + i, ATR_NONE, 0,
+                 buf, (i == old_pi) ? MENU_ITEMFLAGS_SELECTED
+                                    : MENU_ITEMFLAGS_NONE);
+    }
+    end_menu(tmpwin, "Choose permanent inventory mode:");
+    n = select_menu(tmpwin, PICK_ONE, &pi_pick);
+    destroy_nhwindow(tmpwin);
+    if (n > 0) {
+        new_pi = pi_pick[0].item.a_int - 1;
+        if (n > 1 && new_pi == old_pi)
+            new_pi = pi_pick[1].item.a_int - 1;
+        free((genericptr_t) pi_pick);
+        iflags.perminv_mode = new_pi;
+    }
+    if (n >= 0) { /* not ESC */
+        buf[0] = '\0';
+        (void) optfn_perminv_mode(opt_perm_invent, get_val, FALSE, buf, NULL);
+        pline("'perminv_mode' %s '%s' (%s).",
+              (new_pi != old_pi) ? "changed to" : "is still",
+              perminv_modes[new_pi][0], buf);
+        if (new_pi != InvOptNone && !old_perm_invent)
+            iflags.perm_invent = can_set_perm_invent();
+        else if (new_pi == InvOptNone && old_perm_invent)
+            iflags.perm_invent = FALSE;
+
+        if (new_pi != old_pi || iflags.perm_invent != old_perm_invent) {
+#ifdef TTY_PERM_INVENT
+            /* FIXME: TTY_PERM_INVENT will blank WIN_INVEN when changing
+               perminv_mode while perm_invent is already on; to remedy that,
+               turn it off and then back on when already on */
+            if (WINDOWPORT(tty) && iflags.perm_invent && old_perm_invent) {
+                perm_invent_toggled(TRUE);      /*TEMP?*/
+                perm_invent_toggled(FALSE);     /*TEMP?*/
+            }
+#endif
+            go.opt_need_redraw = TRUE;
+        }
+    }
     return optn_ok;
 }
 
@@ -5754,18 +5956,14 @@ handler_whatis_coord(void)
              0, ATR_NONE, clr, "none (no coordinates displayed)",
              (gpc == GPCOORDS_NONE)
                 ? MENU_ITEMFLAGS_SELECTED : MENU_ITEMFLAGS_NONE);
-    any.a_long = 0L;
-    add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr,
-             "", MENU_ITEMFLAGS_NONE);
+    add_menu_str(tmpwin, "");
     Sprintf(buf, "map: upper-left: <%d,%d>, lower-right: <%d,%d>%s",
             1, 0, COLNO - 1, ROWNO - 1,
             flags.verbose ? "; column 0 unused, off left edge" : "");
-    add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-             ATR_NONE, clr, buf, MENU_ITEMFLAGS_NONE);
+    add_menu_str(tmpwin, buf);
     if (strcmp(windowprocs.name, "tty")) /* only show for non-tty */
-        add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr,
-   "screen: row is offset to accommodate tty interface's use of top line",
-                 MENU_ITEMFLAGS_NONE);
+        add_menu_str(tmpwin,
+      "screen: row is offset to accommodate tty interface's use of top line");
 #if COLNO == 80
 #define COL80ARG flags.verbose ? "; column 80 is not used" : ""
 #else
@@ -5774,10 +5972,8 @@ handler_whatis_coord(void)
     Sprintf(buf, "screen: upper-left: [%02d,%02d], lower-right: [%d,%d]%s",
             0 + 2, 1, ROWNO - 1 + 2, COLNO - 1, COL80ARG);
 #undef COL80ARG
-    add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr,
-             buf, MENU_ITEMFLAGS_NONE);
-    add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr,
-             "", MENU_ITEMFLAGS_NONE);
+    add_menu_str(tmpwin, buf);
+    add_menu_str(tmpwin, "");
     end_menu(tmpwin,
         "Select coordinate display when auto-describing a map position:");
     if ((pick_cnt = select_menu(tmpwin, PICK_ONE, &window_pick)) > 0) {
@@ -5887,10 +6083,8 @@ handler_autopickup_exception(void)
         if (numapes) {
             ape = ga.apelist;
             any = cg.zeroany;
-            add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-                     iflags.menu_headings, clr,
-                     "Always pickup '<'; never pickup '>'",
-                     MENU_ITEMFLAGS_NONE);
+            add_menu_heading(tmpwin,
+                             "Always pickup '<'; never pickup '>'");
             for (i = 0; i < numapes && ape; i++) {
                 any.a_void = (opt_idx == 1) ? 0 : ape;
                 /* length of pattern plus quotes (plus '<'/'>') is
@@ -8297,8 +8491,12 @@ optfn_o_menu_colors(int optidx UNUSED, int req, boolean negated UNUSED,
 }
 
 static int
-optfn_o_message_types(int optidx UNUSED, int req, boolean negated UNUSED,
-              char *opts, char *op UNUSED)
+optfn_o_message_types(
+    int optidx UNUSED,
+    int req,
+    boolean negated UNUSED,
+    char *opts,
+    char *op UNUSED)
 {
     if (req == do_init) {
         return optn_ok;
@@ -8477,9 +8675,7 @@ doset_simple_menu(void)
            the player might not know how to type them; keep this simple */
         Strcpy(buf, "Use command '#optionsfull'"
                     " to get the complete options list.");
-        any = cg.zeroany;
-        add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
-                 0, buf, MENU_ITEMFLAGS_NONE);
+        add_menu_str(tmpwin, buf);
     }
     any = cg.zeroany;
     any.a_int = -2 + 1;
@@ -8489,12 +8685,9 @@ doset_simple_menu(void)
 
     for (section = OptS_General; section < OptS_Advanced; section++) {
         any = cg.zeroany;
-        add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
-                 0, "", MENU_ITEMFLAGS_NONE);
+        add_menu_str(tmpwin, "");
         Sprintf(buf, " %-30s ", OptS_type[section]);
-        add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-                 iflags.menu_headings, 0,
-                 buf /*OptS_type[section]*/, MENU_ITEMFLAGS_NONE);
+        add_menu_heading(tmpwin, buf);
         for (i = 0; (name = allopt[i].name) != 0; i++) {
             if (allopt[i].section != section)
                 continue;
@@ -8543,13 +8736,9 @@ doset_simple_menu(void)
             add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
                      ATR_NONE, 0, buf, MENU_ITEMFLAGS_NONE);
             if (gs.simple_options_help && allopt[i].descr) {
-                any = cg.zeroany;
                 Sprintf(buf, "    %s", allopt[i].descr);
-                add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-                         ATR_NONE, 0, buf, MENU_ITEMFLAGS_NONE);
-                any = cg.zeroany;
-                add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
-                         0, "", MENU_ITEMFLAGS_NONE);
+                add_menu_str(tmpwin, buf);
+                add_menu_str(tmpwin, "");
             }
         }
     }
@@ -8715,9 +8904,7 @@ doset(void) /* changing options via menu by Per Liboriussen */
         for (i = 0; i < SIZE(helptext); ++i) {
             if (helptext[i]) {
                 Sprintf(buf, "%4s%.75s", "", helptext[i]);
-                any.a_int = 0;
-                add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, FALSE, clr,
-                         buf, MENU_ITEMFLAGS_NONE);
+                add_menu_str(tmpwin, buf);
             } else {
                 any.a_int = '?' + 1; /* processing pick_list subtracts 1 */
                 add_menu(tmpwin, &nul_glyphinfo, &any, '?', '?', ATR_NONE,
@@ -8746,8 +8933,8 @@ doset(void) /* changing options via menu by Per Liboriussen */
 
     indexoffset = 1;
     any = cg.zeroany;
-    add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, iflags.menu_headings, clr,
-             "Booleans (selecting will toggle value):", MENU_ITEMFLAGS_NONE);
+    add_menu_heading(tmpwin,
+             "Booleans (selecting will toggle value):");
     any.a_int = 0;
     /* first list any other non-modifiable booleans, then modifiable ones */
     for (pass = 0; pass <= 1; pass++)
@@ -8777,12 +8964,10 @@ doset(void) /* changing options via menu by Per Liboriussen */
                 add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
                          ATR_NONE, clr, buf, MENU_ITEMFLAGS_NONE);
             }
-    any = cg.zeroany;
-    add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-             ATR_NONE, clr, "", MENU_ITEMFLAGS_NONE);
-    add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, iflags.menu_headings, clr,
-             "Compounds (selecting will prompt for new value):",
-             MENU_ITEMFLAGS_NONE);
+
+    add_menu_str(tmpwin, "");
+    add_menu_heading(tmpwin,
+                     "Compounds (selecting will prompt for new value):");
 
     for (pass = startpass; pass <= endpass; pass++)
         for (i = 0; (name = allopt[i].name) != 0; i++) {
@@ -8798,12 +8983,8 @@ doset(void) /* changing options via menu by Per Liboriussen */
             }
         }
 
-    any = cg.zeroany;
-    add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-             ATR_NONE, clr, "", MENU_ITEMFLAGS_NONE);
-    add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-             iflags.menu_headings, clr,
-             "Other settings:", MENU_ITEMFLAGS_NONE);
+    add_menu_str(tmpwin, "");
+    add_menu_heading(tmpwin, "Other settings:");
 
     for (pass = startpass; pass <= endpass; pass++)
         for (i = 0; (name = allopt[i].name) != 0; i++) {
@@ -8820,12 +9001,9 @@ doset(void) /* changing options via menu by Per Liboriussen */
         }
 
 #ifdef PREFIXES_IN_USE
-    any = cg.zeroany;
-    add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-             ATR_NONE, clr, "", MENU_ITEMFLAGS_NONE);
-    add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-             iflags.menu_headings, clr,
-             "Variable playground locations:", MENU_ITEMFLAGS_NONE);
+    add_menu_str(tmpwin, "");
+    add_menu_heading(tmpwin,
+             "Variable playground locations:");
     for (i = 0; i < PREFIX_COUNT; i++)
         doset_add_menu(tmpwin, fqn_prefix_names[i], fmtstr_doset, -1, 0);
 #endif
@@ -9722,8 +9900,7 @@ choose_classes_menu(const char *prompt,
     if (category == 1 && next_accelerator <= 'z') {
         /* for objects, add "A - ' '  all classes", after a separator */
         any = cg.zeroany;
-        add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                 ATR_NONE, clr, "", MENU_ITEMFLAGS_NONE);
+        add_menu_str(win, "");
         any.a_int = (int) ' ';
         Sprintf(buf, "%c  %s", (char) any.a_int, "all classes of objects");
         /* we won't preselect this even if the incoming list is empty;
@@ -9764,6 +9941,7 @@ static struct wc_Opt wc_options[] = {
     { "eight_bit_tty", WC_EIGHT_BIT_IN },
     { "hilite_pet", WC_HILITE_PET },
     { "perm_invent", WC_PERM_INVENT },
+    { "perminv_mode", WC_PERM_INVENT }, /* shares WC_PERM_INVENT */
     { "popup_dialog", WC_POPUP_DIALOG },
     { "player_selection", WC_PLAYER_SELECTION },
     { "preload_tiles", WC_PRELOAD_TILES },
@@ -10081,11 +10259,17 @@ set_playmode(void)
             gp.plnamelen = (int) strlen(strcpy(gp.plname, "wizard"));
         else
             wizard = FALSE; /* not allowed or not available */
-        /* force explore mode if we didn't make it into wizard mode */
+        /* try explore mode if we didn't make it into wizard mode */
+        /* if requesting wizard mode when restoring a normal game, this will
+           set iflags.deferred_X and prompt to activate explore mode after the
+           save file has already been deleted */
         discover = !wizard;
         iflags.deferred_X = FALSE;
     }
-    /* don't need to do anything special for explore mode or normal play */
+    if (discover && !authorize_explore_mode()) {
+        discover = iflags.deferred_X = FALSE;
+    }
+    /* don't need to do anything special for normal play */
 }
 
 static void
@@ -10103,7 +10287,7 @@ enhance_menu_text(
     nowsz = strlen(buf) + 1;
     availsz = sz - nowsz;
 
-#ifdef TTY_PERM_INVENT
+#if 0 /*#ifdef TTY_PERM_INVENT*/
     if (bool_p == &iflags.perm_invent && WINDOWPORT(tty)) {
         if (thisopt->setwhere == set_gameview)
             Snprintf(eos(buf), availsz, " *terminal size is too small");

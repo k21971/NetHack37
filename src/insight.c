@@ -114,14 +114,8 @@ static struct ll_achieve_msg achieve_msg [] = {
 static void
 enlght_out_attr(int attr, const char *buf)
 {
-    int clr = 0;
-
     if (ge.en_via_menu) {
-        anything any;
-
-        any = cg.zeroany;
-        add_menu(ge.en_win, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr, buf,
-                 MENU_ITEMFLAGS_NONE);
+        add_menu_str(ge.en_win, buf);
     } else
         putstr(ge.en_win, attr, buf);
 }
@@ -2778,7 +2772,9 @@ list_vanquished(char defquery, boolean ask)
                 mlet = mons[i].mlet;
                 if (class_header && mlet != prev_mlet) {
                     Strcpy(buf, def_monsyms[(int) mlet].explain);
-                    putstr(klwin, ask ? 0 : iflags.menu_headings,
+                    /* 'ask' implies final disclosure, where highlighting
+                       of various header lines is suppressed */
+                    putstr(klwin, ask ? ATR_NONE : iflags.menu_headings,
                            upstart(buf));
                     prev_mlet = mlet;
                 }
@@ -2987,7 +2983,9 @@ list_genocided(char defquery, boolean ask)
                 mlet = mons[mndx].mlet;
                 if (class_header && mlet != prev_mlet) {
                     Strcpy(buf, def_monsyms[(int) mlet].explain);
-                    putstr(klwin, ask ? 0 : iflags.menu_headings,
+                    /* 'ask' implies final disclosure, where highlighting
+                       of various header lines is suppressed */
+                    putstr(klwin, ask ? ATR_NONE : iflags.menu_headings,
                            upstart(buf));
                     prev_mlet = mlet;
                 }

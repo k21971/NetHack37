@@ -592,18 +592,13 @@ choose_disco_sort(
         /* called via 'm `' where full alphabetize doesn't make sense
            (only showing one class so can't span all classes) but the
            chosen sort will stick and also apply to '\' usage */
-        any = cg.zeroany;
-        add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr,
-                 "", MENU_ITEMFLAGS_NONE);
-        add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr,
-                 "Note: full alphabetical and alphabetical within class",
-                 MENU_ITEMFLAGS_NONE);
-        add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr,
-                 "      are equivalent for single class discovery, but",
-                 MENU_ITEMFLAGS_NONE);
-        add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr,
-                 "      will matter for future use of total discoveries.",
-                 MENU_ITEMFLAGS_NONE);
+        add_menu_str(tmpwin, "");
+        add_menu_str(tmpwin,
+                     "Note: full alphabetical and alphabetical within class");
+        add_menu_str(tmpwin,
+                     "      are equivalent for single class discovery, but");
+        add_menu_str(tmpwin,
+                     "      will matter for future use of total discoveries.");
     }
     end_menu(tmpwin, "Ordering of discoveries");
 
@@ -711,7 +706,7 @@ dodiscovered(void) /* free after Robert Viduya */
     for (i = dis = 0; i < SIZE(uniq_objs); i++)
         if (objects[uniq_objs[i]].oc_name_known) {
             if (!dis++)
-                putstr(tmpwin, iflags.menu_headings, "Unique items");
+                add_menu_heading(tmpwin, "Unique items");
             ++uniq_ct;
             Sprintf(buf, "  %s", OBJ_NAME(objects[uniq_objs[i]]));
             putstr(tmpwin, 0, buf);
@@ -751,8 +746,8 @@ dodiscovered(void) /* free after Robert Viduya */
                     }
                     if (!alphabetized || alphabyclass) {
                         /* header for new class */
-                        putstr(tmpwin, iflags.menu_headings,
-                               let_to_name(oclass, FALSE, FALSE));
+                        add_menu_heading(tmpwin,
+                                         let_to_name(oclass, FALSE, FALSE));
                         prev_class = oclass;
                     }
                 }
@@ -777,7 +772,7 @@ dodiscovered(void) /* free after Robert Viduya */
                classes, we normally don't need a header; but it we showed
                any unique items or any artifacts then we do need one */
             if ((uniq_ct || arti_ct) && alphabetized && !alphabyclass)
-                putstr(tmpwin, iflags.menu_headings, "Discovered items");
+                add_menu_heading(tmpwin, "Discovered items");
             qsort(sorted_lines, sorted_ct, sizeof (char *), discovered_cmp);
             for (j = 0; j < sorted_ct; ++j) {
                 p = sorted_lines[j];
@@ -951,8 +946,7 @@ doclassdisco(void)
     ct = 0;
     switch (c) {
     case 'u':
-        putstr(tmpwin, iflags.menu_headings,
-               upstart(strcpy(buf, unique_items)));
+        add_menu_heading(tmpwin, upstart(strcpy(buf, unique_items)));
         for (i = 0; i < SIZE(uniq_objs); i++)
             if (objects[uniq_objs[i]].oc_name_known) {
                 ++ct;
@@ -1060,10 +1054,8 @@ rename_disco(void)
 
             if (oclass != prev_class) {
                 any.a_int = 0;
-                add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-                         iflags.menu_headings, clr,
-                         let_to_name(oclass, FALSE, FALSE),
-                         MENU_ITEMFLAGS_NONE);
+                add_menu_heading(tmpwin,
+                                 let_to_name(oclass, FALSE, FALSE));
                 prev_class = oclass;
             }
             any.a_int = dis;

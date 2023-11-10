@@ -1,4 +1,4 @@
-/* NetHack 3.7	unixmain.c	$NHDT-Date: 1693359574 2023/08/30 01:39:34 $  $NHDT-Branch: keni-crashweb2 $:$NHDT-Revision: 1.117 $ */
+/* NetHack 3.7	unixmain.c	$NHDT-Date: 1699233290 2023/11/06 01:14:50 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.118 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2011. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -53,7 +53,6 @@ extern void init_linux_cons(void);
 #endif
 
 static void wd_message(void);
-static boolean wiz_error_flag = FALSE;
 static struct passwd *get_unix_pw(void);
 
 int
@@ -606,7 +605,8 @@ early_options(int *argc_p, char ***argv_p, char **hackdir_p)
     /*
      * Both *argc_p and *argv_p account for the program name as (*argv_p)[0];
      * local argc and argv impicitly discard that (by starting 'ndx' at 1).
-     * argcheck() doesn't mind, prscore() (via scores_only()) does.
+     * argcheck() doesn't mind, prscore() (via scores_only()) does (for the
+     * number of args it gets passed, not for the value of argv[0]).
      */
     for (ndx = 1; ndx < *argc_p; ndx += (consumed ? 0 : 1)) {
         consumed = 0;
@@ -687,8 +687,16 @@ early_options(int *argc_p, char ***argv_p, char **hackdir_p)
                 /*NOTREACHED*/
             }
             /* check for "-s" request to show scores */
-            if (lopt(arg,
-                     (ArgValDisallowed | ArgNamOneLetter | ArgErrComplain),
+            if (lopt(arg, ((ArgValDisallowed | ArgErrComplain)
+                           /* only accept one-letter if there is just one
+                              dash; reject "--s" because prscore() via
+                              scores_only() doesn't understand it */
+                           | ((origarg[1] != '-') ? ArgNamOneLetter : 0)),
+                           /* [ought to omit val-disallowed and accept
+                              --scores=foo since -s foo and -sfoo are
+                              allowed, but -s form can take more than one
+                              space-separated argument and --scores=foo
+                              isn't suited for that] */
                      "-scores", origarg, &argc, &argv)) {
                 /* at this point, argv[0] contains "-scores" or a leading
                    substring of it; prscore() (via scores_only()) expects
@@ -950,28 +958,48 @@ port_help(void)
 boolean
 authorize_wizard_mode(void)
 {
-    struct passwd *pw = get_unix_pw();
-
-    if (pw && sysopt.wizards && sysopt.wizards[0]) {
+    if (sysopt.wizards && sysopt.wizards[0]) {
         if (check_user_string(sysopt.wizards))
             return TRUE;
     }
-    wiz_error_flag = TRUE; /* not being allowed into wizard mode */
+    iflags.wiz_error_flag = TRUE; /* not being allowed into wizard mode */
     return FALSE;
+}
+
+/* similar to above, validate explore mode access */
+boolean
+authorize_explore_mode(void)
+{
+#ifdef SYSCF
+    if (sysopt.explorers && sysopt.explorers[0]) {
+        if (check_user_string(sysopt.explorers))
+            return TRUE;
+    }
+    iflags.explore_error_flag = TRUE; /* not allowed into explore mode */
+    return FALSE;
+#else
+    return TRUE; /* if sysconf disabled, no restrictions on explore mode */
+#endif
 }
 
 static void
 wd_message(void)
 {
-    if (wiz_error_flag) {
+    if (iflags.wiz_error_flag) {
         if (sysopt.wizards && sysopt.wizards[0]) {
             char *tmp = build_english_list(sysopt.wizards);
             pline("Only user%s %s may access debug (wizard) mode.",
                   strchr(sysopt.wizards, ' ') ? "s" : "", tmp);
             free(tmp);
-        } else
+        } else {
+            You("cannot access debug (wizard) mode.");
+        }
+        wizard = FALSE; /* (paranoia) */
+        if (!iflags.explore_error_flag)
             pline("Entering explore/discovery mode instead.");
-        wizard = 0, discover = 1; /* (paranoia) */
+    } else if (iflags.explore_error_flag) {
+        You("cannot access explore mode."); /* same as enter_explore_mode */
+        discover = iflags.deferred_X = FALSE; /* (more paranoia) */
     } else if (discover)
         You("are in non-scoring explore/discovery mode.");
 }

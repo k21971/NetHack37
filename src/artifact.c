@@ -1050,7 +1050,7 @@ disp_artifact_discoveries(winid tmpwin) /* supplied by dodiscover() */
             continue; /* for WIN_ERR, we just count */
 
         if (i == 0)
-            putstr(tmpwin, iflags.menu_headings, "Artifacts");
+            add_menu_heading(tmpwin, "Artifacts");
         m = artidisco[i];
         otyp = artilist[m].otyp;
         algnstr = align_str(artilist[m].alignment);
@@ -1071,6 +1071,7 @@ dump_artifact_info(winid tmpwin)
     int m;
     char buf[BUFSZ], buf2[BUFSZ];
 
+    /* not a menu, but header uses same bold or whatever attribute as such */
     putstr(tmpwin, iflags.menu_headings, "Artifacts");
     for (m = 1; m <= NROFARTIFACTS; ++m) {
         Snprintf(buf2, sizeof buf2,

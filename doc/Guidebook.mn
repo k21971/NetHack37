@@ -1,4 +1,4 @@
-.\" $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.532 $ $NHDT-Date: 1698899756 2023/11/02 04:35:56 $
+.\" $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.536 $ $NHDT-Date: 1699260377 2023/11/06 08:46:17 $
 .\"
 .\" This is an excerpt from the 'roff' man page from the 'groff' package.
 .\"+--
@@ -25,6 +25,12 @@
 .\" with an optional filtering step between 'cat' and 'tbl':
 .\"  cat... |../util/makedefs --grep --input - --output - |tbl...
 .
+.if n \{\
+.po 5n
+.ll 70n
+.lt 70n
+.\}
+.
 .so tmac.nh	\" extra macros which aren't in tmac.n
 .
 .\" building Guidebook.txt doesn't have CR font available; groff 1.23 issues
@@ -33,14 +39,14 @@
 .if n .do ftr CR R  \" if formatting for a terminal, substitute R for CR
 .                   \" (the substitution affects both '\f' and '.ft')
 .
-.ds h0 "NetHack Guidebook
-.ds h1
+.ds h0 NetHack Guidebook
+.ds h1 \" empty
 .ds h2 %
-.ds vr "NetHack 3.7.0
-.ds f0 "\*(vr
-.ds f1
-.\"DO NOT REMOVE NH_DATESUB .ds f2 "DATE(%B %-d, %Y)
-.ds f2 "September 8, 2023
+.ds vr NetHack 3.7.0
+.ds f0 \*(vr
+.ds f1 \" empty
+.\"DO NOT REMOVE NH_DATESUB .ds f2 DATE(%B %-d, %Y)
+.ds f2 November 6, 2023
 .
 .\" A note on some special characters:
 .\" \(lq = left double quote
@@ -48,9 +54,11 @@
 .\" \(oq = left (open) single quote
 .\" \(cq = right (close) single quote    \(aq = apostrophe / single quote
 .\"    - = hyphen                        \-   = minus sign
-.\"                                      \(em = M-sized dash
+.\" \(rs = backslash                     \(em = dash as wide as 'M' is tall
 .\"    ^ = small circumflex punctuation  \(ha = larger circumflex character
 .\"    ~ = small tilde punctuation       \(ti = larger tilde character
+.\"
+.\" See groff_man_style(7) or groff_char(7) for more on these.
 .
 .
 .\" finally, start the actual Guidebook...
@@ -249,16 +257,16 @@ The way the screen looks for you depends on your platform.
 .\" situations.  Originally the character had only reached a second room
 .\" (unchanged here) by turn 257 (now changed to 752) and was already
 .\" Weak from hunger (now changed to just Hungry) and also lacked any of
-\." Tourist's starting gold.  Confusion is added to include a condition.)
+.\" Tourist's starting gold.  Confusion is added to include a
+.\" condition.)
 .\"
-.\" Width is constrained by the margins of plain text output (Guidebook.txt).
-.\" Text output shows an extra space in front of the right hand boundary box
-.\" which isn't present in this data nor in the Postscript output.  It also
-.\" overwrites the label on the bottom boundary box line so that ends ups as
-.\" ------Figure-N------.  Odd but acceptable.
+.\" Width is constrained by the margins of plain text output
+.\" (Guidebook.txt).  Text output might show an extra space inboard of
+.\" the left and right box boundaries that does not appear in PostScript
+.\" output.  This behavior is specific to GNU tbl.
 .BR 2
 .ft CR \" set font to constant-width Roman
-.TS S
+.TS
 center box tab(~);
 L.
 The bat bites!
@@ -275,22 +283,24 @@ The bat bites!
 Player the Rambler   St:12 Dx:7 Co:18 In:11 Wi:9 Ch:15 Neutral
 Dlvl:1 $:993 HP:9(12) Pw:3(3) AC:10 Exp:1/19 T:752 Hungry Conf
 .TE
-.ft \" revert to previous font
+.ft R
 .ce 1
+.if t .sp 0.5v
 Figure 1
 .
 .\" Figure 2 uses trailing spaces to force the same width as Figure 1.
 .BR 1
 .ft CR
-.TS S
+.TS
 center box tab(~);
 L.
 Player the Rambler   St:12 Dx:7 Co:18 In:11 Wi:9 Ch:15        \"
 Neutral $:993 HP:9(12) Pw:3(3) AC:10 Exp:1/19 Hungry          \"
 Dlvl:1 T:752                                  Conf            \"
 .TE
-.ft
+.ft R
 .ce 1
+.if t .sp 0.5v
 Figure 2
 .
 .hn 2
@@ -613,30 +623,23 @@ If you sense or remember a monster there, you will fight the monster
 instead.
 Only these one-step movement commands cause you to fight monsters; the
 others (below) are \(lqsafe.\(rq
-.SD n
-.\" note: the two number pad layouts are separated by a tab on each line;
-.\"       [that's out of date; it's now tab,backslash,space,tab]
-.\"       converting those tabs to spaces will screw up the formatting;
-.\"       the '(if ... set)' line starts with <backslash><space><tab>
-.\"       and is intended to line up with the right hand layout rather
-.\"       than be centered.  Second column forces the label to be evenly
-.\"       spaced between first and third; Phantom fourth column forces
-.\"       the whole to shift left since fully centered doesn't look good.
-.\"       "Figure 3 " includes a trailing space to shift left a little.
 .ft CR
-.TS S
-center;
-ce c ce ce.
-y  k  u	\ 	7  8  9\ 	\"
-\\ | /	\ 	\\ | /\ 	\"
-h\- . \-l	\ 	4\- . \-6\ 	\"
-/ | \\	\ 	/ | \\\ 	\"
-b  j  n	\ 	1  2  3\ 	\"
-\fR\ 	\ 	(if \fBnumber_pad\fR is set)\ 	\"
-\fR\ 	Figure 3\ 	\ 	\"
+.tr -\-@\(rs
+.TS
+box center expand;
+C C.
+y  k  u	7  8  9
+@ | /	@ | /
+h- . -l	4- . -6
+/ | @	/ | @
+b  j  n	1  2  3
+\fR(\fBnumber_pad\fP off)	\fR(\fBnumber_pad\fP on)
 .TE
-.ft
-.ED
+.tr --@@
+.ft R
+.if t .sp 0.5v
+.ce 1
+Figure 3
 .
 .lp [YUHJKLBN]
 Go in that direction until you hit a wall or run into something.
@@ -2768,7 +2771,7 @@ Here is a list of the armor class values provided by suits of armor:
 .\" it to get the second column (number) closer to the text on most lines.
 .\" Both AC4 and AC7 have trailing tab plus empty comment on their first
 .\" line and leading spaces to indent their second line.
-.TS S
+.TS
 center;
 a n.
 Dragon scale mail	1
@@ -4281,8 +4284,42 @@ and entries to be removed by \(oq\f(CR!\fP\(cq and name.
 The positive (no \(oq!\(cq) and negative (with \(oq!\(cq) entries
 can be intermixed.
 .lp perm_invent
-If true, always display your current inventory in a window.  This only
+If true, always display your current inventory in a window (default false).
+.lp ""
+This only
 makes sense for windowing system interfaces that implement this feature.
+For those that do, the
+.op perminv_mode
+option can be used to refine what gets displayed
+for \fIperm_invent\fP.
+Setting that to a value other than \fInone\fP
+while \fIperm_invent\fP is false will change it to true.
+.lp perminv_mode
+Augments the
+.op perm_invent
+option.
+Value is one of
+.PS "\f(CRin-use\fP"
+.PL "\f(CRnone\fP"
+behave as if \fIperm_invent\fP is false;
+.PL "\f(CRall\fP"
+show all inventory except for gold;
+.PL "\f(CRfull\fP"
+show full inventory including gold;
+.PL "\f(CRin-use\fP"
+only show items which are in use (worn, wielded, lit lamp).
+.\" %if these get uncommented, change .PS argument to "\f(CRgold+grid\fP"
+.\" %and the terminator for in-use to semi-colon.
+.\" .PL "\f(CRon+grid\fP"
+.\" special for tty only, show \fIall\fP plus unused inventory letters;
+.\" .PL "\f(CRgold+grid\fP"
+.\" special for tty only, show \fIfull\fP plus unused inventory letters.
+.PE
+Default is \fInone\fP but if \fIperm_invent\fP gets set to true
+while it is \fInone\fP it will be changed to \fIall\fP.
+.lp ""
+Note: if gold has been equipped in quiver/ammo-pouch then it will be
+included for \fIall\fP despite that mode normally omitting gold.
 .\" petattr is a wincap option but we'll document it here...
 .lp "petattr "
 Specifies one or more text highlighting attributes to use when showing
@@ -5402,7 +5439,7 @@ the \f(CRtty\fP interface) rather than all at once, the only way a
 situation like that can be controlled is to specify just one attribute.
 .pg
 You can adjust the appearance of the following status fields:
-.TS S
+.TS
 center;
 c c c.
 .\"TABLE_START
@@ -5567,7 +5604,7 @@ control character.
 .\" to be too wide when generating plain text output.  Two spaces leaves
 .\" some room between the symbol character and name.)  Entries in first
 .\" column now use constant-width Roman font to approximate TeX tt font.
-.TS S
+.TS
 center;
 l s s
 l1fCR l1 l.
@@ -6454,7 +6491,7 @@ Development Team sometimes makes note of the names of the worst of these
 miscreants in this, the list of Dungeoneers:
 .BR 1
 .
-.TS S
+.TS
 center;
 c2 c2 c.
 .\"TABLE_START

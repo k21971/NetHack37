@@ -512,7 +512,7 @@ restgamestate(NHFILE *nhfp)
     struct obj *bc_obj;
     char timebuf[15];
     unsigned long uid = 0;
-    boolean defer_perm_invent;
+    boolean defer_perm_invent, restoring_special;
 
     if (nhfp->structlevel)
         Mread(nhfp->fd, &uid, sizeof uid);
@@ -557,11 +557,12 @@ restgamestate(NHFILE *nhfp)
        in the discover case, we don't want to set that for a normal
        game until after the save file has been removed */
     iflags.deferred_X = (newgameflags.explore && !discover);
+    restoring_special = (wizard || discover);
     if (newgameflags.debug) {
         /* authorized by startup code; wizard mode exists and is allowed */
         wizard = TRUE, discover = iflags.deferred_X = FALSE;
-    } else if (wizard) {
-        /* specified by save file; check authorization now */
+    } else if (restoring_special) {
+        /* specified by save file; check authorization now. */
         set_playmode();
     }
     role_init(); /* Reset the initial role, race, gender, and alignment */
@@ -571,6 +572,13 @@ restgamestate(NHFILE *nhfp)
     if (nhfp->structlevel)
         Mread(nhfp->fd, &u, sizeof u);
     gy.youmonst.cham = u.mcham;
+
+    if (restoring_special && iflags.explore_error_flag) {
+        /* savefile has wizard or explore mode, but player is no longer
+           authorized to access either; can't downgrade mode any further, so
+           fail restoration. */
+        u.uhp = 0; 
+    }
 
     if (nhfp->structlevel)
         Mread(nhfp->fd, timebuf, 14);
@@ -1411,13 +1419,10 @@ restore_menu(
             clear_nhwindow(bannerwin);
             /* COPYRIGHT_BANNER_[ABCD] */
             for (k = 1; k <= 4; ++k)
-                add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
-                         clr, copyright_banner_line(k), MENU_ITEMFLAGS_NONE);
-            add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr, "",
-                     MENU_ITEMFLAGS_NONE);
+                add_menu_str(tmpwin, copyright_banner_line(k));
+            add_menu_str(tmpwin, "");
         }
-        add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
-                 clr, "Select one of your saved games", MENU_ITEMFLAGS_NONE);
+        add_menu_str(tmpwin, "Select one of your saved games");
         for (k = 0; saved[k]; ++k) {
             any.a_int = k + 1;
             add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,

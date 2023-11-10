@@ -694,6 +694,7 @@ getspell(int* spell_no)
 {
     int nspells, idx;
     char ilet, lets[BUFSZ], qbuf[QBUFSZ];
+    struct _cmd_queue cq, *cmdq;
 
     if (spellid(0) == NO_SPELL) {
         You("don't know any spells right now.");
@@ -701,6 +702,21 @@ getspell(int* spell_no)
     }
     if (rejectcasting())
         return FALSE; /* no spell chosen */
+
+    if ((cmdq = cmdq_pop()) != 0) {
+        cq = *cmdq;
+        free(cmdq);
+        if (cq.typ == CMDQ_KEY) {
+            nspells = num_spells();
+            idx = spell_let_to_idx(cq.key);
+            if (idx < 0 || idx >= nspells)
+                return FALSE;
+            *spell_no = idx;
+            return TRUE;
+        } else {
+            return FALSE;
+        }
+    }
 
     if (flags.menu_style == MENU_TRADITIONAL) {
         /* we know there is at least 1 known spell */
@@ -776,9 +792,11 @@ docast(void)
 {
     int spell_no;
 
-    if (getspell(&spell_no))
+    if (getspell(&spell_no)) {
+        cmdq_add_key(CQ_REPEAT, spellet(spell_no));
         return spelleffects(gs.spl_book[spell_no].sp_id, FALSE, FALSE);
-    return ECMD_OK;
+    }
+    return ECMD_FAIL;
 }
 
 static const char *
@@ -1655,9 +1673,7 @@ spellsortmenu(void)
         if (i == SORTRETAINORDER) {
             let = 'z'; /* assumes fewer than 26 sort choices... */
             /* separate final choice from others with a blank line */
-            any.a_int = 0;
-            add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-                     ATR_NONE, clr, "", MENU_ITEMFLAGS_NONE);
+            add_menu_str(tmpwin, "");
         } else {
             let = 'a' + i;
         }
@@ -1762,8 +1778,7 @@ dospellmenu(
     if (wizard)
         Sprintf(eos(buf), "%c%6s", sep, "turns");
 
-    add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-             iflags.menu_headings, clr, buf, MENU_ITEMFLAGS_NONE);
+    add_menu_heading(tmpwin, buf);
     for (i = 0; i < MAXSPELL && spellid(i) != NO_SPELL; i++) {
         splnum = !gs.spl_orderindx ? i : gs.spl_orderindx[i];
         Sprintf(buf, fmt, spellname(splnum), spellev(splnum),

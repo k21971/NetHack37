@@ -384,17 +384,8 @@ describe_decor(void)
             || IS_LAVA(iflags.prev_decor)
             || iflags.prev_decor == ICE) {
             if (iflags.last_msg != PLNMSG_BACK_ON_GROUND) {
-                const char *surf = is_ice(u.ux, u.uy)
-                                       ? ice_descr(u.ux, u.uy, fbuf)
-                                       : surface(u.ux, u.uy);
-
-                if (!strcmpi(surf, "floor") || !strcmpi(surf, "ground"))
-                    surf = "solid ground";
-                pline("%s %s %s.",
-                      flags.verbose ? "You are back" : "Back",
-                      (Levitation || Flying) ? "over" : "on", surf);
+                back_on_ground(FALSE);
             }
-
         }
     }
     iflags.prev_decor = ltyp;
@@ -1048,8 +1039,7 @@ query_objlist(const char *qstr,        /* query string */
     if (gt.this_title) {
         /* dotypeinv() supplies gt.this_title to display as initial header;
            intentionally avoid the menu_headings highlight attribute here */
-        add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
-                 clr, gt.this_title, MENU_ITEMFLAGS_NONE);
+        add_menu_str(win, gt.this_title);
     }
     /*
      * Run through the list and add the objects to the menu.  If
@@ -1077,12 +1067,10 @@ query_objlist(const char *qstr,        /* query string */
                 /* if sorting, print type name (once only) */
                 if (sorted && !printed_type_name) {
                     any = cg.zeroany;
-                    add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                             iflags.menu_headings, clr,
+                    add_menu_heading(win,
                              let_to_name(*pack, FALSE,
                                          ((how != PICK_NONE)
-                                          && iflags.menu_head_objsym)),
-                             MENU_ITEMFLAGS_NONE);
+                                          && iflags.menu_head_objsym)));
                     printed_type_name = TRUE;
                 }
 
@@ -1109,8 +1097,7 @@ query_objlist(const char *qstr,        /* query string */
         if (sorted && n > 1) {
             Sprintf(buf, "%s Creatures",
                     digests(u.ustuck->data) ? "Swallowed" : "Engulfed");
-            add_menu(win, &nul_glyphinfo, &any, 0, 0, iflags.menu_headings,
-                     clr, buf, MENU_ITEMFLAGS_NONE);
+            add_menu_heading(win, buf);
         }
         fake_hero_object = cg.zeroobj;
         fake_hero_object.quan = 1L; /* not strictly necessary... */
@@ -1269,9 +1256,7 @@ query_category(
         verify_All = (how == PICK_ANY) && ParanoidAutoAll;
 
         /* blank separator */
-        any = cg.zeroany;
-        add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                 ATR_NONE, NO_COLOR, "", MENU_ITEMFLAGS_NONE);
+        add_menu_str(win, "");
     }
 
     invlet = 'a';
@@ -1315,9 +1300,7 @@ query_category(
 
     if (do_unpaid || (qflags & BILLED_TYPES) || do_blessed || do_cursed
         || do_uncursed || do_buc_unknown || num_justpicked) {
-        any = cg.zeroany;
-        add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                 ATR_NONE, NO_COLOR, "", MENU_ITEMFLAGS_NONE);
+        add_menu_str(win, "");
     }
 
     /* unpaid items if there are any */
@@ -3307,9 +3290,7 @@ in_or_out_menu(
         add_menu(win, &nul_glyphinfo, &any, menuselector[any.a_int], 0,
                  ATR_NONE, clr, buf, MENU_ITEMFLAGS_NONE);
     }
-    any.a_int = 0;
-    add_menu(win, &nul_glyphinfo, &any, 0, 0,
-             ATR_NONE, clr, "", MENU_ITEMFLAGS_NONE);
+    add_menu_str(win, "");
     if (more_containers) {
         any.a_int = 7; /* 'n' */
         add_menu(win, &nul_glyphinfo, &any, menuselector[any.a_int], 0,
@@ -3412,9 +3393,7 @@ dotip(void)
                                  clr, doname(cobj), MENU_ITEMFLAGS_NONE);
                     }
                 if (gi.invent) {
-                    any = cg.zeroany;
-                    add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
-                             clr, "", MENU_ITEMFLAGS_NONE);
+                    add_menu_str(win, "");
                     any.a_obj = &dummyobj;
                     /* use 'i' for inventory unless there are so many
                        containers that it's already being used */
@@ -3746,9 +3725,7 @@ tipcontainer_gettarget(
     add_menu(win, &nul_glyphinfo, &any, '-', 0, ATR_NONE, clr,
              /* [TODO? vary destination string depending on surface()] */
              "on the floor", MENU_ITEMFLAGS_SELECTED);
-    any = cg.zeroany;
-    add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr,
-             "", MENU_ITEMFLAGS_NONE);
+    add_menu_str(win, "");
 
     n_conts = 0;
     for (otmp = gi.invent; otmp; otmp = otmp->nobj) {

@@ -1,4 +1,4 @@
-$NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1277 $ $NHDT-Date: 1698899752 2023/11/02 04:35:52 $
+$NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1286 $ $NHDT-Date: 1699233285 2023/11/06 01:14:45 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -838,7 +838,8 @@ clear obj->bypass for buried objects [a giant on ice triggers a fire trap,
 	other inventory, ice is melted, boulder plugs resulting pool burying
 	rest of giant's dropped inventory, subsequent sanity checks report
 	that there are buried objects which are 'flagged bypass']
-only give Sunsword or Demonbane as starting gear to lawful Angels
+give Sunsword as starting gear only to lawful Angels; since Demonbane has
+	become a mace and Angels only get swords, they won't start with it
 for #knownclass with menustyle=Tradtional, allow player to ask for `a even if
 	no artifacts have been discovered yet, same as `<any-object-class>;
 	likewise for `u to ask to see unique items
@@ -1270,6 +1271,13 @@ hero had worn amulet of magical breathing become unworn during theft by nymph,
 	dropped it to be able to crawl out of water, so it wasn't there when
 	game tried to transfer it to thief, triggering an "object lost" panic
 digging down on a magical trap causes it to explode
+thrown potion of sickness now bypasses target's innate magic resistance but
+	only affects current hit points, no longer also reducing maximum HP
+lightning has a small chance of melting iron bars
+make spell menu work with repeat
+when attempting to look up a named fruit in data.base, try harder
+set and check mon->mstate flags more consistently
+fix sanity error when cloud was created over an engraving
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -1722,6 +1730,11 @@ experimental #saveoptions wasn't saving the set of cond_xyz options correctly;
 	if player viewed the 'm O' submenu for status conditions, they would
 	get saved even if not changed; otherwise, ones that came in from the
 	old RC file wouldn't be included in the new one
+knockback or recoil while levitating could hurtle the hero through a wall of
+	water to the spot beyond unless it happened on the Plane of Water
+if recoil from throwing an item while levitating sent hero into a wall of
+	water, the thrown item got placed in that water rather than at its
+	intended destination
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
@@ -1798,6 +1811,8 @@ tty: if a group accelerator matched a menu command ('^' in menu for '/')
 	it wouldn't work to select, just to manipulate the menu
 Unix: after lua changes to Makefiles, 'make spotless' for dat subdirectory
 	left some generated data files which should have been deleted
+Unix: reject "--sX" on command line except if "X" is "cores" (so "--scores");
+	single dash form still accepts "-sX" to lookup scores for "X"
 Windows: new tile additions in win/share did not trigger the creation of a new
 	NetHackW.res file
 Windows: nhl_loadlua() was missing the RDBMODE argument on the [dlb_]fopen(),

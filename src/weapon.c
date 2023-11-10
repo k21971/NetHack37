@@ -1195,25 +1195,21 @@ enhance_weapon_skill(void)
         /* start with a legend if any entries will be annotated
            with "*" or "#" below */
         if (eventually_advance > 0 || maxxed_cnt > 0) {
-            any = cg.zeroany;
             if (eventually_advance > 0) {
                 Sprintf(buf, "(Skill%s flagged by \"*\" may be enhanced %s.)",
                         plur(eventually_advance),
                         (u.ulevel < MAXULEV)
                             ? "when you're more experienced"
                             : "if skill slots become available");
-                add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                         ATR_NONE, clr, buf, MENU_ITEMFLAGS_NONE);
+                add_menu_str(win, buf);
             }
             if (maxxed_cnt > 0) {
                 Sprintf(buf,
                  "(Skill%s flagged by \"#\" cannot be enhanced any further.)",
                         plur(maxxed_cnt));
-                add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                         ATR_NONE, clr, buf, MENU_ITEMFLAGS_NONE);
+                add_menu_str(win, buf);
             }
-            add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                     ATR_NONE, clr, "", MENU_ITEMFLAGS_NONE);
+            add_menu_str(win, "");
         }
 
         /* List the skills, making ones that could be advanced
@@ -1226,9 +1222,7 @@ enhance_weapon_skill(void)
                 /* Print headings for skill types */
                 any = cg.zeroany;
                 if (i == skill_ranges[pass].first)
-                    add_menu(win, &nul_glyphinfo, &any, 0, 0,
-                             iflags.menu_headings, clr,
-                             skill_ranges[pass].name, MENU_ITEMFLAGS_NONE);
+                    add_menu_heading(win, skill_ranges[pass].name);
 
                 if (P_RESTRICTED(i))
                     continue;

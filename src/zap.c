@@ -5143,29 +5143,27 @@ zap_over_floor(
         (void) create_gas_cloud(x, y, 1, 8);
         break;
 
+    case ZT_LIGHTNING:
+        /*FALLTHRU*/
     case ZT_ACID:
         if (lev->typ == IRONBARS) {
+            if (damgtype == ZT_LIGHTNING && rn2(10))
+                break;
             if ((lev->wall_info & W_NONDIGGABLE) != 0) {
                 if (see_it)
-                    Norep("The %s corrode somewhat but remain intact.",
+                    Norep("The %s %s somewhat but remain intact.",
+                          (damgtype == ZT_ACID) ? "corrode" : "melt",
                           defsyms[S_bars].explanation);
                 /* but nothing actually happens... */
             } else {
                 rangemod -= 3;
                 if (see_it)
                     Norep("The %s melt.", defsyms[S_bars].explanation);
+                dissolve_bars(x, y);
                 if (*in_rooms(x, y, SHOPBASE)) {
-                    /* in case we ever have a shop bounded by bars */
-                    lev->typ = ROOM, lev->flags = 0;
-                    if (see_it)
-                        newsym(x, y);
                     add_damage(x, y, (type >= 0) ? SHOP_BARS_COST : 0L);
                     if (type >= 0)
                         *shopdamage = TRUE;
-                } else {
-                    lev->typ = DOOR, lev->doormask = D_NODOOR;
-                    if (see_it)
-                        newsym(x, y);
                 }
             }
         }

@@ -897,7 +897,7 @@ checkfile(
            then "fruit" is the alternate description. We do this here so that
            if the fruit name is an extant object, looking at the fruit yields
            that object's description. */
-        if (!alt && !strncmpi(dbase_str, gp.pl_fruit, PL_FSIZ))
+        if (!alt && fruit_from_name(dbase_str, TRUE, (int *) 0))
             alt = strcpy(newstr, obj_descr[SLIME_MOLD].oc_name);
         /*
          * If the object is named, then the name is the alternate description;
@@ -1587,8 +1587,7 @@ do_look(int mode, coord *click_cc)
                      MENU_ITEMFLAGS_NONE);
             if (!u.uswallow && !Hallucination) {
                 any = cg.zeroany;
-                add_menu(win, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
-                         clr, "", MENU_ITEMFLAGS_NONE);
+                add_menu_str(win, "");
                 /* these options work sensibly for the swallowed case,
                    but there's no reason for the player to use them then;
                    objects work fine when hallucinating, but screen
