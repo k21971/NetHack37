@@ -1,4 +1,4 @@
-/* NetHack 3.7	pray.c	$NHDT-Date: 1684138081 2023/05/15 08:08:01 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.194 $ */
+/* NetHack 3.7	pray.c	$NHDT-Date: 1699595930 2023/11/10 05:58:50 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.202 $ */
 /* Copyright (c) Benson I. Margulies, Mike Stephenson, Steve Linhart, 1989. */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -1793,10 +1793,10 @@ bestow_artifact(void)
 int
 dosacrifice(void)
 {
-    register struct obj *otmp;
-    int value = 0;
+    struct obj *otmp;
     boolean highaltar;
     aligntyp altaralign = a_align(u.ux, u.uy);
+    int value = 0;
 
     if (!on_altar() || u.uswallow) {
         You("are not standing on an altar.");
@@ -1807,6 +1807,22 @@ dosacrifice(void)
     otmp = floorfood("sacrifice", 1);
     if (!otmp)
         return ECMD_OK;
+
+    if (otmp->otyp == AMULET_OF_YENDOR) {
+        if (!highaltar) {
+            offer_too_soon(altaralign);
+            return ECMD_TIME;
+        } else {
+            offer_real_amulet(otmp, altaralign);
+            /*NOTREACHED*/
+        }
+    } /* real Amulet */
+
+    if (otmp->otyp == FAKE_AMULET_OF_YENDOR) {
+        offer_fake_amulet(otmp, highaltar, altaralign);
+        return ECMD_TIME;
+    } /* fake Amulet */
+
     /*
      * Was based on nutritional value and aging behavior (< 50 moves).
      * Sacrificing a food ration got you max luck instantly, making the
@@ -1819,7 +1835,7 @@ dosacrifice(void)
 #define MAXVALUE 24 /* Highest corpse value (besides Wiz) */
 
     if (otmp->otyp == CORPSE) {
-        register struct permonst *ptr = &mons[otmp->corpsenm];
+        struct permonst *ptr = &mons[otmp->corpsenm];
         struct monst *mtmp;
 
         /* KMH, conduct */
@@ -1902,22 +1918,9 @@ dosacrifice(void)
                 value += 3;
             }
         }
-    } /* corpse */
-
-    if (otmp->otyp == AMULET_OF_YENDOR) {
-        if (!highaltar) {
-            offer_too_soon(altaralign);
-            return ECMD_TIME;
-        } else {
-            offer_real_amulet(otmp, altaralign);
-            /*NOTREACHED*/
-        }
-    } /* real Amulet */
-
-    if (otmp->otyp == FAKE_AMULET_OF_YENDOR) {
-        offer_fake_amulet(otmp, highaltar, altaralign);
-        return ECMD_TIME;
-    } /* fake Amulet */
+    } else { /* !corpse */
+        ; /* value==0 which is what we want for non-corpse */
+    } /* ?corpse */
 
     if (value == 0) {
         pline1(nothing_happens);

@@ -2653,7 +2653,7 @@ set_vanq_order(boolean for_vanq)
     char buf[BUFSZ];
     const char *desc;
     int i, n, choice,
-        clr = 0;
+        clr = NO_COLOR;
 
     tmpwin = create_nhwindow(NHW_MENU);
     start_menu(tmpwin, MENU_BEHAVE_STANDARD);
@@ -2774,7 +2774,7 @@ list_vanquished(char defquery, boolean ask)
                     Strcpy(buf, def_monsyms[(int) mlet].explain);
                     /* 'ask' implies final disclosure, where highlighting
                        of various header lines is suppressed */
-                    putstr(klwin, ask ? ATR_NONE : iflags.menu_headings,
+                    putstr(klwin, ask ? ATR_NONE : iflags.menu_headings.attr,
                            upstart(buf));
                     prev_mlet = mlet;
                 }
@@ -2985,7 +2985,7 @@ list_genocided(char defquery, boolean ask)
                     Strcpy(buf, def_monsyms[(int) mlet].explain);
                     /* 'ask' implies final disclosure, where highlighting
                        of various header lines is suppressed */
-                    putstr(klwin, ask ? ATR_NONE : iflags.menu_headings,
+                    putstr(klwin, ask ? ATR_NONE : iflags.menu_headings.attr,
                            upstart(buf));
                     prev_mlet = mlet;
                 }

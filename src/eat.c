@@ -2719,8 +2719,8 @@ doeat(void)
         }
     }
 
-    /* from floorfood(), &zeroobj means iron bars at current spot */
-    if (otmp == &cg.zeroobj) {
+    /* from floorfood(), &hands_obj means iron bars at current spot */
+    if (otmp == &hands_obj) {
         /* hero in metallivore form is eating [diggable] iron bars
            at current location so skip the other assorted checks;
            operates as if digging rather than via the eat occupation */
@@ -3506,7 +3506,7 @@ floorfood(
                 c = yn_function(qbuf, ynqchars, 'n', TRUE);
             }
             if (c == 'y')
-                return (struct obj *) &cg.zeroobj; /* csst away 'const' */
+                return &hands_obj;
             else if (c == 'q')
                 return (struct obj *) 0;
             ++getobj_else;

@@ -270,11 +270,11 @@ struct c_color_names {
 };
 
 struct c_common_strings {
-    const char *const c_nothing_happens, *const c_thats_enough_tries,
-        *const c_silly_thing_to, *const c_shudder_for_moment,
-        *const c_something, *const c_Something, *const c_You_can_move_again,
-        *const c_Never_mind, *c_vision_clears, *const c_the_your[2],
-        *const c_fakename[2];
+    const char *const c_nothing_happens, *const c_nothing_seems_to_happen,
+        *const c_thats_enough_tries, *const c_silly_thing_to,
+        *const c_shudder_for_moment, *const c_something, *const c_Something,
+        *const c_You_can_move_again, *const c_Never_mind,
+        *const c_vision_clears, *const c_the_your[2], *const c_fakename[2];
 };
 
 struct container {
@@ -1044,6 +1044,7 @@ typedef uint32_t mmflags_nht;     /* makemon MM_ flags */
 #define GP_CHECKSCARY 0x200000L /* check monster for onscary() */
 #define MM_NOEXCLAM   0x400000L /* more sedate "<mon> appears." mesg for ^G */
 #define MM_IGNORELAVA 0x800000L /* ignore lava when positioning */
+#define MM_MINVIS   0x01000000L /* for ^G/create_particular */
 
 /* flags for make_corpse() and mkcorpstat(); 0..7 are recorded in obj->spe */
 #define CORPSTAT_NONE     0x00

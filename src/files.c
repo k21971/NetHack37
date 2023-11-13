@@ -4036,7 +4036,7 @@ fopen_wizkit_file(void)
 static void
 wizkit_addinv(struct obj *obj)
 {
-    if (!obj || obj == &cg.zeroobj)
+    if (!obj || obj == &hands_obj)
         return;
 
     /* subset of starting inventory pre-ID */
@@ -4068,7 +4068,7 @@ proc_wizkit_line(char *buf)
     otmp = readobjnam(buf, (struct obj *) 0);
 
     if (otmp) {
-        if (otmp != &cg.zeroobj)
+        if (otmp != &hands_obj)
             wizkit_addinv(otmp);
     } else {
         /* .60 limits output line width to 79 chars */

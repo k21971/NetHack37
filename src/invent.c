@@ -1527,13 +1527,13 @@ any_obj_ok(struct obj *obj)
  * getobj returns:
  *      struct obj *xxx:        object to do something with.
  *      (struct obj *) 0        error return: no object.
- *      &cg.zeroobj             explicitly no object (as in w-).
+ *      &hands_obj              explicitly no object (as in w-).
  * The obj_ok callback should not have side effects (apart from
  * abnormal-behavior things like impossible calls); it can be called multiple
  * times on the same object during the execution of this function.
  * Callbacks' argument is either a valid object pointer or a null pointer,
  * which represents the validity of doing that action on HANDS_SYM. getobj
- * won't call it with &cg.zeroobj, so its behavior can be undefined in that
+ * won't call it with &hands_obj, so its behavior can be undefined in that
  * case.
  */
 struct obj *
@@ -1579,7 +1579,7 @@ getobj(
                     /* check whether the hands/self choice is suitable */
                     v = (*obj_ok)((struct obj *) 0);
                     if (v == GETOBJ_SUGGEST || v == GETOBJ_DOWNPLAY)
-                        otmp = (struct obj *) &cg.zeroobj;
+                        otmp = &hands_obj;
                 } else {
                     /* there could be more than one match if key is '#';
                        take first one which passes the obj_ok callback */
@@ -1742,7 +1742,7 @@ getobj(
         if (ilet == HANDS_SYM) { /* '-' */
             if (!allownone)
                 mime_action(word);
-            return (allownone ? (struct obj *) &cg.zeroobj : (struct obj *) 0);
+            return (allownone ? &hands_obj : (struct obj *) 0);
         }
  redo_menu:
         /* since gold is now kept in inventory, we need to do processing for
@@ -1778,7 +1778,7 @@ getobj(
                 continue;
             }
             if (ilet == HANDS_SYM)
-                return (struct obj *) &cg.zeroobj; /* cast away 'const' */
+                return &hands_obj;
             if (ilet == '\033') {
                 if (flags.verbose)
                     pline1(Never_mind);
@@ -2763,7 +2763,7 @@ static void
 ia_addmenu(winid win, int act, char let, const char *txt)
 {
     anything any;
-    int clr = 0;
+    int clr = NO_COLOR;
 
     any = cg.zeroany;
     any.a_int = act;
@@ -3295,7 +3295,7 @@ display_pickinv(
     unsigned sortflags;
     Loot *sortedinvent, *srtinv;
     boolean wizid = (wizard && iflags.override_ID), gotsomething = FALSE;
-    int clr = 0, menu_behavior = MENU_BEHAVE_STANDARD;
+    int clr = NO_COLOR, menu_behavior = MENU_BEHAVE_STANDARD;
     boolean show_gold = TRUE, inuse_only = FALSE,
             skipped_gold = FALSE, skipped_noninuse = FALSE,
             doing_perm_invent = FALSE, save_flags_sortpack = flags.sortpack;
@@ -3623,7 +3623,7 @@ display_used_invlets(char avoidlet)
     winid win;
     anything any;
     menu_item *selected;
-    int clr = 0;
+    int clr = NO_COLOR;
 
     if (gi.invent) {
         win = create_nhwindow(NHW_MENU);

@@ -1,4 +1,4 @@
-/* NetHack 3.7	fountain.c	$NHDT-Date: 1687058871 2023/06/18 03:27:51 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.95 $ */
+/* NetHack 3.7	fountain.c	$NHDT-Date: 1699582923 2023/11/10 02:22:03 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.100 $ */
 /*      Copyright Scott R. Turner, srt@ucla, 10/27/86 */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -238,6 +238,7 @@ dryup(coordxy x, coordxy y, boolean isyou)
     }
 }
 
+/* quaff from a fountain when standing on its location */
 void
 drinkfountain(void)
 {
@@ -394,10 +395,12 @@ static const char *const excalmsgs[] = {
     "endured an absurd aquatic ceremony, and now wields Excalibur"
 };
 
+/* dip an object into a fountain when standing on its location */
 void
-dipfountain(register struct obj *obj)
+dipfountain(struct obj *obj)
 {
     int er = ER_NOTHING;
+    boolean is_hands = (obj == &hands_obj);
 
     if (Levitation) {
         floating_above("fountain");
@@ -445,17 +448,19 @@ dipfountain(register struct obj *obj)
         if (in_town(u.ux, u.uy))
             (void) angry_guards(FALSE);
         return;
+    } else if (is_hands || obj == uarmg) {
+        er = wash_hands();
     } else {
         er = water_damage(obj, NULL, TRUE);
+    }
 
-        if (er == ER_DESTROYED || (er != ER_NOTHING && !rn2(2))) {
-            return; /* no further effect */
-        }
+    if (er == ER_DESTROYED || (er != ER_NOTHING && !rn2(2))) {
+        return; /* no further effect */
     }
 
     switch (rnd(30)) {
     case 16: /* Curse the item */
-        if (obj->oclass != COIN_CLASS && !obj->cursed) {
+        if (!is_hands && obj->oclass != COIN_CLASS && !obj->cursed) {
             curse(obj);
         }
         break;
@@ -463,7 +468,7 @@ dipfountain(register struct obj *obj)
     case 18:
     case 19:
     case 20: /* Uncurse the item */
-        if (obj->cursed) {
+        if (!is_hands && obj->cursed) {
             if (!Blind)
                 pline_The("%s glows for a moment.", hliquid("water"));
             uncurse(obj);
@@ -500,6 +505,7 @@ dipfountain(register struct obj *obj)
         {
             long money = money_cnt(gi.invent);
             struct obj *otmp;
+
             if (money > 10) {
                 /* Amount to lose.  Might get rounded up as fountains don't
                  * pay change... */
@@ -540,13 +546,35 @@ dipfountain(register struct obj *obj)
         break;
     default:
         if (er == ER_NOTHING)
-            pline("Nothing seems to happen.");
+            pline1(nothing_seems_to_happen);
         break;
     }
     update_inventory();
     dryup(u.ux, u.uy, TRUE);
 }
 
+/* dipping '-' in fountain, pool, or sink */
+int
+wash_hands(void)
+{
+    const char *hands = makeplural(body_part(HAND));
+    int res = ER_NOTHING;
+
+    You("wash your %s%s in the %s.", uarmg ? "gloved " : "", hands,
+        hliquid("water"));
+    if (Glib) {
+        make_glib(0);
+        Your("%s are no longer slippery.", fingers_or_gloves(TRUE));
+        /* not what ER_GREASED is for, but the checks in dipfountain just
+           compare the result to ER_DESTROYED and ER_NOTHING, so it works */
+        res = ER_GREASED;
+    } else if (uarmg) {
+        res = water_damage(uarmg, (const char *) 0, TRUE);
+    }
+    return res;
+}
+
+/* convert a sink into a fountain */
 void
 breaksink(coordxy x, coordxy y)
 {
@@ -560,6 +588,7 @@ breaksink(coordxy x, coordxy y)
     newsym(x, y);
 }
 
+/* quaff from a sink while standing on its location */
 void
 drinksink(void)
 {
@@ -675,6 +704,119 @@ drinksink(void)
         You("take a sip of %s %s.",
             rn2(3) ? (rn2(2) ? "cold" : "warm") : "hot",
             hliquid("water"));
+    }
+}
+
+/* for #dip(potion.c) when standing on a sink */
+void
+dipsink(struct obj *obj)
+{
+    boolean try_call = FALSE,
+            not_looted_yet = (levl[u.ux][u.uy].looted & S_LRING) == 0,
+            is_hands = (obj == &hands_obj || (uarmg && obj == uarmg));
+
+    if (!rn2(not_looted_yet ? 25 : 15)) {
+        /* can't rely on using sink for unlimited scroll blanking; however,
+           since sink will be converted into a fountain, hero can dip again */
+        breaksink(u.ux, u.uy); /* "The pipes break!  Water spurts out!" */
+        if (Glib && is_hands)
+            Your("%s are still slippery.", fingers_or_gloves(TRUE));
+        return;
+    } else if (is_hands) {
+        (void) wash_hands();
+        return;
+    } else if (obj->oclass != POTION_CLASS) {
+        You("hold %s under the tap.", the(xname(obj)));
+        if (water_damage(obj, (const char *) 0, TRUE) == ER_NOTHING)
+            pline1(nothing_seems_to_happen);
+        return;
+    }
+
+    /* at this point the object must be a potion */
+    You("pour %s%s down the drain.", (obj->quan > 1L ? "one of " : ""),
+        the(xname(obj)));
+    switch (obj->otyp) {
+    case POT_POLYMORPH:
+        polymorph_sink();
+        try_call = TRUE;
+        break;
+    case POT_OIL:
+        if (!Blind) {
+            pline("It leaves an oily film on the basin.");
+            try_call = TRUE;
+        } else {
+            pline1(nothing_seems_to_happen);
+        }
+        break;
+    case POT_ACID:
+        /* acts like a drain cleaner product */
+        try_call = TRUE;
+        if (!Blind) {
+            pline_The("drain seems less clogged.");
+        } else if (!Deaf) {
+            You_hear("a sucking sound.");
+        } else {
+            pline1(nothing_seems_to_happen);
+            try_call = FALSE;
+        }
+        break;
+    case POT_LEVITATION:
+        sink_backs_up(u.ux, u.uy);
+        try_call = TRUE;
+        break;
+    case POT_OBJECT_DETECTION:
+        if (!(levl[u.ux][u.uy].looted & S_LRING)) {
+            You("sense a ring lost down the drain.");
+            try_call = TRUE;
+            break;
+        }
+        /* FALLTHRU */
+    case POT_GAIN_LEVEL:
+    case POT_GAIN_ENERGY:
+    case POT_MONSTER_DETECTION:
+    case POT_FRUIT_JUICE:
+    case POT_WATER:
+        /* potions with no potionbreathe() effects, plus water.  if effects
+           are added to potionbreathe these should go to that instead (except
+           for water). */
+        pline1(nothing_seems_to_happen);
+        break;
+    default:
+        /* hero can feel the vapor on her skin, so no need to check Blind or
+           breathless for this message */
+        pline("A wisp of vapor rises up...");
+        /* NB: potionbreathe calls trycall or makeknown as appropriate */
+        if (!breathless(gy.youmonst.data) || haseyes(gy.youmonst.data))
+            potionbreathe(obj);
+        break;
+    }
+    if (try_call && obj->dknown)
+        trycall(obj);
+    useup(obj);
+}
+
+/* find a ring in a sink */
+void
+sink_backs_up(coordxy x, coordxy y)
+{
+    char buf[BUFSZ];
+
+    if (!Blind)
+        Strcpy(buf, "Muddy waste pops up from the drain");
+    else if (!Deaf)
+        Strcpy(buf, "You hear a sloshing sound"); /* Deaf-aware */
+    else
+        Sprintf(buf, "Something splashes you in the %s", body_part(FACE));
+    pline("%s%s.", !Deaf ? "Flupp!  " : "", buf);
+
+    if (!(levl[x][y].looted & S_LRING)) { /* once per sink */
+        if (!Blind)
+            You_see("a ring shining in its midst.");
+        (void) mkobj_at(RING_CLASS, x, y, TRUE);
+        newsym(x, y);
+        exercise(A_DEX, TRUE);
+        exercise(A_WIS, TRUE); /* a discovery! */
+        levl[x][y].looted |= S_LRING;
     }
 }
 

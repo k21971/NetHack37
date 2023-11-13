@@ -1,4 +1,4 @@
-$NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1286 $ $NHDT-Date: 1699233285 2023/11/06 01:14:45 $
+$NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1294 $ $NHDT-Date: 1699813307 2023/11/12 18:21:47 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -1278,6 +1278,11 @@ make spell menu work with repeat
 when attempting to look up a named fruit in data.base, try harder
 set and check mon->mstate flags more consistently
 fix sanity error when cloud was created over an engraving
+docall naming of the monster that currently has the hero swallowed by
+	using their visible interior
+give missiles thrown or shot by monsters the same chance to get used up upon
+	hitting as when thrown or shot by the hero
+change menu_headings to also accept a color or color&attribute
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -1735,6 +1740,9 @@ knockback or recoil while levitating could hurtle the hero through a wall of
 if recoil from throwing an item while levitating sent hero into a wall of
 	water, the thrown item got placed in that water rather than at its
 	intended destination
+include '-' as suggested item in "what to dip?" prompt if dipping at pool or
+	fountain or sink with slippery hands
+don't attempt a second hit for bare handed/martial arts if wearing a shield
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
@@ -2318,6 +2326,10 @@ applying gold pieces will flip one and report "heads" or "tails"; with a stack
 during enlightenment and end-of-game disclosure, use contraction "<verb>n't"
 	for "<verb> not"
 give feedback about the thaw status of ice terrain
+allow #dip '-' in a fountain, pool, or sink to clean slippery fingers/gloves
+allow #dip potions into a sink to get a hint about what they are, similar to
+	dropping rings into a sink; dipping other stuff causes water damage
+	so could be used to blank out scrolls and books
 
 
 Platform- and/or Interface-Specific New Features

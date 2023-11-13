@@ -46,7 +46,7 @@
 \author{Original version - Eric S. Raymond\\
 (Edited and expanded for 3.7.0 by Mike Stephenson and others)}
 %DO NOT REMOVE NH_DATESUB \date{DATE(%B %-d, %Y)}
-\date{November 6, 2023}
+\date{November 13, 2023}
 
 \maketitle
 
@@ -4449,9 +4449,8 @@ Implemented by the Amiga, Gem and tty ports.
 Default `\verb+^+'.
 \item[\ib{menu\verb+_+headings}]
 Controls how the headings in a menu are highlighted.
-Values are ``{\tt none}'', ``{\tt bold}'', ``{\tt dim}'',
-``{\tt italic}'', ``{\tt underline}'',``{\tt blink}'', or
-``{\tt inverse}''.
+Takes a text attribute, or text color and attribute separated by ampersand.
+For allowed attributes and colors, see ``{\it Configuring Menu Colors\/}``.
 Not all ports can actually display all types.
 \item[\ib{menu\verb+_+invert\verb+_+all}]
 Key to invert all items in a menu.

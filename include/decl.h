@@ -29,6 +29,7 @@ extern NEARDATA const struct c_color_names c_color_names;
 /* common_strings */
 extern const struct c_common_strings c_common_strings;
 #define nothing_happens c_common_strings.c_nothing_happens
+#define nothing_seems_to_happen c_common_strings.c_nothing_seems_to_happen
 #define thats_enough_tries c_common_strings.c_thats_enough_tries
 #define silly_thing_to c_common_strings.c_silly_thing_to
 #define shudder_for_moment c_common_strings.c_shudder_for_moment
@@ -468,6 +469,8 @@ struct instance_globals_i {
 
     /* sp_lev.c */
     boolean in_mk_themerooms;
+
+    /* new */
 
     boolean havestate;
     unsigned long magic; /* validate that structure layout is preserved */
@@ -1147,6 +1150,8 @@ struct const_globals {
 };
 
 extern const struct const_globals cg;
+
+extern struct obj hands_obj;
 
 #endif /* DECL_H */
 
