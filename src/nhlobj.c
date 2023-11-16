@@ -71,7 +71,7 @@ l_obj_gc(lua_State *L)
 static struct _lua_obj *
 l_obj_push(lua_State *L, struct obj *otmp)
 {
-    struct _lua_obj *lo = (struct _lua_obj *)lua_newuserdata(L, sizeof(struct _lua_obj));
+    struct _lua_obj *lo = (struct _lua_obj *) lua_newuserdata(L, sizeof(struct _lua_obj));
     luaL_getmetatable(L, "obj");
     lua_setmetatable(L, -2);
 
@@ -349,9 +349,11 @@ l_obj_new_readobjnam(lua_State *L)
     if (argc == 1) {
         char buf[BUFSZ];
         struct obj *otmp;
+
         Sprintf(buf, "%s", luaL_checkstring(L, 1));
         lua_pop(L, 1);
-        otmp = readobjnam(buf, NULL);
+        if ((otmp = readobjnam(buf, NULL)) == &hands_obj)
+            otmp = NULL;
         (void) l_obj_push(L, otmp);
         return 1;
     } else

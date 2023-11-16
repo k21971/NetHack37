@@ -303,7 +303,7 @@ nh_basename(const char *fname, boolean keep_suffix)
  *
  *   Sample:
  *      The following call:
- *  (void)fname_encode("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+ * (void) fname_encode("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
  *                     '%', "This is a % test!", buf, 512);
  *      results in this encoding:
  *          "This%20is%20a%20%25%20test%21"
@@ -522,9 +522,9 @@ zero_nhfile(NHFILE *nhfp)
         nhfp->fieldlevel = FALSE;
         nhfp->addinfo = FALSE;
         nhfp->bendian = IS_BIGENDIAN();
-        nhfp->fpdef = (FILE *)0;
-        nhfp->fplog = (FILE *)0;
-        nhfp->fpdebug = (FILE *)0;
+        nhfp->fpdef = (FILE *) 0;
+        nhfp->fplog = (FILE *) 0;
+        nhfp->fpdebug = (FILE *) 0;
         nhfp->count = 0;
         nhfp->eof = FALSE;
         nhfp->fnidx = 0;
@@ -534,7 +534,7 @@ zero_nhfile(NHFILE *nhfp)
 static NHFILE *
 new_nhfile(void)
 {
-    NHFILE *nhfp = (NHFILE *)alloc(sizeof(NHFILE));
+    NHFILE *nhfp = (NHFILE *) alloc(sizeof(NHFILE));
 
     zero_nhfile(nhfp);
     return nhfp;
@@ -1334,7 +1334,7 @@ restore_saved_game(void)
     if ((nhfp = open_savefile()) != 0) {
         if (validate(nhfp, fq_save, FALSE) != 0) {
             close_nhfile(nhfp);
-            nhfp = (NHFILE *)0;
+            nhfp = (NHFILE *) 0;
             (void) delete_savefile();
         }
     }

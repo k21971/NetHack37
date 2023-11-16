@@ -21,26 +21,6 @@ static void stat_update_time(void);
 /* limit of the player's name in the status window */
 #define BOTL_NSIZ 16
 
-void
-add_menu_heading(winid tmpwin, const char *buf)
-{
-    anything any = cg.zeroany;
-
-    add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-             iflags.menu_headings.attr, iflags.menu_headings.color,
-             buf, MENU_ITEMFLAGS_NONE);
-}
-
-void
-add_menu_str(winid tmpwin, const char *buf)
-{
-    anything any = cg.zeroany;
-
-    add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-             ATR_NONE, NO_COLOR,
-             buf, MENU_ITEMFLAGS_NONE);
-}
-
 static char *
 get_strength_str(void)
 {
@@ -3577,8 +3557,8 @@ status_hilite_menu_choose_updownboth(
             Sprintf(buf, "Value goes up");
         any = cg.zeroany;
         any.a_int = 10 + GT_VALUE;
-        add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE,
-             clr, buf, MENU_ITEMFLAGS_NONE);
+        add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0, ATR_NONE, clr,
+                 buf, MENU_ITEMFLAGS_NONE);
     }
     Sprintf(buf, "Select field %s value:", initblstats[fld].fldname);
     end_menu(tmpwin, buf);
@@ -3787,7 +3767,7 @@ status_hilite_menu_add(int origfld)
         if (initblstats[fld].anytype != ANY_STR) {
             boolean ltok = (fld != BL_TIME), gtok = TRUE;
 
-            lt_gt_eq = status_hilite_menu_choose_updownboth(fld, (char *)0,
+            lt_gt_eq = status_hilite_menu_choose_updownboth(fld, (char *) 0,
                                                             ltok, gtok);
             if (lt_gt_eq == NO_LTEQGT)
                 goto choose_behavior;
@@ -3933,14 +3913,14 @@ status_hilite_menu_add(int origfld)
     }
 
  choose_color:
-    clr = query_color(colorqry);
+    clr = query_color(colorqry, NO_COLOR);
     if (clr == -1) {
         if (behavior != BL_TH_ALWAYS_HILITE)
             goto choose_value;
         else
             goto choose_behavior;
     }
-    atr = query_attr(attrqry);
+    atr = query_attr(attrqry, ATR_NONE);
     if (atr == -1)
         goto choose_color;
 
@@ -4098,9 +4078,8 @@ status_hilite_menu_fld(int fld)
     if (count) {
         any = cg.zeroany;
         any.a_int = -1;
-        add_menu(tmpwin, &nul_glyphinfo, &any, 'X', 0, ATR_NONE,
-                 clr, "Remove selected hilites",
-                 MENU_ITEMFLAGS_NONE);
+        add_menu(tmpwin, &nul_glyphinfo, &any, 'X', 0, ATR_NONE, clr,
+                 "Remove selected hilites", MENU_ITEMFLAGS_NONE);
     }
 
 #ifndef SCORE_ON_BOTL

@@ -171,9 +171,10 @@ typedef struct gi {
 #define MENU_INVERT_PAGE        '~'
 #define MENU_SEARCH             ':'
 
-#define MENU_ITEMFLAGS_NONE       0x0000000U
-#define MENU_ITEMFLAGS_SELECTED   0x0000001U
-#define MENU_ITEMFLAGS_SKIPINVERT 0x0000002U
+#define MENU_ITEMFLAGS_NONE           0x0000000U
+#define MENU_ITEMFLAGS_SELECTED       0x0000001U
+#define MENU_ITEMFLAGS_SKIPINVERT     0x0000002U
+#define MENU_ITEMFLAGS_SKIPMENUCOLORS 0x0000004U
 
 /* 3.7+ enhanced menu flags that not all window ports are likely to
  * support initially.
@@ -216,8 +217,9 @@ enum to_core_flags {
 };
 
 enum from_core_requests {
-    set_mode         = 1,
-    request_settings = 2,
+    set_mode             = 1,
+    request_settings     = 2,
+    set_menu_promptstyle = 3
 };
 
 struct to_core {
@@ -232,6 +234,7 @@ struct to_core {
 struct from_core {
     enum from_core_requests core_request;
     enum inv_modes invmode;
+    color_attr menu_promptstyle;
 };
 
 struct win_request_info_t {
@@ -240,6 +243,7 @@ struct win_request_info_t {
 };
 
 typedef struct win_request_info_t win_request_info;
+extern win_request_info zerowri;    /* windows.c */
 
 /* #define CORE_INVENT */
 

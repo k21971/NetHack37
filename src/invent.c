@@ -45,7 +45,6 @@ static void itemactions_pushkeys(struct obj *, int);
 static void mime_action(const char *);
 
 /* enum and structs are defined in wintype.h */
-static win_request_info zerowri = { { 0L, 0, 0, 0, 0, 0, 0, 0 }, { 0, 0 } };
 static win_request_info wri_info;
 static int perminv_flags = InvOptNone;
 static boolean in_perm_invent_toggled;
@@ -3593,7 +3592,7 @@ display_inventory(const char *lets, boolean want_reply)
             for (otmp = gi.invent; otmp; otmp = otmp->nobj)
                 if (otmp->invlet == cmdq->key
                     && (!lets || !*lets
-                        || strchr(lets, def_oc_syms[(int)otmp->oclass].sym))) {
+                        || strchr(lets, def_oc_syms[(int) otmp->oclass].sym))) {
                     free(cmdq);
                     return otmp->invlet;
                 }

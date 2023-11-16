@@ -1,4 +1,4 @@
-/* NetHack 3.7	windows.c	$NHDT-Date: 1661202202 2022/08/22 21:03:22 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.97 $ */
+/* NetHack 3.7	windows.c	$NHDT-Date: 1700012891 2023/11/15 01:48:11 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.109 $ */
 /* Copyright (c) D. Cohrs, 1993. */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -64,6 +64,7 @@ extern void *trace_procs_chain(int, int, void *, void *, void *);
 
 static void def_raw_print(const char *s);
 static void def_wait_synch(void);
+static boolean get_menu_coloring(const char *, int *, int *);
 
 #if defined(DUMPLOG) || defined(DUMPHTML)
 static winid dump_create_nhwindow(int);
@@ -2487,5 +2488,91 @@ mixed_to_glyphinfo(const char *str, glyph_info *gip)
     }
     return str;
 }
+
+/* enum and structs are defined in wintype.h */
+
+win_request_info zerowri = { { 0L, 0, 0, 0, 0, 0, 0, 0 },
+                             { 0, 0, { NO_COLOR, ATR_NONE }}};
+
+void
+adjust_menu_promptstyle(winid window, color_attr *style)
+{
+    win_request_info wri = zerowri;
+    wri.fromcore.menu_promptstyle.color = style->color;
+    wri.fromcore.menu_promptstyle.attr = style->attr;
+    /*  relay the style change to the window port */
+    (void) ctrl_nhwindow(window, set_menu_promptstyle, &wri);
+}
+
+/*
+ *   Common code point leading into the interface-specifc
+ *   add_menu() to allow single-spot adjustments to the parameters,
+ *   such as those done by menu_colors.
+ */
+void
+add_menu(
+    winid window,  /* window to use, must be of type NHW_MENU */
+    const glyph_info *glyphinfo, /* glyph info with glyph to
+                                  * display with item */
+    const anything *identifier, /* what to return if selected */
+    char ch,                    /* selector letter (0 = pick our own) */
+    char gch,                   /* group accelerator (0 = no group) */
+    int attr,                   /* attribute for menu text (str) */
+    int color,                  /* color for menu text (str) */
+    const char *str,            /* menu text */
+    unsigned int itemflags)     /* itemflags such as MENU_ITEMFLAGS_SELECTED */
+{
+    if (iflags.use_menu_color) {
+        if ((itemflags & MENU_ITEMFLAGS_SKIPMENUCOLORS) == 0)
+            (void) get_menu_coloring(str, &color, &attr);
+    }
+    /* this is the only function that cared about this flag; remove it now */
+    itemflags &= ~MENU_ITEMFLAGS_SKIPMENUCOLORS;
+
+    (*windowprocs.win_add_menu)(window, glyphinfo, identifier,
+                                ch, gch, attr, color, str, itemflags);
+}
+
+/* insert a non-selectable, possibly highlighted line of text into a menu */
+void
+add_menu_heading(winid tmpwin, const char *buf)
+{
+    anything any = cg.zeroany;
+    int attr = iflags.menu_headings.attr,
+        color = iflags.menu_headings.color;
+
+    /* suppress highlighting during end-of-game disclosure */
+    if (gp.program_state.gameover)
+        attr = ATR_NONE, color = NO_COLOR;
+
+    add_menu(tmpwin, &nul_glyphinfo, &any, '\0', '\0', attr, color,
+             buf, MENU_ITEMFLAGS_SKIPMENUCOLORS);
+}
+
+/* insert a non-selectable, unhighlighted line of text into a menu */
+void
+add_menu_str(winid tmpwin, const char *buf)
+{
+    anything any = cg.zeroany;
+
+    add_menu(tmpwin, &nul_glyphinfo, &any, '\0', '\0', ATR_NONE, NO_COLOR,
+             buf, MENU_ITEMFLAGS_NONE);
+}
+
+static boolean
+get_menu_coloring(const char *str, int *color, int *attr)
+{
+    struct menucoloring *tmpmc;
+
+    if (iflags.use_menu_color)
+        for (tmpmc = gm.menu_colorings; tmpmc; tmpmc = tmpmc->next)
+            if (regex_match(str, tmpmc->match)) {
+                *color = tmpmc->color;
+                *attr = tmpmc->attr;
+                return TRUE;
+            }
+    return FALSE;
+}
+
 
 /*windows.c*/

@@ -35,7 +35,7 @@ void
 early_init(int argc UNUSED, char *argv[] UNUSED)
 {
 #ifdef CRASHREPORT
-	// Do this as early as possible, but let ports do other things first.
+    /* Do this as early as possible, but let ports do other things first. */
     crashreport_init(argc, argv);
 #endif
     decl_globals_init();
@@ -678,6 +678,7 @@ void
 init_sound_disp_gamewindows(void)
 {
     int menu_behavior = MENU_BEHAVE_STANDARD;
+    color_attr menu_promptstyle = { NO_COLOR, ATR_INVERSE };
 
     activate_chosen_soundlib();
 
@@ -696,6 +697,8 @@ init_sound_disp_gamewindows(void)
     }
     WIN_MAP = create_nhwindow(NHW_MAP);
     WIN_INVEN = create_nhwindow(NHW_MENU);
+    if (WIN_INVEN != WIN_ERR)
+        adjust_menu_promptstyle(WIN_INVEN, &menu_promptstyle);
 #ifdef TTY_PERM_INVENT
     if (WINDOWPORT(tty) && WIN_INVEN != WIN_ERR) {
         menu_behavior = MENU_BEHAVE_PERMINV;
@@ -1020,9 +1023,9 @@ argcheck(int argc, char *argv[], enum earlyarg e_arg)
             return 2;
 #endif
 #ifdef CRASHREPORT
-	case ARG_BIDSHOW:
-	    crashreport_bidshow();
-	    return 2;
+        case ARG_BIDSHOW:
+            crashreport_bidshow();
+            return 2;
 #endif
 #ifdef WIN32
         case ARG_WINDOWS:

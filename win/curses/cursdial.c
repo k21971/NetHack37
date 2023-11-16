@@ -1164,6 +1164,8 @@ get_menuitem_y(
 
 /* Displays menu selections in the given window */
 
+extern color_attr curses_menu_promptstyle; /*cursmain.c */
+
 static void
 menu_display_page(
     nhmenu *menu, WINDOW *win,
@@ -1175,8 +1177,7 @@ menu_display_page(
     int count, curletter, entry_cols, start_col, num_lines;
     char *tmpstr;
     boolean first_accel = TRUE;
-    int color = NO_COLOR, attr = A_NORMAL;
-    boolean menu_color = FALSE;
+    int color = NO_COLOR, attr;
 
     /* letters assigned to entries on current page */
     if (selectors)
@@ -1208,9 +1209,11 @@ menu_display_page(
 
         for (count = 0; count < num_lines; count++) {
             tmpstr = curses_break_str(menu->prompt, menu->width, count + 1);
-            curses_toggle_color_attr(win, NO_COLOR, A_NORMAL, ON);
+            curses_toggle_color_attr(win, curses_menu_promptstyle.color,
+			             curses_menu_promptstyle.attr, ON);
             mvwprintw(win, count + 1, 1, "%s", tmpstr);
-            curses_toggle_color_attr(win, NO_COLOR, A_NORMAL, OFF);
+            curses_toggle_color_attr(win, curses_menu_promptstyle.color,
+			             curses_menu_promptstyle.attr, OFF);
             free(tmpstr);
         }
     }
@@ -1281,19 +1284,13 @@ menu_display_page(
             start_col += 2;
         }
 #endif
-        color = NONE;
-        menu_color = iflags.use_menu_color
-                     && get_menu_coloring(menu_item_ptr->str, &color, &attr);
-        if (menu_color) {
-            attr = curses_convert_attr(attr);
-            if (color != NONE || attr != A_NORMAL)
-                curses_menu_color_attr(win, color, attr, ON);
-        } else {
-            attr = menu_item_ptr->attr;
-            color = menu_item_ptr->color;
-            if (color != NONE || attr != A_NORMAL)
-                curses_toggle_color_attr(win, color, attr, ON);
-        }
+	color = menu_item_ptr->color;
+        if (color == NO_COLOR)
+            color = NONE;
+	attr = menu_item_ptr->attr;
+	/* attr is already a curses attr (A_ not ATR_) */
+	if (color != NONE || attr != A_NORMAL)
+            curses_menu_color_attr(win, color, attr, ON);
 
         num_lines = curses_num_lines(menu_item_ptr->str, entry_cols);
         for (count = 0; count < num_lines; count++) {
@@ -1306,12 +1303,8 @@ menu_display_page(
             }
         }
         if (color != NONE || attr != A_NORMAL) {
-            if (menu_color)
-                curses_menu_color_attr(win, color, attr, OFF);
-            else
-                curses_toggle_color_attr(win, color, attr, OFF);
+            curses_menu_color_attr(win, color, attr, OFF);
         }
-
         menu_item_ptr = menu_item_ptr->next_item;
     }
 

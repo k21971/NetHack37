@@ -1150,8 +1150,8 @@ makemap_prepost(boolean pre, boolean wiztower)
         /* escape from trap */
         reset_utrap(FALSE);
         check_special_room(TRUE); /* room exit */
-        (void) memset((genericptr_t)&gd.dndest, 0, sizeof (dest_area));
-        (void) memset((genericptr_t)&gu.updest, 0, sizeof (dest_area));
+        (void) memset((genericptr_t) &gd.dndest, 0, sizeof (dest_area));
+        (void) memset((genericptr_t) &gu.updest, 0, sizeof (dest_area));
         u.ustuck = (struct monst *) 0;
         u.uswallow = u.uswldtim = 0;
         set_uinwater(0); /* u.uinwater = 0 */
@@ -3107,15 +3107,15 @@ redo_rebind:
     any = cg.zeroany;
 
     any.a_int = 1;
-    add_menu(win, &nul_glyphinfo, &any, '\0', 0, ATR_NONE, clr, "bind key to a command",
-             MENU_ITEMFLAGS_NONE);
+    add_menu(win, &nul_glyphinfo, &any, '\0', 0, ATR_NONE, clr,
+             "bind key to a command", MENU_ITEMFLAGS_NONE);
     any.a_int = 2;
-    add_menu(win, &nul_glyphinfo, &any, '\0', 0, ATR_NONE, clr, "bind command to a key",
-             MENU_ITEMFLAGS_NONE);
+    add_menu(win, &nul_glyphinfo, &any, '\0', 0, ATR_NONE, clr,
+             "bind command to a key", MENU_ITEMFLAGS_NONE);
     if (count_bind_keys()) {
         any.a_int = 3;
-        add_menu(win, &nul_glyphinfo, &any, '\0', 0, ATR_NONE, clr, "view changed key binds",
-                 MENU_ITEMFLAGS_NONE);
+        add_menu(win, &nul_glyphinfo, &any, '\0', 0, ATR_NONE, clr,
+                 "view changed key binds", MENU_ITEMFLAGS_NONE);
     }
     end_menu(win, "Do what?");
     npick = select_menu(win, PICK_ONE, &picks);
@@ -5124,8 +5124,8 @@ movecmd(char sym, int mode)
 {
     int d = DIR_ERR;
 
-    if (gc.Cmd.commands[(uchar)sym]) {
-        int (*fnc)(void) = gc.Cmd.commands[(uchar)sym]->ef_funct;
+    if (gc.Cmd.commands[(uchar) sym]) {
+        int (*fnc)(void) = gc.Cmd.commands[(uchar) sym]->ef_funct;
 
         if (mode == MV_ANY) {
             for (d = N_DIRS_Z - 1; d > DIR_ERR; d--)
