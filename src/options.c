@@ -5071,10 +5071,12 @@ optfn_boolean(int optidx, int req, boolean negated, char *opts, char *op)
 #endif
             go.opt_need_redraw = TRUE;
             go.opt_need_glyph_reset = TRUE;
+            go.opt_need_promptstyle = TRUE;
             break;
         case opt_menucolors:
         case opt_guicolor:
             update_inventory();
+            go.opt_need_promptstyle = TRUE;
             break;
         case opt_mention_decor:
             iflags.prev_decor = STONE;
@@ -5418,6 +5420,7 @@ handler_menu_headings(void)
         if (iflags.perm_invent)
             update_inventory();
     }
+    adjust_menu_promptstyle(WIN_INVEN, &iflags.menu_headings);
     return optn_ok;
 }
 
@@ -8694,6 +8697,8 @@ doset_simple(void)
             docrt();
             flush_screen(1);
         }
+        if (go.opt_need_promptstyle)
+            adjust_menu_promptstyle(WIN_INVEN, &iflags.menu_headings);
         if (gc.context.botl || gc.context.botlx) {
             bot();
         }
@@ -8718,6 +8723,8 @@ term_for_boolean(int idx, boolean *b)
         boolean_term = booleanterms[f_t][i];
     return boolean_term;
 }
+
+#define HELP_IDX (SIZE(allopt))
 
 /* the #optionsfull command */
 int
@@ -8767,7 +8774,7 @@ doset(void) /* changing options via menu by Per Liboriussen */
                 Sprintf(buf, "%4s%.75s", "", helptext[i]);
                 add_menu_str(tmpwin, buf);
             } else {
-                any.a_int = '?' + 1; /* processing pick_list subtracts 1 */
+                any.a_int = HELP_IDX + 1; /* processing pick_list subtracts 1 */
                 add_menu(tmpwin, &nul_glyphinfo, &any, '?', '?', ATR_NONE,
                          clr, "view help for options menu",
                          MENU_ITEMFLAGS_SKIPINVERT);
@@ -8878,7 +8885,7 @@ doset(void) /* changing options via menu by Per Liboriussen */
          */
         for (pick_idx = 0; pick_idx < pick_cnt; ++pick_idx) {
             opt_indx = pick_list[pick_idx].item.a_int - 1;
-            if (opt_indx == '?') {
+            if (opt_indx == HELP_IDX) {
                 display_file(OPTMENUHELP, FALSE);
                 gavehelp = TRUE;
                 continue; /* just handled '?'; there might be more picks */
@@ -8942,11 +8949,16 @@ doset(void) /* changing options via menu by Per Liboriussen */
         reglyph_darkroom();
         docrt();
     }
+    if (go.opt_need_promptstyle) {
+        adjust_menu_promptstyle(WIN_INVEN, &iflags.menu_headings);
+    }
     if (gc.context.botl || gc.context.botlx) {
         bot();
     }
     return ECMD_OK;
 }
+
+#undef HELP_IDX
 
 /* doset(#optionsfull command) menu entries for compound options */
 static void
