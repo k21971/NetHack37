@@ -3397,7 +3397,7 @@ xkilled(
     adjalign(mtmp->malign);
 
     if (is_bones_monster(mtmp->data)
-        && mtmp->former_rank && strlen(mtmp->former_rank) > 0) {
+        && *mtmp->former_rank && strlen(mtmp->former_rank) > 0) {
         if (mtmp->data == &mons[PM_GHOST])
             livelog_printf(LL_UMONST, "destroyed %s, the former %s",
                            livelog_mon_nam(mtmp), mtmp->former_rank);

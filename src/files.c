@@ -831,11 +831,11 @@ write_whereis(boolean playing) /* < True if game is running */
             0L,
 #endif
             u.uhave.amulet ? 1 : 0,
-            u.uevent.ascended ? 2 : gk.killer.name ? 1 : 0);
+            u.uevent.ascended ? 2 : *gk.killer.name ? 1 : 0);
     Sprintf(eos(whereis_work), "playing=%d\n",
             playing);
 
-    fp = fopen_datafile(whereis_file,"w",LEVELPREFIX);
+    fp = fopen_datafile(whereis_file, "w", LEVELPREFIX);
     if (fp) {
 #ifdef UNIX
         mode_t whereismode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH;
