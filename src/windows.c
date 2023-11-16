@@ -2000,7 +2000,7 @@ dump_open_log(time_t now)
 #endif
     if (dumplog_file || dumphtml_file) {
         dumplog_windowprocs_backup = windowprocs;
-        menu_headings_backup = iflags.menu_headings;
+        menu_headings_backup = iflags.menu_headings.attr;
     }
     dump_headers();
 #else /*!DUMPLOG/HTML*/
@@ -2174,10 +2174,10 @@ dump_redirect(boolean onoff_flag)
             windowprocs.win_status_update = dump_status_update;
         } else {
             windowprocs = dumplog_windowprocs_backup;
-            iflags.menu_headings = menu_headings_backup;
+            iflags.menu_headings.attr = menu_headings_backup;
         }
         iflags.in_dumplog = onoff_flag;
-        iflags.menu_headings |= ATR_SUBHEAD; /* ATR_SUBHEAD changes with in_dumplog */
+        iflags.menu_headings.attr |= ATR_SUBHEAD; /* ATR_SUBHEAD changes with in_dumplog */
     } else {
         iflags.in_dumplog = FALSE;
     }
