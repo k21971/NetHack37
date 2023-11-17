@@ -56,6 +56,7 @@ static void tport_menu(winid, char *, struct lchoice *, d_level *, boolean);
 static const char *br_string(int);
 static char chr_u_on_lvl(d_level *);
 static void print_branch(winid, int, int, int, boolean, struct lchoice *);
+static char *get_annotation(d_level *);
 static void query_annotation(d_level *);
 static mapseen *load_mapseen(NHFILE *);
 static void save_mapseen(NHFILE *, mapseen *);
@@ -2603,7 +2604,7 @@ recbranch_mapseen(d_level *source, d_level *dest)
     }
 }
 
-char *
+static char *
 get_annotation(d_level *lev)
 {
     mapseen *mptr;
@@ -2611,6 +2612,16 @@ get_annotation(d_level *lev)
     if ((mptr = find_mapseen(lev)))
         return mptr->custom;
     return NULL;
+}
+
+/* print the annotation for the current level, if it exists */
+void
+print_level_annotation(void)
+{
+    const char *annotation;
+
+    if ((annotation = get_annotation(&u.uz)) != 0)
+        You("remember this level as %s.", annotation);
 }
 
 /* ask user to annotate level lev.
@@ -2639,7 +2650,29 @@ query_annotation(d_level *lev)
         getlin(tmpbuf, nbuf);
     } else
 #endif
-        getlin("What do you want to call this dungeon level?", nbuf);
+    {
+        char qbuf[QBUFSZ], lbuf[QBUFSZ]; /* level description */
+
+        if (!lev || on_level(&u.uz, lev)) {
+            Strcpy(lbuf, "this dungeon level");
+        } else {
+            int dflgs = (lev->dnum == u.uz.dnum) ? 0 : 2;
+            d_level save_uz = u.uz;
+
+            u.uz = *lev;
+            (void) describe_level(lbuf, dflgs);
+            u.uz = save_uz;
+
+            (void) strsubst(lbuf, "Dlvl:", "level ");
+            /* even though we've told describe_level() not to append
+               a trailing space (by not including '1' in dflgs), the
+               level number is formatted with %-2d so single digit
+               values will end up with one anyway; remove it */
+            (void) trimspaces(lbuf);
+        }
+        Snprintf(qbuf, sizeof qbuf, "What do you want to call %s?", lbuf);
+        getlin(qbuf, nbuf);
+    }
 
     /* empty input or ESC means don't add or change annotation;
        space-only means discard current annotation without adding new one */
@@ -3389,7 +3422,7 @@ show_overview(
     if (In_endgame(&u.uz))
         traverse_mapseenchn(1, win, why, reason, &lastdun);
     /* if game is over or we're not in the endgame yet, show the dungeon */
-    if (why != 0 || !In_endgame(&u.uz))
+    if (why > 0 || !In_endgame(&u.uz))
         traverse_mapseenchn(0, win, why, reason, &lastdun);
     end_menu(win, (char *) 0);
     n = select_menu(win, (why != -1) ? PICK_NONE : PICK_ONE, &selected);

@@ -1,4 +1,4 @@
-$NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1294 $ $NHDT-Date: 1699813307 2023/11/12 18:21:47 $
+$NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1297 $ $NHDT-Date: 1700204638 2023/11/17 07:03:58 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -1743,6 +1743,10 @@ if recoil from throwing an item while levitating sent hero into a wall of
 include '-' as suggested item in "what to dip?" prompt if dipping at pool or
 	fountain or sink with slippery hands
 don't attempt a second hit for bare handed/martial arts if wearing a shield
+when using 'm #overview' to annotate a level other than current the one,
+	include level number, and dungeon branch if not current one, in the
+	prompt instead of generic "this level"
+when using 'm #overview' in the endgame, don't include non-endgame levels
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
@@ -2024,6 +2028,8 @@ tty: if a menu used full screen and brought up another menu that wasn't full
 	it with most of the map left blank until after the menu was dismissed
 tty: have <return> dismiss pick-none menus instead of acting like '>' (not
 	only wouldn't dismiss when not on last page, wouldn't dismiss at all)
+tty: menu search via ':' would clobber part of the menu with a status line
+	refresh if the menu was tall enough to cover that
 Unix: when user name is used as default character name, keep hyphenated value
 	intact instead stripping off dash and whatever follows as if that
 	specified role/race/&c (worked once upon a time; broken since 3.3.0)
@@ -2330,6 +2336,7 @@ allow #dip '-' in a fountain, pool, or sink to clean slippery fingers/gloves
 allow #dip potions into a sink to get a hint about what they are, similar to
 	dropping rings into a sink; dipping other stuff causes water damage
 	so could be used to blank out scrolls and books
+when restoring, show current level's player-applied annotation if there is one
 
 
 Platform- and/or Interface-Specific New Features
