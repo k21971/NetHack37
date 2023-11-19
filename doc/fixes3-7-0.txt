@@ -511,6 +511,8 @@ any blessed key was behaving as if was the rogue's Master Key when unlocking
 when an unseen non-pet picks up or uses an item, hero loses known/dknown/
 	bknown/cknown/lknown memory of that item (so becomes unidentified; in
 	particular, player won't be asked what to call unseen thrown potion)
+when picking up a stackable item, it can be identified by comparing it to
+        another identical item that is already identified
 wishing for a partly eaten wraith corpse yielded "partly eaten food (1) more
 	nutritious than untouched food (0)"
 if PREFIXES_IN_USE was defined (and VAR_PLAYGROUND forces it to be) when
@@ -1821,6 +1823,8 @@ tty: for the !DEF_PAGER configuration, redraw screen properly if attempting
 	feedback for that situation
 tty: if a group accelerator matched a menu command ('^' in menu for '/')
 	it wouldn't work to select, just to manipulate the menu
+tty: after resize changes which included screen erasure changes, ^C and yes|y
+	to "Really quit?" while a menu was open would lead to a panic
 Unix: after lua changes to Makefiles, 'make spotless' for dat subdirectory
 	left some generated data files which should have been deleted
 Unix: reject "--sX" on command line except if "X" is "cores" (so "--scores");
@@ -2305,7 +2309,7 @@ make music improvisations more varied and interesting, as well as useful
 give a helpful tip when first entering "farlook" mode
 add a boolean option tips to disable all of the helpful tips
 add a tutorial level
-engravings appear on the map display
+engravings appear on the map display; 'whatis' can list them ('/e', '/E')
 option to create the character deaf
 add conduct for petless
 preceding #overview with the 'm' prefix brings up the overview display as a
@@ -2337,6 +2341,7 @@ allow #dip potions into a sink to get a hint about what they are, similar to
 	dropping rings into a sink; dipping other stuff causes water damage
 	so could be used to blank out scrolls and books
 when restoring, show current level's player-applied annotation if there is one
+have farlook of a grave report the engraving on the headstone if it's known
 
 
 Platform- and/or Interface-Specific New Features

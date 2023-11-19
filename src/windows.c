@@ -2575,5 +2575,26 @@ get_menu_coloring(const char *str, int *color, int *attr)
     return FALSE;
 }
 
+int select_menu(winid window, int how, menu_item **menu_list)
+{
+    int reslt;
+    boolean old_bot_disabled = gb.bot_disabled;
 
+    gb.bot_disabled = TRUE;
+    reslt = (*windowprocs.win_select_menu)(window, how, menu_list);
+    gb.bot_disabled = old_bot_disabled;
+    return reslt;
+}
+
+void
+getlin(const char *query, register char *bufp)
+{
+    boolean old_bot_disabled = gb.bot_disabled;
+
+    gp.program_state.in_getlin = 1;
+    gb.bot_disabled = TRUE;
+    (*windowprocs.win_getlin)(query, bufp);
+    gb.bot_disabled = old_bot_disabled;
+    gp.program_state.in_getlin = 0;
+}
 /*windows.c*/

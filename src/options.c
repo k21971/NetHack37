@@ -8876,6 +8876,7 @@ doset(void) /* changing options via menu by Per Liboriussen */
     end_menu(tmpwin, "Set what options?");
     go.opt_need_redraw = FALSE;
     go.opt_need_glyph_reset = FALSE;
+
     if ((pick_cnt = select_menu(tmpwin, PICK_ANY, &pick_list)) > 0) {
         /*
          * Walk down the selection list and either invert the booleans

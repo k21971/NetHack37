@@ -1,4 +1,4 @@
-/* NetHack 3.7	wintty.c	$NHDT-Date: 1698017917 2023/10/22 23:38:37 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.354 $ */
+/* NetHack 3.7	wintty.c	$NHDT-Date: 1700385095 2023/11/19 09:11:35 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.365 $ */
 /* Copyright (c) David Cohrs, 1991                                */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -595,9 +595,9 @@ tty_init_nhwindows(int *argcp UNUSED, char **argv UNUSED)
     if ((tty_procs.wincap2 & WC2_STATUSLINES) != 0)
         set_wc2_option_mod_status(WC2_STATUSLINES,
 #ifndef CLIPPING
-                                  (LI < 1 + ROWNO + 2) ? set_gameview :
+                                  (LI <= 1 + ROWNO + 2) ? set_gameview :
 #endif
-                                   set_in_game);
+                                      set_in_game);
 }
 
 void
@@ -1077,9 +1077,9 @@ tty_clear_nhwindow(winid window)
         break;
     case NHW_MENU:
     case NHW_TEXT:
-        if (cw->active)
-            erase_menu_or_text(window, cw, TRUE);
         if (!erasing_tty_screen) {
+            if (cw->active)
+                erase_menu_or_text(window, cw, TRUE);
             free_window_info(cw, FALSE);
         }
         break;
@@ -1953,7 +1953,7 @@ tty_dismiss_nhwindow(winid window)
                final run-down in case this is the end-of-game window;
                the contents of that window should remain shown even when
                the window itself has gone away */
-            if (iflags.window_inited) {
+            if (iflags.window_inited && !erasing_tty_screen) {
                 boolean clearscreen = FALSE; /* just erase the menu */
 
                 /* during role/race/&c selection, menus are put up on top
@@ -2006,6 +2006,7 @@ erase_tty_screen(void)
     struct WinDesc *cw;
     int i;
 
+    HUPSKIP();
     if (erasing_tty_screen++)
         return;
 #if 0   /* originally we called term_clear_screen() but now it calls us */

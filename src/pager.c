@@ -23,6 +23,7 @@ static void look_region_nearby(coordxy *, coordxy *, coordxy *, coordxy *,
                                boolean);
 static void look_all(boolean, boolean);
 static void look_traps(boolean);
+static void look_engrs(boolean);
 static void do_supplemental_info(char *, struct permonst *, boolean);
 static void whatdoes_help(void);
 static void docontact(void);
@@ -1122,6 +1123,9 @@ add_cmap_descr(
                     /* thawing ice ("solid ice", "thin ice", &c) */
                     || ((p = strchr(x_str, ' ')) != 0 && !strcmpi(p, " ice"))
                     );
+    } else if (idx == S_engroom || idx == S_engrcorr) {
+        x_str = "engraving";
+        article = 1;
     }
 
     if (!found) {
@@ -1265,22 +1269,46 @@ do_screen_description(
 
     /* Now check for objects */
     if (!iflags.terrainmode || (iflags.terrainmode & TER_OBJ) != 0) {
+        /* need a static buffer in case it gets returned as *firstmatch */
+        static char oc_buf[40]; /* does not need to be in 'struct g' */
+        nhsym bouldersym;
+
+        j = SYM_BOULDER + SYM_OFF_X;
+        bouldersym = Is_rogue_level(&u.uz) ? go.ov_rogue_syms[j]
+                                           : go.ov_primary_syms[j];
+        if (!bouldersym)
+            bouldersym = def_oc_syms[ROCK_CLASS].sym;
+
         for (i = 1; i < MAXOCLASSES; i++) {
             if (sym == (looked ? gs.showsyms[i + SYM_OFF_O]
                                : def_oc_syms[i].sym)
-                || (looked && i == ROCK_CLASS && glyph_is_statue(glyph))) {
+                || (i == ROCK_CLASS && (glyph_is_statue(glyph)
+                                        || sym == bouldersym))) {
+                Strcpy(oc_buf, def_oc_syms[i].explain);
+                /* ROCK_CLASS is complicated; statues are displayed as the
+                   monster they depict rather than as S_rock; boulders might
+                   be displayed as a custom symbol rather than as S_rock;
+                   for added fun, engravings are shown with the same symbol
+                   as S_rock which is why we want to shorten this */
+                if (i == ROCK_CLASS && !strcmp(oc_buf, "boulder or statue")) {
+                    if (sym == bouldersym)
+                        Strcpy(oc_buf, "boulder"); /* discard "or statue" */
+                    else if (glyph_is_statue(glyph))
+                        Strcpy(oc_buf, "statue"); /* discard "boulder or" */
+                    else if (looked)
+                        continue; /* discard both */
+                }
                 need_to_look = TRUE;
                 if (looked && i == VENOM_CLASS) {
                     skipped_venom++;
                     continue;
                 }
                 if (!found) {
-                    Sprintf(out_str, "%s%s",
-                            prefix, an(def_oc_syms[i].explain));
-                    *firstmatch = def_oc_syms[i].explain;
+                    Sprintf(out_str, "%s%s", prefix, an(oc_buf));
+                    *firstmatch = oc_buf;
                     found++;
                 } else {
-                    found += append_str(out_str, an(def_oc_syms[i].explain));
+                    found += append_str(out_str, an(oc_buf));
                 }
             }
         }
@@ -1336,10 +1364,13 @@ do_screen_description(
          * places were swapped.
          */
         alt_i = ((i != S_water && i != S_lava) ? i /* as-is */
-                 : (S_water + S_lava) - i); /* swap water and lava */
+                 : (S_water + S_lava - i)); /* swap water and lava */
         x_str = defsyms[alt_i].explanation;
-        if (!*x_str)  /* cmap includes beams, shield effects, swallow  +*/
-            continue; /*+ boundaries, and explosions; skip all of those */
+        /* cmap includes beams, shield effects, swallow boundaries, and
+           explosions; skip all of those */
+        if (!*x_str)
+            continue;
+
         if (sym == (looked ? gs.showsyms[alt_i] : defsyms[alt_i].sym)) {
             int article; /* article==2 => "the", 1 => "an", 0 => (none) */
 
@@ -1354,11 +1385,6 @@ do_screen_description(
                           || strcmp(x_str, "air") == 0
                           || strcmp(x_str, "land") == 0);
 
-            if (alt_i == S_engroom || alt_i == S_engrcorr) {
-                article = 1;
-                x_str = "engraving";
-                need_to_look = TRUE;
-            }
             found = add_cmap_descr(found, alt_i, glyph, article,
                                    cc, x_str, prefix,
                                    &hit_trap, firstmatch, out_str);
@@ -1375,7 +1401,9 @@ do_screen_description(
 
             if (alt_i == S_altar || is_cmap_trap(alt_i)
                 || (hallucinate && (alt_i == S_water /* S_pool already done */
-                                    || alt_i == S_lava || alt_i == S_ice)))
+                                    || alt_i == S_lava || alt_i == S_ice))
+                || alt_i == S_engroom || alt_i == S_engrcorr
+                || alt_i == S_grave) /* 'need_to_look' to report engraving */
                 need_to_look = TRUE;
         }
     }
@@ -1413,12 +1441,13 @@ do_screen_description(
 
     /* Finally, handle some optional overriding symbols */
     for (j = SYM_OFF_X; j < SYM_MAX; ++j) {
-        if (j == (SYM_INVISIBLE + SYM_OFF_X))
+        if (j == SYM_INVISIBLE + SYM_OFF_X || j == SYM_BOULDER + SYM_OFF_X)
             continue;       /* already handled above */
         tmpsym = Is_rogue_level(&u.uz) ? go.ov_rogue_syms[j]
                                        : go.ov_primary_syms[j];
         if (tmpsym && sym == tmpsym) {
             switch (j) {
+#if 0
             case SYM_BOULDER + SYM_OFF_X: {
                 static const char boulder[] = "boulder";
 
@@ -1431,6 +1460,7 @@ do_screen_description(
                 }
                 break;
             }
+#endif
             case SYM_PET_OVERRIDE + SYM_OFF_X:
                 if (looked) {
                     /* convert to symbol without override in effect */
@@ -1446,19 +1476,6 @@ do_screen_description(
             }
         }
     }
-#if 0
-    /* handle optional boulder symbol as a special case */
-    if (o_syms[SYM_BOULDER + SYM_OFF_X]
-        && sym == o_syms[SYM_BOULDER + SYM_OFF_X]) {
-        if (!found) {
-            *firstmatch = "boulder";
-            Sprintf(out_str, "%s%s", prefix, an(*firstmatch));
-            found++;
-        } else {
-            found += append_str(out_str, "boulder");
-        }
-    }
-#endif
 
     /*
      * If we are looking at the screen, follow multiple possibilities or
@@ -1488,11 +1505,11 @@ do_screen_description(
             if (look_buf[0] != '\0')
                 *firstmatch = look_buf;
             if (*(*firstmatch)) {
-                if (strncmp(look_buf, "engraving", 9) != 0) {
-                    Snprintf(temp_buf, sizeof temp_buf, " (%s)", *firstmatch);
-                    (void) strncat(out_str, temp_buf,
-                                   BUFSZ - strlen(out_str) - 1);
-                }
+                Sprintf(temp_buf, " (%s", *firstmatch);
+                (void) add_quoted_engraving(cc.x, cc.y, temp_buf);
+                Strcat(temp_buf, ")");
+                (void) strncat(out_str, temp_buf,
+                               BUFSZ - strlen(out_str) - 1);
                 found = 1; /* we have something to look up */
             }
             if (monbuf[0]) {
@@ -1513,14 +1530,26 @@ add_quoted_engraving(coordxy x, coordxy y, char *buf)
     struct engr *ep = engr_at(x, y);
 
     if (ep) {
+#define GRAVESTONE "(grave"
+        /* is a grave's headstone if buf ends with "(grave";
+           caller will add closing ")" after we return;
+           -1: sizeof for a literal string includes the terminating '\0' */
+        boolean is_headstone = (IS_GRAVE(levl[x][y].typ)
+                                && strlen(buf) >= (sizeof GRAVESTONE - 1)
+                                && !strcmp(eos(buf) - (sizeof GRAVESTONE - 1),
+                                           GRAVESTONE));
+
         if (ep->eread)
-            Snprintf(temp_buf, sizeof temp_buf,
-                     " with remembered text: \"%s\"",
+            Snprintf(temp_buf, sizeof temp_buf, " with %s: \"%s\"",
+                     is_headstone ? "headstone reading" : "remembered text",
                      ep->engr_txt[remembered_text]);
         else
-            Snprintf(temp_buf, sizeof temp_buf, " that you've never read");
+            Snprintf(temp_buf, sizeof temp_buf, " %s you haven't read",
+                     is_headstone ? "whose headstone" : "that");
+
         (void) strncat(buf, temp_buf, BUFSZ - strlen(buf) - 1);
         return TRUE;
+#undef ENGRVG
     }
     return FALSE;
 }
@@ -1618,6 +1647,15 @@ do_look(int mode, coord *click_cc)
                          flags.lootabc ? 0 : any.a_char, '\"', ATR_NONE,
                          clr, "all seen or remembered traps",
                          MENU_ITEMFLAGS_NONE);
+                any.a_char = 'e';
+                add_menu(win, &nul_glyphinfo, &any,
+                         flags.lootabc ? 0 : any.a_char, '`', ATR_NONE,
+                         clr, "nearby engravings", MENU_ITEMFLAGS_NONE);
+                any.a_char = 'E';
+                add_menu(win, &nul_glyphinfo, &any,
+                         flags.lootabc ? 0 : any.a_char, '|', ATR_NONE,
+                         clr, "all seen or remembered engravings",
+                         MENU_ITEMFLAGS_NONE);
             }
             end_menu(win, "What do you want to look at:");
             if (select_menu(win, PICK_ONE, &pick_list) > 0) {
@@ -1693,6 +1731,12 @@ do_look(int mode, coord *click_cc)
         case 'T':
             look_traps(FALSE); /* list all traps (visible or remembered) */
             return ECMD_OK;
+        case 'e':
+            look_engrs(TRUE); /* list nearby engravings */
+            return ECMD_OK;
+        case 'E':
+            look_engrs(FALSE); /* list all engravings (visible|remembered) */
+            return ECMD_OK;
         }
     } else { /* clicklook */
         cc.x = click_cc->x;
@@ -1733,18 +1777,6 @@ do_look(int mode, coord *click_cc)
 
         /* Finally, print out our explanation. */
         if (found) {
-            if (ans != LOOK_QUICK && ans != LOOK_ONCE
-                && (ans == LOOK_VERBOSE || (flags.help && !quick))
-                && !clicklook
-                && !strncmp(firstmatch, "engraving", 9)) {
-                    char engbuf[BUFSZ];
-
-                    engbuf[0] = '\0';
-                    if (add_quoted_engraving(cc.x, cc.y, engbuf)) {
-                        Snprintf(eos(out_str), BUFSZ - strlen(out_str) - 1,
-                                 "%s", engbuf);
-                    }
-            }
             /* use putmixed() because there may be an encoded glyph present */
             putmixed(WIN_MESSAGE, 0, out_str);
 #if defined(DUMPLOG) || defined (DUMPHTML)
@@ -1963,6 +1995,97 @@ look_traps(boolean nearby)
         display_nhwindow(win, TRUE);
     else
         pline("No traps seen or remembered%s.", nearby ? " nearby" : "");
+    destroy_nhwindow(win);
+}
+
+/* display of discovered engravings including headstones, even when they're
+   covered provided they've been read */
+static void
+look_engrs(boolean nearby)
+{
+    winid win;
+    struct engr *e;
+    char lookbuf[BUFSZ], outbuf[BUFSZ];
+    nhsym sym;
+    coordxy x, y, lo_x, lo_y, hi_x, hi_y;
+    boolean is_headstone;
+    int glyph, count = 0;
+
+    win = create_nhwindow(NHW_TEXT);
+    look_region_nearby(&lo_x, &lo_y, &hi_x, &hi_y, nearby);
+    for (y = lo_y; y <= hi_y; y++) {
+        for (x = lo_x; x <= hi_x; x++) {
+            lookbuf[0] = '\0';
+            /* this won't find remembered engravings which aren't there
+               anymore (in case the hero is unaware that they're gone;
+               scuffed away by monster movement or deleted during shop
+               or vault wall repair); not sure what to do about that */
+            e = engr_at(x, y);
+            if (!e)
+                continue;
+            glyph = glyph_at(x, y);
+            sym = ((levl[x][y].typ == GRAVE || gl.lastseentyp[x][y] == GRAVE)
+                   ? S_grave
+                   : (levl[x][y].typ == CORR) ? S_engrcorr
+                     : S_engroom);
+            is_headstone = (sym == S_grave);
+            Sprintf(lookbuf, "(%s", is_headstone ? "grave" : "engraving");
+            (void) add_quoted_engraving(x, y, lookbuf);
+            /* the paren is used by farlook and add_quoted_engraving()
+               expected to see it; we don't want it here */
+            if (is_headstone) {
+                (void) strsubst(lookbuf, "(grave with ", "");
+                (void) strsubst(lookbuf, "(grave whose ", "");
+            } else {
+                (void) strsubst(lookbuf, "(engraving with ", "");
+                (void) strsubst(lookbuf, "(engraving that ", "one that ");
+            }
+
+            if (glyph_is_cmap(glyph) && !glyph_is_trap(glyph)) {
+                /* engraving or grave+headstone shown on the map */
+                ++count;
+            } else if (e->eread || is_headstone) {
+                /* engraving or grave covered by object(s) */
+                Snprintf(eos(lookbuf), sizeof lookbuf - strlen(lookbuf),
+                         ", obscured by %s", encglyph(glyph));
+                glyph = is_headstone ? cmap_to_glyph(S_grave)
+                                     : engraving_to_glyph(e);
+                ++count;
+            } else {
+                continue;
+            }
+            if (*lookbuf) { /* (redundant) */
+                char coordbuf[20], cmode;
+
+                cmode = (iflags.getpos_coords != GPCOORDS_NONE)
+                           ? iflags.getpos_coords : GPCOORDS_MAP;
+                if (count == 1) {
+                    Sprintf(outbuf, "%sseen or remembered engravings%s:",
+                            nearby ? "nearby " : "",
+                            nearby ? "" : " on this level");
+                    putstr(win, 0, upstart(outbuf));
+                    /* hack alert! Qt watches a text window for any line
+                       with 4 consecutive spaces and renders the window
+                       in a fixed-width font it if finds at least one */
+                    putstr(win, 0, "    "); /* separator */
+                }
+                /* prefix: "coords  C  " where 'C' is engrvng|grave symbol */
+                Sprintf(outbuf, (cmode == GPCOORDS_SCREEN) ? "%s  "
+                                  : (cmode == GPCOORDS_MAP) ? "%8s  "
+                                      : "%12s  ",
+                        coord_desc(x, y, coordbuf, cmode));
+                Sprintf(eos(outbuf), "%s  ", encglyph(glyph));
+                /* guard against potential overflow */
+                lookbuf[sizeof lookbuf - 1 - strlen(outbuf)] = '\0';
+                Strcat(outbuf, lookbuf);
+                putmixed(win, 0, outbuf);
+            }
+        }
+    }
+    if (count)
+        display_nhwindow(win, TRUE);
+    else
+        pline("No engravings seen or remembered%s.", nearby ? " nearby" : "");
     destroy_nhwindow(win);
 }
 

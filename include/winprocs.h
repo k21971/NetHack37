@@ -125,13 +125,15 @@ extern
 #define putmixed (*windowprocs.win_putmixed)
 #define display_file (*windowprocs.win_display_file)
 #define start_menu (*windowprocs.win_start_menu)
-/* 3.7: There is a real add_menu() in the core now, which does
- *      some common activities, such as menu_colors.
- *      add_menu() is in windows.c
+#define end_menu (*windowprocs.win_end_menu)
+/* 3.7: There are real add_menu() and select_menu
+ *      in the core now.
+ *      add_menu does some common activities, such as menu_colors.
+ *      select_menu does some before and after activities. 
+ *      add_menu() and select_menu() are in windows.c
  */
 /* #define add_menu (*windowprocs.win_add_menu) */
-#define end_menu (*windowprocs.win_end_menu)
-#define select_menu (*windowprocs.win_select_menu)
+/* #define select_menu (*windowprocs.win_select_menu) */
 #define message_menu (*windowprocs.win_message_menu)
 
 #define mark_synch (*windowprocs.win_mark_synch)
@@ -149,7 +151,12 @@ extern
 #define nh_poskey (*windowprocs.win_nh_poskey)
 #define nhbell (*windowprocs.win_nhbell)
 #define nh_doprev_message (*windowprocs.win_doprev_message)
-#define getlin (*windowprocs.win_getlin)
+/* 3.7: There is a real getlin() in the core now, which does
+ *      some before and after activities.
+ *      [alternative fix for menu search via ':'.]
+ *      getlin() is in windows.c
+ */
+/* #define getlin (*windowprocs.win_getlin) */
 #define get_ext_cmd (*windowprocs.win_get_ext_cmd)
 #define number_pad (*windowprocs.win_number_pad)
 #define nh_delay_output (*windowprocs.win_delay_output)
