@@ -1779,11 +1779,7 @@ docompress_file(const char *filename, boolean uncomp)
 void
 nh_compress(const char *filename UNUSED_if_not_COMPRESS)
 {
-#if !defined(COMPRESS) && !defined(ZLIB_COMP)
-#ifdef PRAGMA_UNUSED
-#pragma unused(filename)
-#endif
-#else
+#if defined(COMPRESS) || defined(ZLIB_COMP)
     docompress_file(filename, FALSE);
 #endif
 }
@@ -1792,11 +1788,7 @@ nh_compress(const char *filename UNUSED_if_not_COMPRESS)
 void
 nh_uncompress(const char *filename UNUSED_if_not_COMPRESS)
 {
-#if !defined(COMPRESS) && !defined(ZLIB_COMP)
-#ifdef PRAGMA_UNUSED
-#pragma unused(filename)
-#endif
-#else
+#if defined(COMPRESS) || defined(ZLIB_COMP)
     docompress_file(filename, TRUE);
 #endif
 }
@@ -1957,6 +1949,8 @@ docompress_file(const char *filename, boolean uncomp)
 }
 #endif /* RLC 09 Mar 1999: End ZLIB patch */
 
+#undef UNUSED_if_not_COMPRESS
+
 /* ----------  END FILE COMPRESSION HANDLING ----------- */
 
 /* ----------  BEGIN FILE LOCKING HANDLING ----------- */
@@ -1974,9 +1968,18 @@ struct flock sflock; /* for unlocking, same as above */
 #define HUP
 #endif
 
+
+#if defined(UNIX) || defined(VMS) || defined(AMIGA) || defined(WIN32) \
+    || defined(MSDOS)
+#define UNUSED_conditional /*empty*/
+#else
+#define UNUSED_conditional UNUSED
+#endif
+
+
 #ifndef USE_FCNTL
 static char *
-make_lockname(const char *filename, char *lockname)
+make_lockname(const char *filename UNUSED_conditional, char *lockname)
 {
 #if defined(UNIX) || defined(VMS) || defined(AMIGA) || defined(WIN32) \
     || defined(MSDOS)
@@ -1999,9 +2002,6 @@ make_lockname(const char *filename, char *lockname)
 #endif
     return lockname;
 #else /* !(UNIX || VMS || AMIGA || WIN32 || MSDOS) */
-#ifdef PRAGMA_UNUSED
-#pragma unused(filename)
-#endif
     lockname[0] = '\0';
     return (char *) 0;
 #endif
@@ -2010,12 +2010,9 @@ make_lockname(const char *filename, char *lockname)
 
 /* lock a file */
 boolean
-lock_file(const char *filename, int whichprefix, int retryct)
+lock_file(const char *filename, int whichprefix,
+	  int retryct UNUSED_conditional)
 {
-#if defined(PRAGMA_UNUSED) && !(defined(UNIX) || defined(VMS)) \
-    && !(defined(AMIGA) || defined(WIN32) || defined(MSDOS))
-#pragma unused(retryct)
-#endif
 #ifndef USE_FCNTL
     char locknambuf[BUFSZ];
     const char *lockname;
@@ -2213,6 +2210,8 @@ unlock_file(const char *filename)
 
     gn.nesting--;
 }
+
+#undef UNUSED_conditional
 
 /* ----------  END FILE LOCKING HANDLING ----------- */
 
@@ -4187,9 +4186,6 @@ read_sym_file(int which_set)
 void
 check_recordfile(const char *dir UNUSED_if_not_OS2_CODEVIEW)
 {
-#if defined(PRAGMA_UNUSED) && !defined(OS2_CODEVIEW)
-#pragma unused(dir)
-#endif
     const char *fq_record;
     int fd;
 
@@ -4291,6 +4287,8 @@ check_recordfile(const char *dir UNUSED_if_not_OS2_CODEVIEW)
 
 #endif /* MICRO || WIN32*/
 }
+
+#undef UNUSED_if_not_OS2_CODEVIEW
 
 /* ----------  END SCOREBOARD CREATION ----------- */
 

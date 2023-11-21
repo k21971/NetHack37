@@ -62,7 +62,8 @@ static void tipcontainer(struct obj *);
 #define Icebox (gc.current_container->otyp == ICE_BOX)
 
 static const char
-        moderateloadmsg[] = "You have a little trouble lifting",
+        slightloadmsg[] = "You have a little trouble lifting",
+        moderateloadmsg[] = "You have trouble lifting",
         nearloadmsg[] = "You have much trouble lifting",
         overloadmsg[] = "You have extreme difficulty lifting";
 
@@ -1673,11 +1674,10 @@ lift_object(
                 long savequan = obj->quan;
 
                 obj->quan = *cnt_p;
-                Strcpy(qbuf, (next_encumbr > HVY_ENCUMBER)
-                                 ? overloadmsg
-                                 : (next_encumbr > MOD_ENCUMBER)
-                                       ? nearloadmsg
-                                       : moderateloadmsg);
+                Strcpy(qbuf, (next_encumbr >= EXT_ENCUMBER) ? overloadmsg
+                                 : (next_encumbr >= HVY_ENCUMBER) ? nearloadmsg
+                                 : (next_encumbr >= MOD_ENCUMBER) ? moderateloadmsg
+                                 : slightloadmsg);
                 if (container)
                     (void) strsubst(qbuf, "lifting", "removing");
                 Strcat(qbuf, " ");
@@ -1716,6 +1716,7 @@ pickup_object(
     boolean telekinesis) /* not picking it up directly by hand */
 {
     int res, nearload;
+    const char *prefix;
 
     if (obj->quan < count) {
         impossible("pickup_object: count %ld > quan %ld?", count, obj->quan);
@@ -1785,8 +1786,12 @@ pickup_object(
     if (uwep && uwep == obj)
         gm.mrg_to_wielded = TRUE;
     nearload = near_capacity();
-    prinv(nearload == SLT_ENCUMBER ? moderateloadmsg : (char *) 0, obj,
-          count);
+    prefix = (nearload >= EXT_ENCUMBER) ? overloadmsg
+        : (nearload >= HVY_ENCUMBER) ? nearloadmsg
+        : (nearload >= MOD_ENCUMBER) ? moderateloadmsg
+        : (nearload >= SLT_ENCUMBER) ? slightloadmsg
+        : (char *) 0;
+    prinv(prefix, obj, count);
     gm.mrg_to_wielded = FALSE;
     return 1;
 }
