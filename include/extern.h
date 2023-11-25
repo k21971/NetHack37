@@ -1704,7 +1704,6 @@ extern struct attack *dmgtype_fromattack(struct permonst *, int, int);
 extern boolean dmgtype(struct permonst *, int);
 extern int max_passive_dmg(struct monst *, struct monst *);
 extern boolean same_race(struct permonst *, struct permonst *);
-extern int monsndx(struct permonst *);
 extern int name_to_mon(const char *, int *);
 extern int name_to_monplus(const char *, const char **, int *);
 extern int name_to_monclass(const char *, int *);
@@ -2077,7 +2076,6 @@ extern void option_help(void);
 extern void all_options_strbuf(strbuf_t *);
 extern void next_opt(winid, const char *);
 extern int fruitadd(char *, struct fruit *);
-extern int choose_classes_menu(const char *, int, boolean, char *, char *);
 extern boolean parsebindings(char *);
 extern void oc_to_str(char *, char *);
 extern void add_menu_cmd_alias(char, char);
@@ -3457,12 +3455,12 @@ extern void genl_display_file(const char *, boolean);
 extern boolean menuitem_invert_test(int, unsigned, boolean);
 extern const char *mixed_to_glyphinfo(const char *str, glyph_info *gip);
 extern void adjust_menu_promptstyle(winid, color_attr *);
+extern int choose_classes_menu(const char *, int, boolean, char *, char *);
 extern void add_menu(winid, const glyph_info *, const ANY_P *,
                      char, char, int, int, const char *, unsigned int);
 extern void add_menu_heading(winid, const char *);
 extern void add_menu_str(winid, const char *);
 extern int select_menu(winid, int, menu_item **);
-
 extern void getlin(const char *, char *);
 
 /* ### windows.c ### */

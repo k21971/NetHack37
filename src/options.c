@@ -110,7 +110,7 @@ static struct allopt_t allopt[SIZE(allopt_init)];
 
 extern char configfile[]; /* for messages */
 extern const struct symparse loadsyms[];
-#if defined(TOS) && defined(TEXTCOLOR)
+#if defined(TOS)
 extern boolean colors_changed;  /* in tos.c */
 #endif
 #ifdef VIDEOSHADES
@@ -3148,8 +3148,8 @@ optfn_pickup_types(
             if (use_menu) {
                 if (wizard && !strchr(ocl, VENOM_SYM))
                     strkitten(ocl, VENOM_SYM);
-                (void) choose_classes_menu("Autopickup what?", 1, TRUE, ocl,
-                                           tbuf);
+                (void) choose_classes_menu("Autopickup what?",
+                                           1, TRUE, ocl, tbuf);
                 op = tbuf;
             }
         }
@@ -6756,9 +6756,7 @@ initoptions_init(void)
         if (!gs.symset[ROGUESET].explicitly)
             load_symset("RogueIBM", ROGUESET);
         switch_symbols(TRUE);
-#ifdef TEXTCOLOR
         iflags.use_color = TRUE;
-#endif
     }
 #endif /* UNIX && TTY_GRAPHICS */
 #if defined(UNIX) || defined(VMS)
@@ -9683,128 +9681,6 @@ next_opt(winid datawin, const char *str)
         free((genericptr_t) buf), buf = 0;
     }
     return;
-}
-
-/*
- * This is a somewhat generic menu for taking a list of NetHack style
- * class choices and presenting them via a description
- * rather than the traditional NetHack characters.
- * (Benefits users whose first exposure to NetHack is via tiles).
- *
- * prompt
- *           The title at the top of the menu.
- *
- * category: 0 = monster class
- *           1 = object  class
- *
- * way
- *           FALSE = PICK_ONE, TRUE = PICK_ANY
- *
- * class_list
- *           a null terminated string containing the list of choices.
- *
- * class_selection
- *           a null terminated string containing the selected characters.
- *
- * Returns number selected.
- */
-int
-choose_classes_menu(const char *prompt,
-                    int category,
-                    boolean way,
-                    char *class_list,
-                    char *class_select)
-{
-    menu_item *pick_list = (menu_item *) 0;
-    winid win;
-    anything any;
-    char buf[BUFSZ];
-    int i, n;
-    int ret;
-    int next_accelerator, accelerator;
-    int clr = NO_COLOR;
-
-    if (class_list == (char *) 0 || class_select == (char *) 0)
-        return 0;
-    accelerator = 0;
-    next_accelerator = 'a';
-    any = cg.zeroany;
-    win = create_nhwindow(NHW_MENU);
-    start_menu(win, MENU_BEHAVE_STANDARD);
-    while (*class_list) {
-        const char *text;
-        boolean selected;
-
-        text = (char *) 0;
-        selected = FALSE;
-        switch (category) {
-        case 0:
-            text = def_monsyms[def_char_to_monclass(*class_list)].explain;
-            accelerator = *class_list;
-            Sprintf(buf, "%s", text);
-            break;
-        case 1:
-            text = def_oc_syms[def_char_to_objclass(*class_list)].explain;
-            accelerator = next_accelerator;
-            Sprintf(buf, "%c  %s", *class_list, text);
-            break;
-        default:
-            impossible("choose_classes_menu: invalid category %d", category);
-        }
-        if (way && *class_select) { /* Selections there already */
-            if (strchr(class_select, *class_list)) {
-                selected = TRUE;
-            }
-        }
-        any.a_int = *class_list;
-        add_menu(win, &nul_glyphinfo, &any, accelerator,
-                 category ? *class_list : 0, ATR_NONE, clr, buf,
-                 selected ? MENU_ITEMFLAGS_SELECTED : MENU_ITEMFLAGS_NONE);
-        ++class_list;
-        if (category > 0) {
-            ++next_accelerator;
-            if (next_accelerator == ('z' + 1))
-                next_accelerator = 'A';
-            if (next_accelerator == ('Z' + 1))
-                break;
-        }
-    }
-    if (category == 1 && next_accelerator <= 'z') {
-        /* for objects, add "A - ' '  all classes", after a separator */
-        any = cg.zeroany;
-        add_menu_str(win, "");
-        any.a_int = (int) ' ';
-        Sprintf(buf, "%c  %s", (char) any.a_int, "all classes of objects");
-        /* we won't preselect this even if the incoming list is empty;
-           having it selected means that it would have to be explicitly
-           de-selected in order to select anything else */
-        add_menu(win, &nul_glyphinfo, &any, 'A', 0,
-                 ATR_NONE, clr, buf, MENU_ITEMFLAGS_NONE);
-    }
-    end_menu(win, prompt);
-    n = select_menu(win, way ? PICK_ANY : PICK_ONE, &pick_list);
-    destroy_nhwindow(win);
-    if (n > 0) {
-        if (category == 1) {
-            /* for object classes, first check for 'all'; it means 'use
-               a blank list' rather than 'collect every possible choice' */
-            for (i = 0; i < n; ++i)
-                if (pick_list[i].item.a_int == ' ') {
-                    pick_list[0].item.a_int = ' ';
-                    n = 1; /* return 1; also an implicit 'break;' */
-                }
-        }
-        for (i = 0; i < n; ++i)
-            *class_select++ = (char) pick_list[i].item.a_int;
-        free((genericptr_t) pick_list);
-        ret = n;
-    } else if (n == -1) {
-        class_select = eos(class_select);
-        ret = -1;
-    } else
-        ret = 0;
-    *class_select = '\0';
-    return ret;
 }
 
 static struct wc_Opt wc_options[] = {
