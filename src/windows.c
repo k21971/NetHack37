@@ -1605,7 +1605,7 @@ condcolor(
     long bm,
     unsigned long *bmarray)
 {
-#if defined(STATUS_HILITES) && defined(TEXTCOLOR)
+#if defined(STATUS_HILITES)
     int i;
 
     if (bm && bmarray)
@@ -1852,9 +1852,6 @@ dump_status_update(
         /*FALLTHRU*/
     default:
         attrmask = (color >> 8) & 0x00FF;
-#ifndef TEXTCOLOR
-        color = NO_COLOR;
-#endif
         fmt = status_fieldfmt[fldidx];
         if (!fmt)
             fmt = "%s";
