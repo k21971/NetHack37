@@ -1,4 +1,4 @@
-/* NetHack 3.7	wield.c	$NHDT-Date: 1695159631 2023/09/19 21:40:31 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.97 $ */
+/* NetHack 3.7	wield.c	$NHDT-Date: 1701279364 2023/11/29 17:36:04 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.102 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2009. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -390,7 +390,8 @@ dowield(void)
         return doswapweapon();
     } else if (wep == uquiver) {
         /* offer to split stack if multiple are quivered */
-        if (uquiver->quan > 1L && inv_cnt(FALSE) < 52 && splittable(uquiver)) {
+        if (uquiver->quan > 1L && inv_cnt(FALSE) < invlet_basic
+                                    && splittable(uquiver)) {
             Sprintf(qbuf, "You have %ld %s readied.  Wield one?",
                     uquiver->quan, simpleonames(uquiver));
             switch (ynq(qbuf)) {
@@ -556,7 +557,8 @@ doquiver_core(const char *verb) /* "ready" or "fire" */
             return weld_res ? ECMD_TIME : ECMD_OK;
         }
         /* offer to split stack if wielding more than 1 */
-        if (uwep->quan > 1L && inv_cnt(FALSE) < 52 && splittable(uwep)) {
+        if (uwep->quan > 1L && inv_cnt(FALSE) < invlet_basic
+                                    && splittable(uwep)) {
             Sprintf(qbuf, "You are wielding %ld %s.  Ready %ld of them?",
                     uwep->quan, simpleonames(uwep), uwep->quan - 1L);
             switch (ynq(qbuf)) {
@@ -590,7 +592,7 @@ doquiver_core(const char *verb) /* "ready" or "fire" */
         untwoweapon();
         was_uwep = TRUE;
     } else if (newquiver == uswapwep) {
-        if (uswapwep->quan > 1L && inv_cnt(FALSE) < 52
+        if (uswapwep->quan > 1L && inv_cnt(FALSE) < invlet_basic
             && splittable(uswapwep)) {
             Sprintf(qbuf, "%s %ld %s.  Ready %ld of them?",
                     u.twoweap ? "You are dual wielding"
@@ -789,15 +791,30 @@ can_twoweapon(void)
     return FALSE;
 }
 
+/* uswapwep has become cursed while in two-weapon combat mode or hero is
+   attempting to dual-wield when it is already cursed or hands are slippery */
 void
 drop_uswapwep(void)
 {
-    char str[BUFSZ];
+    char left_hand[QBUFSZ];
     struct obj *obj = uswapwep;
 
-    /* Avoid trashing makeplural's static buffer */
-    Strcpy(str, makeplural(body_part(HAND)));
-    pline("%s from your %s!", Yobjnam2(obj, "slip"), str);
+    /* this used to use makeplural(body_part(HAND)) but in order to be
+       dual-wielded, or to get this far attempting to achieve that,
+       uswapwep must be one-handed; since it's secondary, the hand must
+       be the left one */
+    Sprintf(left_hand, "left %s", body_part(HAND));
+    if (!obj->cursed)
+        /* attempting to two-weapon while Glib */
+        pline("%s from your %s!", Yobjnam2(obj, "slip"), left_hand);
+    else if (!u.twoweap)
+        /* attempting to two-weapon when uswapwep is cursed */
+        pline("%s your grasp and %s from your %s!",
+              Yobjnam2(obj, "evade"), otense(obj, "drop"), left_hand);
+    else
+        /* already two-weaponing but can't anymore because uswapwep has
+           become cursed */
+        Your("%s spasms and drops %s!", left_hand, yobjnam(obj, (char *) 0));
     dropx(obj);
 }
 

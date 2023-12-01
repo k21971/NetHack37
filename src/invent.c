@@ -30,7 +30,7 @@ static int ckunpaid(struct obj *);
 static char *safeq_xprname(struct obj *);
 static char *safeq_shortxprname(struct obj *);
 static char display_pickinv(const char *, const char *, const char *,
-                            boolean, long *);
+                            boolean, boolean, long *);
 static char display_used_invlets(char);
 static boolean this_type_only(struct obj *);
 static void dounpaid(int, int, int);
@@ -401,8 +401,8 @@ invletter_value(char c)
     return ('a' <= c && c <= 'z') ? (c - 'a' + 2)
            : ('A' <= c && c <= 'Z') ? (c - 'A' + 2 + 26)
              : (c == '$') ? 1
-               : (c == '#') ? 1 + 52 + 1
-                 : 1 + 52 + 1 + 1; /* none of the above (shouldn't happen) */
+               : (c == '#') ? 1 + invlet_basic + 1
+                 : 1 + invlet_basic + 1 + 1; /* none of the above (shouldn't happen) */
 }
 
 /* qsort comparison routine for sortloot() */
@@ -700,7 +700,7 @@ sortloot(
 void
 assigninvlet(struct obj *otmp)
 {
-    boolean inuse[52];
+    boolean inuse[invlet_basic];
     register int i;
     register struct obj *obj;
 
@@ -710,7 +710,7 @@ assigninvlet(struct obj *otmp)
         return;
     }
 
-    for (i = 0; i < 52; i++)
+    for (i = 0; i < invlet_basic; i++)
         inuse[i] = FALSE;
     for (obj = gi.invent; obj; obj = obj->nobj)
         if (obj != otmp) {
@@ -726,7 +726,7 @@ assigninvlet(struct obj *otmp)
         && (('a' <= i && i <= 'z') || ('A' <= i && i <= 'Z')))
         return;
     for (i = gl.lastinvnr + 1; i != gl.lastinvnr; i++) {
-        if (i == 52) {
+        if (i == invlet_basic) {
             i = -1;
             continue;
         }
@@ -1242,8 +1242,9 @@ hold_another_object(
             drop_arg = strcpy(buf, drop_arg);
 
         obj = addinv_core0(obj, (struct obj *) 0, FALSE);
-        if (inv_cnt(FALSE) > 52 || ((obj->otyp != LOADSTONE || !obj->cursed)
-                                    && near_capacity() > prev_encumbr)) {
+        if (inv_cnt(FALSE) > invlet_basic
+                || ((obj->otyp != LOADSTONE || !obj->cursed)
+                       && near_capacity() > prev_encumbr)) {
             /* undo any merge which took place */
             if (obj->quan > oquan)
                 obj = splitobj(obj, oquan);
@@ -1896,26 +1897,31 @@ getobj(
             long ctmp = 0;
             char menuquery[QBUFSZ];
 
+            if (ilet == '?' && !*lets && *altlets)
+                allowed_choices = altlets;
+
             menuquery[0] = qbuf[0] = '\0';
             if (iflags.force_invmenu)
                 Sprintf(menuquery, "What do you want to %s?", word);
-            if (!strcmp(word, "grease"))
-                Sprintf(qbuf, "your %s", fingers_or_gloves(FALSE));
-            else if (!strcmp(word, "write with"))
-                Sprintf(qbuf, "your %s", body_part(FINGERTIP));
-            else if (!strcmp(word, "wield"))
-                Sprintf(qbuf, "your %s %s%s", uarmg ? "gloved" : "bare",
-                        makeplural(body_part(HAND)),
-                        !uwep ? " (wielded)" : "");
-            else if (!strcmp(word, "ready"))
-                Sprintf(qbuf, "empty quiver%s",
-                        !uquiver ? " (nothing readied)" : "");
-
-            if (ilet == '?' && !*lets && *altlets)
-                allowed_choices = altlets;
+            if (!allowed_choices || *allowed_choices == '-' || *buf == '-') {
+                if (!strcmp(word, "grease")) {
+                    Sprintf(qbuf, "your %s", fingers_or_gloves(FALSE));
+                } else if (!strcmp(word, "write with")) {
+                    Sprintf(qbuf, "your %s", body_part(FINGERTIP));
+                } else if (!strcmp(word, "wield")) {
+                    Sprintf(qbuf, "your %s %s%s", uarmg ? "gloved" : "bare",
+                            makeplural(body_part(HAND)),
+                            !uwep ? " (wielded)" : "");
+                } else if (!strcmp(word, "ready")) {
+                    Sprintf(qbuf, "empty quiver%s",
+                            !uquiver ? " (nothing readied)" : "");
+                } else {
+                    Sprintf(qbuf, "your %s", makeplural(body_part(HAND)));
+                }
+            }
             ilet = display_pickinv(allowed_choices, *qbuf ? qbuf : (char *) 0,
-                                   menuquery,
-                                   TRUE, allowcnt ? &ctmp : (long *) 0);
+                                   menuquery, allownone, TRUE,
+                                   allowcnt ? &ctmp : (long *) 0);
             if (!ilet) {
                 if (oneloop)
                     return (struct obj *) 0;
@@ -3494,6 +3500,7 @@ display_pickinv(
     const char *lets,        /* non-compacted list of invlet values */
     const char *xtra_choice, /* non-object "bare hands" or "fingers" */
     const char *query,       /* optional; prompt string for menu */
+    boolean allowxtra,       /* hands are allowed (maybe alternate) choice */
     boolean want_reply,      /* True: select an item, False: just display */
     long *out_cnt) /* optional; count player entered when selecting an item */
 {
@@ -3516,7 +3523,8 @@ display_pickinv(
     boolean wizid = (wizard && iflags.override_ID), gotsomething = FALSE;
     int clr = NO_COLOR, menu_behavior = MENU_BEHAVE_STANDARD;
     boolean show_gold = TRUE, inuse_only = FALSE, skipped_gold = FALSE,
-            doing_perm_invent = FALSE, save_flags_sortpack = flags.sortpack;
+            doing_perm_invent = FALSE, save_flags_sortpack = flags.sortpack,
+            usextra = (xtra_choice && allowxtra);
 
     if (lets && !*lets)
         lets = 0; /* simplify tests: (lets) instead of (lets && *lets) */
@@ -3526,7 +3534,7 @@ display_pickinv(
         win = 0; /* passed to dump_putstr() which ignores it... */
     } else
 #endif
-    if (lets || xtra_choice || wizid || want_reply
+    if (lets || usextra || wizid || want_reply
 #ifdef TTY_PERM_INVENT
         /*|| !gi.in_sync_perminvent*/
 #endif
@@ -3569,7 +3577,7 @@ display_pickinv(
        for !lets (full invent or inuse_only) and for override_ID (wizard
        mode identify), skip message_menu handling of single item even if
        item count was 1 */
-    if (xtra_choice || (n == 1 && (!lets || wizid)))
+    if (usextra || (n == 1 && (!lets || wizid)))
         ++n;
 
     if (n == 0) {
@@ -3586,9 +3594,10 @@ display_pickinv(
            we actually use a fake message-line menu in order to allow
            the user to perform selection at the --More-- prompt for tty */
         ret = '\0';
-        if (xtra_choice) {
+        if (usextra) {
             /* xtra_choice is "bare hands" (wield), "fingertip" (Engrave),
-               "nothing" (ready Quiver), or "fingers" (apply grease) */
+               "nothing" (prepare Quiver), "fingers" (apply grease), or
+               "hands" (default) */
             ret = message_menu(HANDS_SYM, PICK_ONE,
                                xprname((struct obj *) 0, xtra_choice,
                                        HANDS_SYM, TRUE, 0L, 0L)); /* '-' */
@@ -3684,7 +3693,7 @@ display_pickinv(
                      ATR_NONE, clr, prompt, MENU_ITEMFLAGS_SKIPINVERT);
             gotsomething = TRUE;
         }
-   } else if (xtra_choice) {
+   } else if (usextra) {
         /* wizard override ID and xtra_choice are mutually exclusive */
         if (flags.sortpack)
             add_menu_heading(win, "Miscellaneous");
@@ -3781,7 +3790,8 @@ display_pickinv(
        includes everything; won't work via keyboard if current menu
        uses '*' as group accelerator for gems but might work via mouse */
     if (iflags.force_invmenu && lets && want_reply
-        && (int) strlen(lets) < inv_cnt(TRUE)) {
+        && ((allowxtra && !usextra)
+            || (int) strlen(lets) < inv_cnt(TRUE))) {
         any = cg.zeroany;
         add_menu_heading(win, "Special");
         any.a_char = '*';
@@ -3873,7 +3883,7 @@ display_inventory(const char *lets, boolean want_reply)
         return '\0';
     }
     return display_pickinv(lets, (char *) 0, (char *) 0,
-                           want_reply, (long *) 0);
+                           FALSE, want_reply, (long *) 0);
 }
 
 /*
@@ -5108,7 +5118,7 @@ doprtool(void)
 {
     struct obj *otmp;
     int ct = 0;
-    char lets[52 + 1];
+    char lets[invlet_basic + 1];
 
     for (otmp = gi.invent; otmp; otmp = otmp->nobj)
         if (tool_being_used(otmp)) {
@@ -5464,8 +5474,8 @@ doorganize_core(struct obj *obj)
     char let;
 #define GOLD_INDX   0
 #define GOLD_OFFSET 1
-#define OVRFLW_INDX (GOLD_OFFSET + 52) /* past gold and 2*26 letters */
-    char lets[1 + 52 + 1 + 1]; /* room for '$a-zA-Z#\0' */
+#define OVRFLW_INDX (GOLD_OFFSET + invlet_basic) /* past gold & 2*26 letters */
+    char lets[1 + invlet_basic + 1 + 1]; /* room for '$a-zA-Z#\0' */
     char qbuf[QBUFSZ];
     char *objname, *otmpname;
     const char *adj_type;
@@ -5498,7 +5508,7 @@ doorganize_core(struct obj *obj)
     lets[OVRFLW_INDX] = ' ';
     lets[sizeof lets - 1] = '\0';
     /* for floating inv letters, truncate list after the first open slot */
-    if (!flags.invlet_constant && (ix = inv_cnt(FALSE)) < 52)
+    if (!flags.invlet_constant && (ix = inv_cnt(FALSE)) < invlet_basic)
         lets[ix + (splitting ? 1 : 2)] = '\0';
 
     /* blank out all the letters currently in use in the inventory
@@ -5624,7 +5634,7 @@ doorganize_core(struct obj *obj)
                     adj_type = "Splitting and merging:";
                     obj = otmp;
                     extract_nobj(obj, &gi.invent);
-                } else if (inv_cnt(FALSE) >= 52) {
+                } else if (inv_cnt(FALSE) >= invlet_basic) {
                     (void) merged(&splitting, &obj); /* undo split */
                     /* "knapsack cannot accommodate any more items" */
                     Your("pack is too full.");
