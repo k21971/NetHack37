@@ -1,4 +1,4 @@
-$NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1308 $ $NHDT-Date: 1700869710 2023/11/24 23:48:30 $
+$NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1317 $ $NHDT-Date: 1701500708 2023/12/02 07:05:08 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -1292,7 +1292,19 @@ if hero destroys a shop wall by breaking a wand of digging or applying a drum
 	of earthquake, have shopkeeper demand payment
 mimics sometimes woke up and came out of hiding when they shouldn't have if
 	hero without protection from shape changers returned to a previously
-	visitied level (though they would usually rehide so it wasn't obvious)
+	visited level (though they would usually rehide so it wasn't obvious)
+Wizards no longer have a bonus to writing unknown spellbooks, but now
+	learn what spellbooks look like as they gain skill in their
+	spell schools (allowing a guaranteed write with enough skill)
+starting inventory: magic markers are more likely (guaranteed for
+	Wizards), but have fewer charges
+early dungeon (pre-Sokoban) generates extra useful survivability items
+potion of healing is much more common, and has a unique price
+alchemy may affect only a portion of the dipped potions if a large
+	stack is dipped (especially if that stack is diluted)
+monster kills can no longer deathdrop comestibles (other than the
+	monster's corpse) unless the monster collects food or
+	generates with food
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -1762,6 +1774,7 @@ when a tethered aklys gets caught in a web, make sure it doesn't return
 add 'X' as a potential context-sensitive item-action for uwep and uswapwep
 monsters weren't noticing hero's possession or lack of magic resistance when
 	hero getting zapped by a wand of striking was or wasn't resisted
+discard monsters' observations about hero's resistances when saving bones
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
@@ -2365,6 +2378,7 @@ allow the ')', '[', '(', '=', '"', and '*' commands to be preceded by the 'm'
 	prefix to force a menu where the player can pick an item and choose
 	a context-sensitive item action for it; some give a menu even without
 	the prefix and for those, same item selection and action can be used
+hot ground (Gehennom / Plane of Fire) often destroys dropped potions
 
 
 Platform- and/or Interface-Specific New Features
