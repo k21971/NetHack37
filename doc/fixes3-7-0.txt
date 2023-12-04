@@ -1309,6 +1309,8 @@ if a monster fled from hero by intentionally jumping into a vault teleporter,
 	it would teleport randomly instead of into the vault, and if the
 	teleport trap's niche wasn't mapped yet, the trap would become mapped
 	but the spot would remain a secret corridor and not become accessible
+spellbooks weight 50 units but Book of the Dead only 20, and novels only 1;
+	the Book of the Dead has been changed to 50 and novels to 10
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -2373,7 +2375,8 @@ allow #dip potions into a sink to get a hint about what they are, similar to
 when restoring, show current level's player-applied annotation if there is one
 have farlook of a grave report the engraving on the headstone if it's known
 the '*' command (list inventory items in use) now shows items in a specific
-	order: amulet, right ring, left ring, blindfold, wielded weapon,
+	order: amulet, ring on main hand (potentially affected by cursed
+	one-handed weapon), ring on off hand, blindfold, wielded weapon,
 	secondary or alternate weapon, quiver, suit, cloak, shield, helmet,
 	gloves, boots, shirt, lit lamps and candles, leashes attached to pets
 	instead of by object class (sortpack) or inventory letter (!sortpack);
