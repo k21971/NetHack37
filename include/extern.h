@@ -2931,6 +2931,8 @@ extern int tt_doppel(struct monst *);
 extern void initrack(void);
 extern void settrack(void);
 extern coord *gettrack(coordxy, coordxy);
+extern void save_track(NHFILE *);
+extern void rest_track(NHFILE *);
 
 /* ### trap.c ### */
 
@@ -3599,7 +3601,8 @@ extern void melt_ice_away(union any *, long);
 extern int zap_over_floor(coordxy, coordxy, int, boolean *, boolean, short);
 extern void fracture_rock(struct obj *);
 extern boolean break_statue(struct obj *);
-extern boolean u_adtyp_resistance_obj(int);
+extern int u_adtyp_resistance_obj(int);
+extern boolean inventory_resistance_check(int);
 extern char *item_what(int);
 extern void destroy_item(int, int);
 extern int destroy_mitem(struct monst *, int, int);

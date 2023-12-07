@@ -415,9 +415,9 @@ do_earthquake(int force)
                         selftouch("Falling, you");
                     } else if (u.utrap && u.utraptype == TT_PIT) {
                         boolean keepfooting =
-                                ((Fumbling && !rn2(5))
-                                 || (!rnl(Role_if(PM_ARCHEOLOGIST) ? 3 : 9))
-                                 || ((ACURR(A_DEX) > 7) && rn2(5)));
+                                (!(Fumbling && rn2(5))
+                                 && (!(rnl(Role_if(PM_ARCHEOLOGIST) ? 3 : 9))
+                                     || ((ACURR(A_DEX) > 7) && rn2(5))));
 
                         You("are jostled around violently!");
                         set_utrap(rn1(6, 2), TT_PIT);
@@ -695,7 +695,7 @@ do_improvisation(struct obj* instr)
             /* TODO maybe: sound effects for these riffs */
             You("%s %s.",
                 rn2(2) ? "butcher" : rn2(2) ? "manage" : "pull off",
-                an(beats[rn2(SIZE(beats))]));
+                an(ROLL_FROM(beats)));
             Hero_playnotes(obj_to_instr(&itmp), improvisation, 50);
         }
         awaken_monsters(u.ulevel * (mundane ? 5 : 40));
