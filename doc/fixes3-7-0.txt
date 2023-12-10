@@ -1319,6 +1319,15 @@ spellbooks weight 50 units but Book of the Dead only 20, and novels only 1;
 save and restore hero tracks, increase track length
 change vrock and hezrou from red to green, adjust vrock tile to have green
 change wolf and werewolf to grey, warg to black
+change [master] mind flayer, the Wizard, and the riders to bright magenta
+walking into a shopkeeper tries to pay the bill
+show billed items in a menu when paying with non-traditional menustyle
+prioritize paying shopkeeper next to you even if multiple are detected
+avoid impossible "trapped without a trap (fmon)" from 'sanity_check' when a
+	drum of earthquake made a pit at a monster's spot and pit creation
+	caused adjacent pool/moat/lava to flood that spot; if a non-floater,
+	non-flyer monster survived that it got marked as trapped even though
+	flooding deleted the trap
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -2570,6 +2579,10 @@ add Unicode support to Qt (pr #910 by chasonr)
 add Unicode, IBMgraphics and DECgraphics support to X11 (pr #923 by chasonr)
 add some glue code for those that might wish to build with 3rd party fmod
 	sound library support (pr #962 by MrEveryDay98)
+add new options 'nopick_dropped' and 'pickup_stolen' options to avoid
+	auto-pickup of items dropped by hero and to auto-pickup things
+	previously stolen from hero if moved upon while autopickup is On; both
+	bypass pickup_types and autopickup_exceptions (pr #1140 by entrez)
 
 
 Code Cleanup and Reorganization
