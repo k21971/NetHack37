@@ -1652,7 +1652,11 @@ mbhit(
         }
         ltyp = levl[gb.bhitpos.x][gb.bhitpos.y].typ;
         dbx = x, dby = y;
-        if (otyp == WAN_STRIKING && find_drawbridge(&dbx, &dby)) {
+        if (otyp == WAN_STRIKING
+            /* if levl[x][y].typ is DRAWBRIDGE_UP then the zap is passing
+               over the moat in front of a closed drawbridge and doesn't
+               hit any part of the bridge's mechanism */
+            && ltyp != DRAWBRIDGE_UP && find_drawbridge(&dbx, &dby)) {
             /* this might kill mon and destroy obj; mon will remain
                accessible even if dead but obj could be deleted */
             destroy_drawbridge(dbx, dby);
@@ -1671,7 +1675,7 @@ mbhit(
                without the responsible object because fhitm (mbhitm) and
                fhito (bhito) will want it at forthcoming spots in zap path */
             if (!otmp) {
-                obj = NULL;
+                /*obj = NULL;*/
                 break;
             }
         } else if (IS_DOOR(ltyp) || ltyp == SDOOR) {
@@ -1701,10 +1705,6 @@ mbhit(
             break;
         }
     }
-    /* 'obj' was set of Null when it couldn't be found, but isn't used again;
-       however, someday that might change, so we want it set to Null; give it
-       a fake use to pacify potential "set but not used"-type warnings */
-    nhUse(obj);
 }
 
 /* Perform an offensive action for a monster.  Must be called immediately

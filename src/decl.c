@@ -960,6 +960,7 @@ const struct const_globals cg = {
     DUMMY, /* zeroobj */
     DUMMY, /* zeromonst */
     DUMMY, /* zeroany */
+    DUMMY, /* zeroNhRect */
 };
 
 #define ZERO(x) memset(&x, 0, sizeof(x))
