@@ -802,7 +802,7 @@ extern const char *surface(coordxy, coordxy);
 extern const char *ceiling(coordxy, coordxy);
 extern boolean In_quest(d_level *) NONNULLARG1;
 extern boolean In_mines(d_level *) NONNULLARG1;
-extern branch *dungeon_branch(const char *) NONNULLARG1;
+extern branch *dungeon_branch(const char *) NONNULL NONNULLARG1;
 extern boolean at_dgn_entrance(const char *) NONNULLARG1;
 extern boolean In_hell(d_level *) NONNULLARG1;
 extern boolean In_V_tower(d_level *) NONNULLARG1;
@@ -1519,7 +1519,7 @@ extern void place_branch(branch *, coordxy, coordxy) NO_NONNULLS;
 extern boolean occupied(coordxy, coordxy);
 extern int okdoor(coordxy, coordxy);
 extern void dodoor(coordxy, coordxy, struct mkroom *) NONNULLARG3;
-extern void mktrap(int, int, struct mkroom *, coord *);
+extern void mktrap(int, int, struct mkroom *, coord *) NO_NONNULLS;
 extern void mkstairs(coordxy, coordxy, char, struct mkroom *, boolean);
 extern void mkinvokearea(void);
 extern void mineralize(int, int, int, int, boolean);
@@ -2842,7 +2842,7 @@ extern void selection_floodfill(struct selectionvar *, coordxy, coordxy,
                                 boolean);
 extern boolean pm_good_location(coordxy, coordxy, struct permonst *) NONNULLARG3;
 extern void get_location_coord(coordxy *, coordxy *, int, struct mkroom *,
-                               long) NONNULLPTRS;
+                               long) NONNULLARG12;
 extern void selection_setpoint(coordxy, coordxy, struct selectionvar *, int);
 extern struct selectionvar * selection_not(struct selectionvar *);
 extern struct selectionvar *selection_filter_percent(struct selectionvar *,
