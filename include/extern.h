@@ -829,6 +829,7 @@ extern int dooverview(void);
 extern void show_overview(int, int);
 extern void rm_mapseen(int);
 extern void init_mapseen(d_level *) NONNULLARG1;
+extern void update_lastseentyp(coordxy, coordxy);
 extern void recalc_mapseen(void);
 extern void mapseen_temple(struct monst *);
 extern void room_discovered(int);
@@ -1005,7 +1006,9 @@ extern boolean can_read_file(const char *) NONNULLARG1;
 extern void config_error_init(boolean, const char *, boolean);
 extern void config_erradd(const char *);
 extern int config_error_done(void);
-extern boolean read_config_file(const char *, int) NONNULLARG1;
+/* arg1 of read_config_file can be NULL to pass through
+ * to fopen_config_file() to mean 'use the default config file name' */
+extern boolean read_config_file(const char *, int);
 extern void check_recordfile(const char *);
 extern void read_wizkit(void);
 extern boolean parse_conf_str(const char *str, boolean (*proc)(char *));
