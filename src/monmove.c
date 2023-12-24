@@ -825,6 +825,8 @@ dochug(register struct monst* mtmp)
             /* if confused grabber has wandered off, let go */
             if (mtmp == u.ustuck && !next2u(mtmp->mx, mtmp->my))
                 unstuck(mtmp);
+            if (grounded(mdat))
+                disturb_buried_zombies(mtmp->mx, mtmp->my);
             /* Maybe it stepped on a trap and fell asleep... */
             if (helpless(mtmp))
                 return 0;
@@ -1815,6 +1817,7 @@ m_move(register struct monst *mtmp, int after)
          * mfndpos) has no effect for normal attacks, though it lets a
          * confused monster attack you by accident.
          */
+        assert(IndexOk(chi, info));
         if (info[chi] & ALLOW_U) {
             nix = mtmp->mux;
             niy = mtmp->muy;

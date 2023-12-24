@@ -4,7 +4,6 @@
 /* NetHack may be freely redistributed.  See license for details. */
 
 #include "hack.h"
-#include <assert.h>
 
 /* for UNIX, Rand #def'd to (long)lrand48() or (long)random() */
 /* croom->lx etc are schar (width <= int), so % arith ensures that */
@@ -121,7 +120,7 @@ void
 sort_rooms(void)
 {
     coordxy x, y;
-    unsigned i, ri[MAXNROFROOMS + 1], n = (unsigned) gn.nroom;
+    unsigned i, ri[MAXNROFROOMS + 1] = { 0U }, n = (unsigned) gn.nroom;
 
     qsort((genericptr_t) gr.rooms, n, sizeof (struct mkroom), mkroom_cmp);
 

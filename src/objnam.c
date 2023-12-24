@@ -49,7 +49,7 @@ static boolean wishymatch(const char *, const char *, boolean);
 static short rnd_otyp_by_wpnskill(schar);
 static short rnd_otyp_by_namedesc(const char *, char, int);
 static struct obj *wizterrainwish(struct _readobjnam_data *);
-static void dbterrainmesg(const char *, coordxy, coordxy);
+static void dbterrainmesg(const char *, coordxy, coordxy) NONNULLARG1;
 static void readobjnam_init(char *, struct _readobjnam_data *);
 static int readobjnam_preparse(struct _readobjnam_data *);
 static void readobjnam_parse_charges(struct _readobjnam_data *);
@@ -1293,9 +1293,25 @@ doname_base(
             break;
         } else if (obj->otyp == OIL_LAMP || obj->otyp == MAGIC_LAMP
                    || obj->otyp == BRASS_LANTERN || Is_candle(obj)) {
-            if (Is_candle(obj)
-                && obj->age < 20L * (long) objects[obj->otyp].oc_cost)
-                Strcat(prefix, "partly used ");
+            if (Is_candle(obj)) {
+                anything timer;
+                long full_burn_time = 20L * (long) objects[obj->otyp].oc_cost,
+                     turns_left = obj->age;
+
+                if (obj->lamplit) {
+                    timer = cg.zeroany;
+                    timer.a_obj = obj;
+                    /* without this, wishing for "lit candle" yields
+                       "partly used candle (lit)" because the time it can
+                       burn gets adjusted when it becomes lit; matters for
+                       the message as it gets added to invent and also if it
+                       gets snuffed out immediately (where it will end up as
+                       not partly used after all) */
+                    turns_left += peek_timer(BURN_OBJECT, &timer) - gm.moves;
+                }
+                if (turns_left < full_burn_time)
+                    Strcat(prefix, "partly used ");
+            }
             if (obj->lamplit)
                 Strcat(bp, " (lit)");
             break;
@@ -2018,7 +2034,7 @@ aobjnam(struct obj *otmp, const char *verb)
 
 /* combine yname and aobjnam eg "your count cxname(otmp)" */
 char *
-yobjnam(struct obj* obj, const char *verb)
+yobjnam(struct obj *obj, const char *verb)
 {
     char *s = aobjnam(obj, verb);
 
@@ -2036,7 +2052,7 @@ yobjnam(struct obj* obj, const char *verb)
 
 /* combine Yname2 and aobjnam eg "Your count cxname(otmp)" */
 char *
-Yobjnam2(struct obj* obj, const char *verb)
+Yobjnam2(struct obj *obj, const char *verb)
 {
     register char *s = yobjnam(obj, verb);
 
@@ -2046,7 +2062,7 @@ Yobjnam2(struct obj* obj, const char *verb)
 
 /* like aobjnam, but prepend "The", not count, and use xname */
 char *
-Tobjnam(struct obj* otmp, const char *verb)
+Tobjnam(struct obj *otmp, const char *verb)
 {
     char *bp = The(xname(otmp));
 
@@ -2059,7 +2075,7 @@ Tobjnam(struct obj* otmp, const char *verb)
 
 /* capitalized variant of doname() */
 char *
-Doname2(struct obj* obj)
+Doname2(struct obj *obj)
 {
     char *s = doname(obj);
 
@@ -2070,7 +2086,7 @@ Doname2(struct obj* obj)
 #if 0 /* stalled-out work in progress */
 /* Doname2() for itemized buying of 'obj' from a shop */
 char *
-payDoname(struct obj* obj)
+payDoname(struct obj *obj)
 {
     static const char and_contents[] = " and its contents";
     char *p = doname(obj);
@@ -2092,7 +2108,7 @@ payDoname(struct obj* obj)
 
 /* returns "[your ]xname(obj)" or "Foobar's xname(obj)" or "the xname(obj)" */
 char *
-yname(struct obj* obj)
+yname(struct obj *obj)
 {
     char *s = cxname(obj);
 
@@ -2111,7 +2127,7 @@ yname(struct obj* obj)
 
 /* capitalized variant of yname() */
 char *
-Yname2(struct obj* obj)
+Yname2(struct obj *obj)
 {
     char *s = yname(obj);
 
@@ -2124,7 +2140,7 @@ Yname2(struct obj* obj)
  * or "the minimal_xname(obj)"
  */
 char *
-ysimple_name(struct obj* obj)
+ysimple_name(struct obj *obj)
 {
     char *outbuf = nextobuf();
     char *s = shk_your(outbuf, obj); /* assert( s == outbuf ); */
@@ -2135,7 +2151,7 @@ ysimple_name(struct obj* obj)
 
 /* capitalized variant of ysimple_name() */
 char *
-Ysimple_name2(struct obj* obj)
+Ysimple_name2(struct obj *obj)
 {
     char *s = ysimple_name(obj);
 
@@ -2145,7 +2161,7 @@ Ysimple_name2(struct obj* obj)
 
 /* "scroll" or "scrolls" */
 char *
-simpleonames(struct obj* obj)
+simpleonames(struct obj *obj)
 {
     char *obufp, *simpleoname = minimal_xname(obj);
 
@@ -2163,7 +2179,7 @@ simpleonames(struct obj* obj)
 
 /* "a scroll" or "scrolls"; "a silver bell" or "the Bell of Opening" */
 char *
-ansimpleoname(struct obj* obj)
+ansimpleoname(struct obj *obj)
 {
     char *obufp, *simpleoname = simpleonames(obj);
     int otyp = obj->otyp;
