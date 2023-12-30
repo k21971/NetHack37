@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1703070179 2023/12/20 11:02:59 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1344 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1703716146 2023/12/27 22:29:06 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1356 $ */
 /* Copyright (c) Steve Creps, 1988.                               */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -35,6 +35,7 @@
  *  NONNULLARG5     The 5th argument is declared nonnull.
  *  NONNULLARG7     The 7th argument is declared nonnull (bhit).
  *  NONNULLARG12    The 1st and 2nd arguments are declared nonnull.
+ *  NONNULLARG23    The 2nd and 3rd arguments are declared nonnull.
  *  NONNULLARG13    The 1st and 3rd arguments are declared nonnull.
  *  NONNULLARG123   The 1st, 2nd and 3rd arguments are declared nonnull.
  *  NONNULLARG14    The 1st and 4th arguments are declared nonnull.
@@ -69,14 +70,14 @@
 
 #if 0
 /* routines in alloc.c depend on MONITOR_HEAP and are declared in global.h */
-extern long *alloc(unsigned int);
+extern long *alloc(unsigned int) NONNULL;
 #endif
 extern char *fmt_ptr(const void *) NONNULL;
 /* moved from hacklib.c to alloc.c so that utility programs have access */
 #define FITSint(x) FITSint_(x, __func__, __LINE__)
-extern int FITSint_(long long, const char *, int);
+extern int FITSint_(long long, const char *, int) NONNULLARG2;
 #define FITSuint(x) FITSuint_(x, __func__, __LINE__)
-extern unsigned FITSuint_(unsigned long long, const char *, int);
+extern unsigned FITSuint_(unsigned long long, const char *, int) NONNULLARG2;
 
 /* This next pre-processor directive covers almost the entire file,
  * interrupted only occasionally to pick up specific functions as needed. */
@@ -379,7 +380,7 @@ extern void makemap_prepost(boolean, boolean);
 
 /* ### date.c ### */
 
-extern void populate_nomakedefs(struct version_info *);
+extern void populate_nomakedefs(struct version_info *) NONNULLARG1;
 extern void free_nomakedefs(void);
 
 /* ### dbridge.c ### */
@@ -1412,7 +1413,7 @@ extern boolean is_home_elemental(struct permonst *) NONNULLARG1;
 extern struct monst *clone_mon(struct monst *, coordxy, coordxy) NONNULLARG1;
 extern int monhp_per_lvl(struct monst *) NONNULLARG1;
 extern void newmonhp(struct monst *, int) NONNULLARG1;
-extern struct mextra *newmextra(void);
+extern struct mextra *newmextra(void) NONNULL;
 extern struct monst *makemon(struct permonst *, coordxy, coordxy, mmflags_nht);
 extern struct monst *unmakemon(struct monst *, mmflags_nht) NONNULLARG1;
 extern boolean create_critters(int, struct permonst *, boolean);
@@ -1447,8 +1448,9 @@ extern int buzzmu(struct monst *, struct attack *) NONNULLARG12;
 /* ### mdlib.c ### */
 
 extern void runtime_info_init(void);
-extern const char *do_runtime_info(int *);
+extern const char *do_runtime_info(int *) NO_NNARGS;
 extern void release_runtime_info(void);
+extern char *mdlib_version_string(char *, const char *) NONNULL NONNULLPTRS;
 #ifdef ENHANCED_SYMBOLS
 extern void dump_glyphids(void);
 #endif
@@ -1568,7 +1570,7 @@ extern void restore_waterlevel(NHFILE *) NONNULLARG1;
 
 /* ### mkobj.c ### */
 
-extern struct oextra *newoextra(void);
+extern struct oextra *newoextra(void) NONNULL;
 extern void copy_oextra(struct obj *, struct obj *);
 extern void dealloc_oextra(struct obj *) NONNULLARG1;
 extern void newomonst(struct obj *) NONNULLARG1;
@@ -3361,8 +3363,8 @@ extern void vault_gd_watching(unsigned int);
 
 /* ### version.c ### */
 
-extern char *version_string(char *, size_t bufsz) NONNULLARG1;
-extern char *getversionstring(char *, size_t bufsz) NONNULLARG1;
+extern char *version_string(char *, size_t bufsz) NONNULL NONNULLARG1;
+extern char *getversionstring(char *, size_t bufsz) NONNULL NONNULLARG1;
 extern int doversion(void);
 extern int doextversion(void);
 #ifdef MICRO
@@ -3375,7 +3377,7 @@ extern void store_formatindicator(NHFILE *) NONNULLARG1;
 extern void store_version(NHFILE *) NONNULLARG1;
 extern unsigned long get_feature_notice_ver(char *) NO_NNARGS;
 extern unsigned long get_current_feature_ver(void);
-extern const char *copyright_banner_line(int);
+extern const char *copyright_banner_line(int) NONNULL;
 extern void early_version_info(boolean);
 
 /* ### video.c ### */
