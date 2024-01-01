@@ -672,7 +672,7 @@ rejectcasting(void)
     } else if (!can_chant(&gy.youmonst)) {
         You("are unable to chant the incantation.");
         return TRUE;
-    } else if (!freehand()) {
+    } else if (!freehand() && !(uwep && uwep->otyp == QUARTERSTAFF)) {
         /* Note: !freehand() occurs when weapon and shield (or two-handed
          * weapon) are welded to hands, so "arms" probably doesn't need
          * to be makeplural(bodypart(ARM)).
@@ -2080,6 +2080,9 @@ percent_success(int spell)
         splcaster -= gu.urole.spelarmr;
     if (uarms)
         splcaster += gu.urole.spelshld;
+
+    if (uwep && uwep->otyp == QUARTERSTAFF)
+        splcaster -= 3; /* Small bonus */
 
     if (!paladin_bonus) {
         if (uarmh && is_metallic(uarmh)) /* && otyp != HELM_OF_BRILLIANCE */
