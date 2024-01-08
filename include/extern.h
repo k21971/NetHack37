@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1703716146 2023/12/27 22:29:06 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1356 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1704225560 2024/01/02 19:59:20 $  $NHDT-Branch: keni-luabits2 $:$NHDT-Revision: 1.1358 $ */
 /* Copyright (c) Steve Creps, 1988.                               */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -1604,6 +1604,7 @@ extern struct obj *mksobj(int, boolean, boolean) NONNULL;
 extern int bcsign(struct obj *) NONNULLARG1;
 extern int weight(struct obj *) NONNULLARG1;
 extern struct obj *mkgold(long, coordxy, coordxy);
+extern void fixup_oil(struct obj *, struct obj *) NONNULLARG1;
 extern struct obj *mkcorpstat(int, struct monst *, struct permonst *,
                               coordxy, coordxy, unsigned);
 extern int corpse_revive_type(struct obj *) NONNULLARG1;
@@ -2006,7 +2007,8 @@ extern boolean nhl_loadlua(lua_State *, const char *) NONNULLARG12;
 extern char *get_nh_lua_variables(void);
 extern void save_luadata(NHFILE *) NONNULLARG1;
 extern void restore_luadata(NHFILE *) NONNULLARG1;
-extern int nhl_pcall(lua_State *, int, int) NONNULLARG1;
+extern int nhl_pcall(lua_State *, int, int, const char *) NONNULLARG1;
+extern int nhl_pcall_handle(lua_State *, int, int, const char *, NHL_pcall_action) NONNULLARG1;
 extern boolean load_lua(const char *, nhl_sandbox_info *) NONNULLARG12;
 ATTRNORETURN extern void nhl_error(lua_State *, const char *) NORETURN NONNULLARG12;
 extern void lcheck_param_table(lua_State *) NONNULLARG1;
@@ -2345,6 +2347,10 @@ extern void dumplogmsg(const char *);
 extern void dumplogfreemessages(void);
 #endif
 extern void pline(const char *, ...) PRINTF_F(1, 2);
+extern void pline_dir(int, const char *, ...) PRINTF_F(2, 3);
+extern void pline_xy(coordxy, coordxy, const char *, ...) PRINTF_F(3, 4);
+extern void set_msg_dir(int);
+extern void set_msg_xy(coordxy, coordxy);
 extern void custompline(unsigned, const char *, ...) PRINTF_F(2, 3);
 extern void urgent_pline(const char *, ...) PRINTF_F(1, 2);
 extern void Norep(const char *, ...) PRINTF_F(1, 2);

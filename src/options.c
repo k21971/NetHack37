@@ -5013,7 +5013,7 @@ optfn_boolean(
         case opt_showexp:
             if (VIA_WINDOWPORT())
                 status_initialize(REASSESS_ONLY);
-            gc.context.botl = TRUE;
+            disp.botl = TRUE;
             break;
         case opt_fixinv:
         case opt_sortpack:
@@ -5069,7 +5069,7 @@ optfn_boolean(
             } else if (WINDOWPORT(Qt)) {
                 /* Qt doesn't support HILITE_STATUS or FLUSH_STATUS so fails
                    VIA_WINDOWPORT(), but it does support WC2_HITPOINTBAR */
-                gc.context.botlx = TRUE;
+                disp.botlx = TRUE;
 #endif
             }
             break;
@@ -8717,7 +8717,7 @@ doset_simple(void)
 /*
  *      I don't think the status window requires updating between
  *      simplemenu iterations.
-        if (gc.context.botl || gc.context.botlx) {
+        if (disp.botl || disp.botlx) {
             bot();
         }
   */
@@ -8972,7 +8972,7 @@ doset(void) /* changing options via menu by Per Liboriussen */
     if (go.opt_need_promptstyle) {
         adjust_menu_promptstyle(WIN_INVEN, &iflags.menu_headings);
     }
-    if (gc.context.botl || gc.context.botlx) {
+    if (disp.botl || disp.botlx) {
         bot();
     }
     return ECMD_OK;

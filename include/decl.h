@@ -1,4 +1,4 @@
-/* NetHack 3.7  decl.h  $NHDT-Date: 1698264758 2023/10/25 20:12:38 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.339 $ */
+/* NetHack 3.7  decl.h  $NHDT-Date: 1704043695 2023/12/31 17:28:15 $  $NHDT-Branch: keni-luabits2 $:$NHDT-Revision: 1.351 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Michael Allison, 2007. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -114,6 +114,13 @@ extern struct tc_gbl_data {   /* also declared in tcap.h */
 #ifdef PANICTRACE
 extern const char *ARGV0;
 #endif
+
+struct display_hints {
+    boolean botl;            /* partially redo status line */
+    boolean botlx;           /* print an entirely new bottom line */
+    boolean time_botl;       /* context.botl for 'time' (moves) only */
+};
+extern struct display_hints disp;
 
 /*
  * 'gX' -- instance_globals holds engine state that does not need to be
@@ -544,6 +551,8 @@ struct instance_globals_l {
     /* nhlua.c */
     genericptr_t luacore; /* lua_State * */
     char lua_warnbuf[BUFSZ];
+    int loglua;
+    int lua_sid;
 
     /* options.c */
     boolean loot_reset_justpicked;

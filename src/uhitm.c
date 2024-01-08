@@ -1156,7 +1156,8 @@ hmon_hitmon_misc_obj(
                 change_luck(-5);
         }
 
-        if (touch_petrifies(&mons[obj->corpsenm])) {
+        if (obj->corpsenm >= LOW_PM
+            && touch_petrifies(&mons[obj->corpsenm])) {
             /*learn_egg_type(obj->corpsenm);*/
             pline("Splat!  You hit %s with %s %s egg%s!",
                   mon_nam(mon),
@@ -3988,7 +3989,7 @@ mhitm_ad_phys(
                         exercise(A_STR, FALSE);
                     /* inflict damage now; we know it can't be fatal */
                     u.mh -= tmp;
-                    gc.context.botl = 1;
+                    disp.botl = TRUE;
                     mhm->damage = 0; /* don't inflict more damage below */
                     if (cloneu())
                         You("divide as %s hits you!", mon_nam(magr));
@@ -4218,7 +4219,7 @@ mhitm_ad_heal(
                 exercise(A_CON, TRUE);
             if (Sick)
                 make_sick(0L, (char *) 0, FALSE, SICK_ALL);
-            gc.context.botl = 1;
+            disp.botl = TRUE;
             if (goaway) {
                 mongone(magr);
                 mhm->done = TRUE;

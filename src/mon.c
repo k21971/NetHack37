@@ -1156,14 +1156,13 @@ meatbox(struct monst *mon, struct obj *otmp)
     }
 }
 
-#define mstoning(obj)                                       \
-    (ofood(obj) && (touch_petrifies(&mons[(obj)->corpsenm]) \
-                    || (obj)->corpsenm == PM_MEDUSA))
+#define mstoning(obj) \
+    (ofood(obj) && obj->corpsenm >= LOW_PM      \
+     && flesh_petrifies(&mons[obj->corpsenm]))
 
-/* monster consumes an object.
-
-   monster may die, polymorph, grow up, heal, etc; meating is not changed.
-   object is extracted from any linked list and freed. */
+/* Monster mtmp consumes an object.
+   Monster may die, polymorph, grow up, heal, etc; meating is not changed.
+   Object is extracted from any linked list and freed. */
 void
 m_consume_obj(struct monst *mtmp, struct obj *otmp)
 {
@@ -1421,7 +1420,7 @@ meatobj(struct monst* mtmp) /* for gelatinous cubes */
 #undef mstoning
 
 /* Monster eats a corpse off the ground.
- * Return value is 0 = nothing eaten, 1 = ate a corpse, 2 = died */
+   Return value is 0 = nothing eaten, 1 = ate a corpse, 2 = died. */
 int
 meatcorpse(
     struct monst *mtmp) /* for purple worms and other voracious monsters */
@@ -1606,8 +1605,9 @@ mpickgold(register struct monst* mtmp)
         add_to_minv(mtmp, gold);
         if (cansee(mtmp->mx, mtmp->my)) {
             if (flags.verbose && !mtmp->isgd)
-                pline("%s picks up some %s.", Monnam(mtmp),
-                      mat_idx == GOLD ? "gold" : "money");
+                pline_xy(mtmp->mx, mtmp->my,
+                         "%s picks up some %s.", Monnam(mtmp),
+                         mat_idx == GOLD ? "gold" : "money");
             newsym(mtmp->mx, mtmp->my);
         }
     }
@@ -1666,7 +1666,8 @@ mpickstuff(struct monst *mtmp)
                 char *otmpname = distant_name(otmp, doname);
 
                 if (flags.verbose)
-                    pline("%s picks up %s.", Monnam(mtmp), otmpname);
+                    pline_xy(mtmp->mx, mtmp->my,
+                             "%s picks up %s.", Monnam(mtmp), otmpname);
             }
             obj_extract_self(otmp3);      /* remove from floor */
             (void) mpickobj(mtmp, otmp3); /* may merge and free otmp3 */
@@ -1871,7 +1872,11 @@ mon_allowflags(struct monst* mtmp)
         allowflags |= OPENDOOR;
     if (can_unlock)
         allowflags |= UNLOCKDOOR;
-    if (passes_bars(mtmp->data))
+    if (passes_bars(mtmp->data)
+        /* restrict engulfer or holder who might try to pass iron bars while
+           carrying hero; accept small subset for poly'd hero passes_bars() */
+        && (mtmp != u.ustuck || (unsolid(gy.youmonst.data)
+                                 || verysmall(gy.youmonst.data))))
         allowflags |= ALLOW_BARS;
 #if 0   /* can't do this here; leave it for mfndpos() */
     if (is_displacer(mtmp->data))
@@ -3124,7 +3129,7 @@ set_ustuck(struct monst *mtmp)
                        mon_nam(mtmp), mdistu(mtmp));
     }
 
-    gc.context.botl = 1;
+    disp.botl = TRUE;
     u.ustuck = mtmp;
     if (!u.ustuck) {
         u.uswallow = 0;

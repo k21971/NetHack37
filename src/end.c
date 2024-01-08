@@ -882,7 +882,7 @@ panic VA_DECL(const char *, str)
         if (soundprocs.sound_exit_nhsound)
             (*soundprocs.sound_exit_nhsound)("panic");
         exit_nhwindows((char *) 0);
-        iflags.window_inited = 0; /* they're gone; force raw_print()ing */
+        iflags.window_inited = FALSE; /* they're gone; force raw_print()ing */
     }
 
     raw_print(gp.program_state.gameover
@@ -1215,7 +1215,7 @@ savelife(int how)
 
     if (u.utrap && u.utraptype == TT_LAVA)
         reset_utrap(FALSE);
-    gc.context.botl = TRUE;
+    disp.botl = TRUE;
     u.ugrave_arise = NON_PM;
     HUnchanging = 0L;
     curs_on_u();
@@ -1510,10 +1510,10 @@ done(int how)
         || (how == QUIT && done_stopprint)) {
         /* skip status update if panicking or disconnected
            or answer of 'q' to "Really quit?" */
-        gc.context.botl = gc.context.botlx = iflags.time_botl = FALSE;
+        disp.botl = disp.botlx = disp.time_botl = FALSE;
     } else {
         /* otherwise force full status update */
-        gc.context.botlx = TRUE;
+        disp.botlx = TRUE;
         bot();
     }
 
@@ -1546,7 +1546,7 @@ done(int how)
                negative (-1 is used as a flag in some circumstances
                which don't apply when actually dying due to HP loss) */
             u.uhp = u.mh = 0;
-            gc.context.botl = 1;
+            disp.botl = TRUE;
         }
     }
     if (Lifesaved && (how <= GENOCIDED)) {
@@ -1620,7 +1620,7 @@ really_done(int how)
         done_stopprint++;
 #endif
     /* render vision subsystem inoperative */
-    iflags.vision_inited = 0;
+    iflags.vision_inited = FALSE;
 
     /* maybe use up active invent item(s), place thrown/kicked missile,
        deal with ball and chain possibly being temporarily off the map */
@@ -1848,7 +1848,7 @@ really_done(int how)
         if (WIN_INVEN != WIN_ERR) {
             destroy_nhwindow(WIN_INVEN),  WIN_INVEN = WIN_ERR;
             /* precaution in case any late update_inventory() calls occur */
-            iflags.perm_invent = 0;
+            iflags.perm_invent = FALSE;
         }
         display_nhwindow(WIN_MESSAGE, TRUE);
         destroy_nhwindow(WIN_MAP),  WIN_MAP = WIN_ERR;
