@@ -1,4 +1,4 @@
-/* NetHack 3.7	mklev.c	$NHDT-Date: 1704225560 2024/01/02 19:59:20 $  $NHDT-Branch: keni-luabits2 $:$NHDT-Revision: 1.174 $ */
+/* NetHack 3.7	mklev.c	$NHDT-Date: 1704830831 2024/01/09 20:07:11 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.175 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Alex Smith, 2017. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -17,6 +17,9 @@ static boolean find_okay_roompos(struct mkroom *, coord *) NONNULLARG12;
 static void mksink(struct mkroom *);
 static void mkaltar(struct mkroom *);
 static void mkgrave(struct mkroom *);
+static void mkinvpos(coordxy, coordxy, int);
+static int mkinvk_check_wall(coordxy x, coordxy y);
+static void mk_knox_portal(coordxy, coordxy);
 static void makevtele(void);
 static void fill_ordinary_room(struct mkroom *, boolean) NONNULLARG1;
 static void makelevel(void);
@@ -38,8 +41,6 @@ static void do_room_or_subroom(struct mkroom *,
 static void makerooms(void);
 static boolean door_into_nonjoined(coordxy, coordxy);
 static boolean finddpos(coord *, coordxy, coordxy, coordxy, coordxy);
-static void mkinvpos(coordxy, coordxy, int);
-static void mk_knox_portal(coordxy, coordxy);
 
 #define create_vault() create_room(-1, -1, 2, 2, -1, -1, VAULT, TRUE)
 #define init_vault() gv.vault_x = -1
@@ -724,7 +725,7 @@ makevtele(void)
     makeniche(TELEP_TRAP);
 }
 
-/* count the different features (sinks, fountains) in the level */
+/* count the tracked features (sinks, fountains) present on the level */
 void
 count_level_features(void)
 {
@@ -1717,19 +1718,35 @@ mktrap_victim(struct trap *ttmp)
         otmp->age -= (TAINT_AGE + 1); /* died too long ago to eat */
 }
 
-/* make a trap somewhere (in croom if mazeflag = 0 && !tm) */
-/* if tm != null, make trap at that location */
+/* mktrap(): select trap type and location, then use maketrap() to create it;
+   make it at location 'tm' when that isn't Null, otherwise in 'croom'
+   if mktrapflags doesn't have MKTRAP_MAZEFLAG set, else in maze corridor */
 void
 mktrap(
-    int num,
-    int mktrapflags,
-    struct mkroom *croom,
-    coord *tm)
+    int num,              /* if non-zero, specific type of trap to make */
+    unsigned mktrapflags, /* MKTRAP_{SEEN,MAZEFLAG,NOSPIDERONWEB,NOVICTIM} */
+    struct mkroom *croom, /* room to hold trap */
+    coord *tm)            /* specific location for trap */
 {
-    register int kind;
+    static int mktrap_err = 0; /* move to struct g? */
     struct trap *t;
+    coord m;
+    int kind;
     unsigned lvl = level_difficulty();
-    coord m = { 0, 0 };
+
+    if (!tm && !croom && !(mktrapflags & MKTRAP_MAZEFLAG)) {
+        /* complain when the combination of arguments will never set 'm' */
+        if (!mktrap_err++) {
+            char errbuf[BUFSZ];
+
+            Snprintf(errbuf, sizeof errbuf,
+                     "args (%d,%d,%s,%s) are invalid",
+                     num, mktrapflags, "null room", "null location");
+            paniclog("mktrap", errbuf);
+        }
+        return;
+    }
+    m.x = m.y = 0;
 
     /* no traps in pools */
     if (tm && is_pool(tm->x, tm->y))
@@ -1837,7 +1854,7 @@ mktrap(
         do {
             if (++tryct > 200)
                 return;
-            if (mktrapflags & MKTRAP_MAZEFLAG)
+            if ((mktrapflags & MKTRAP_MAZEFLAG) != 0)
                 mazexy(&m);
             else if (croom && !somexyspace(croom, &m))
                 return;
@@ -2137,10 +2154,6 @@ mkgrave(struct mkroom *croom)
     return;
 }
 
-/* maze levels have slightly different constraints from normal levels */
-#define x_maze_min 2
-#define y_maze_min 2
-
 /*
  * Major level transmutation:  add a set of stairs (to the Sanctum) after
  * an earthquake that leaves behind a new topology, centered at inv_pos.
@@ -2154,19 +2167,50 @@ mkgrave(struct mkroom *croom)
 void
 mkinvokearea(void)
 {
-    int dist;
-    coordxy xmin = gi.inv_pos.x, xmax = gi.inv_pos.x,
-          ymin = gi.inv_pos.y, ymax = gi.inv_pos.y;
+    int dist, wallct;
+    coordxy xmin, xmax, ymin, ymax;
     register coordxy i;
 
     /* slightly odd if levitating, but not wrong */
     pline_The("floor shakes violently under you!");
-    /*
-     * TODO:
-     *  Suppress this message if player has dug out all the walls
-     *  that would otherwise be affected.
-     */
-    pline_The("walls around you begin to bend and crumble!");
+    /* decide whether to issue the crumbling walls message */
+    {
+        xmin = xmax = gi.inv_pos.x;
+        ymin = ymax = gi.inv_pos.y;
+        wallct = mkinvk_check_wall(xmin, ymin);
+        /* this replicates the somewhat convoluted loop below, working
+           out from the stair position, except for stopping early when
+           walls are found */
+        for (dist = 1; !wallct && dist < 7; ++dist) {
+            xmin--, xmax++;
+            /* top and bottom */
+            if (dist != 3) { /* the area is wider that it is high */
+                ymin--, ymax++;
+                for (i = xmin + 1; i < xmax; i++) {
+                    if (mkinvk_check_wall(i, ymin))
+                        ++wallct; /* we could break after finding first wall
+                                   * but it isn't a significant optimization
+                                   * for code which only executes once */
+                    if (mkinvk_check_wall(i, ymax))
+                        ++wallct;
+                }
+            }
+            /* left and right */
+            if (!wallct) { /* skip y loop if x loop found any walls */
+                for (i = ymin; i <= ymax; i++) {
+                    if (mkinvk_check_wall(xmin, i))
+                        ++wallct;
+                    if (mkinvk_check_wall(xmax, i))
+                        ++wallct;
+                }
+            }
+        }
+        /* message won't appear if the maze 'walls' on this level are lava
+           or if all the walls within range have been dug away; when it does
+           appear, it will describe iron bars as "walls" (which is ok) */
+        if (wallct)
+            pline_The("walls around you begin to bend and crumble!");
+    }
     display_nhwindow(WIN_MESSAGE, TRUE);
 
     /* any trap hero is stuck in will be going away now */
@@ -2175,6 +2219,9 @@ mkinvokearea(void)
             buried_ball_to_punishment();
         reset_utrap(FALSE);
     }
+
+    xmin = xmax = gi.inv_pos.x; /* reset after the check for walls */
+    ymin = ymax = gi.inv_pos.y;
     mkinvpos(xmin, ymin, 0); /* middle, before placing stairs */
 
     for (dist = 1; dist < 7; dist++) {
@@ -2218,13 +2265,22 @@ mkinvpos(coordxy x, coordxy y, int dist)
     boolean make_rocks;
     register struct rm *lev = &levl[x][y];
     struct monst *mon;
+    /* maze levels have slightly different constraints from normal levels;
+       these are also defined in mkmaze.c and may not be appropriate for
+       mazes with corridors wider than 1 or for cavernous levels */
+#define x_maze_min 2
+#define y_maze_min 2
 
     /* clip at existing map borders if necessary */
-    if (!within_bounded_area(x, y, x_maze_min + 1, y_maze_min + 1,
-                             gx.x_maze_max - 1, gy.y_maze_max - 1)) {
+    if (!within_bounded_area(x, y, x_maze_min, y_maze_min,
+                             gx.x_maze_max, gy.y_maze_max)) {
         /* outermost 2 columns and/or rows may be truncated due to edge */
-        if (dist < (7 - 2))
-            panic("mkinvpos: <%d,%d> (%d) off map edge!", x, y, dist);
+        if (dist < (7 - 2)) { /* panic() or impossible() */
+            void (*errfunc)(const char *, ...) PRINTF_F(1, 2);
+
+            errfunc = !isok(x, y) ? panic : impossible;
+            (*errfunc)("mkinvpos: <%d,%d> (%d) off map edge!", x, y, dist);
+        }
         return;
     }
 
@@ -2295,6 +2351,23 @@ mkinvpos(coordxy x, coordxy y, int dist)
 
     /* display new value of position; could have a monster/object on it */
     newsym(x, y);
+#undef x_maze_min
+#undef y_maze_min
+}
+
+/* reduces clutter in mkinvokearea() while avoiding potential static analyzer
+   confusion about using isok(x,y) to control access to levl[x][y] */
+static int
+mkinvk_check_wall(coordxy x, coordxy y)
+{
+    unsigned ltyp;
+
+    if (!isok(x, y))
+        return 0;
+    assert(x > 0 && x < COLNO);
+    assert(y >= 0 && y < ROWNO);
+    ltyp = levl[x][y].typ;
+    return (IS_STWALL(ltyp) || ltyp == IRONBARS) ? 1 : 0;
 }
 
 /*

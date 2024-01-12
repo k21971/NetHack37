@@ -531,7 +531,7 @@ restgamestate(NHFILE *nhfp)
     newgamecontext = gc.context; /* copy statically init'd context */
     if (nhfp->structlevel)
         Mread(nhfp->fd, &gc.context, sizeof gc.context);
-    gc.context.warntype.species = (gc.context.warntype.speciesidx >= LOW_PM)
+    gc.context.warntype.species = (ismnum(gc.context.warntype.speciesidx))
                                   ? &mons[gc.context.warntype.speciesidx]
                                   : (struct permonst *) 0;
     /* gc.context.victual.piece, .tin.tin, .spellbook.book, and .polearm.hitmon
@@ -692,6 +692,7 @@ restgamestate(NHFILE *nhfp)
     /* must come after all mons & objs are restored */
     relink_timers(FALSE);
     relink_light_sources(FALSE);
+    adj_erinys(u.ualign.abuse);
 #ifdef WHEREIS_FILE
     touch_whereis();
 #endif

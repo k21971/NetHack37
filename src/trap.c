@@ -741,7 +741,7 @@ animate_statue(
             mon = makemon(&mons[PM_DOPPELGANGER], x, y, mmflags);
             /* if hero has protection from shape changers, cham field will
                be NON_PM; otherwise, set form to match the statue */
-            if (mon && mon->cham >= LOW_PM)
+            if (mon && ismnum(mon->cham))
                 (void) newcham(mon, mptr, NO_NC_FLAGS);
         } else {
             if (cause == ANIMATE_SPELL)
@@ -3452,8 +3452,10 @@ isclearpath(
     while (distance-- > 0) {
         x += dx;
         y += dy;
+        if (!isok(x, y))
+            return FALSE;
         typ = levl[x][y].typ;
-        if (!isok(x, y) || !ZAP_POS(typ) || closed_door(x, y))
+        if (!ZAP_POS(typ) || closed_door(x, y))
             return FALSE;
         if ((t = t_at(x, y)) != 0
             && (is_pit(t->ttyp) || is_hole(t->ttyp) || is_xport(t->ttyp)))

@@ -411,7 +411,7 @@ extern boolean trapped_chest_at(int, coordxy, coordxy);
 extern boolean trapped_door_at(int, coordxy, coordxy);
 extern struct obj *o_in(struct obj *, char) NONNULLARG1;
 extern struct obj *o_material(struct obj *, unsigned) NONNULLARG1;
-extern int gold_detect(struct obj *);
+extern int gold_detect(struct obj *) NONNULLARG1;
 extern int food_detect(struct obj *);
 extern int object_detect(struct obj *, int);
 extern int monster_detect(struct obj *, int);
@@ -1435,6 +1435,7 @@ extern int mbirth_limit(int);
 extern void mkmonmoney(struct monst *, long) NONNULLARG1;
 extern int bagotricks(struct obj *, boolean, int *);
 extern boolean propagate(int, boolean, boolean);
+extern void summon_furies(int);
 
 /* ### mcastu.c ### */
 
@@ -1531,7 +1532,7 @@ extern void place_branch(branch *, coordxy, coordxy) NO_NNARGS;
 extern boolean occupied(coordxy, coordxy);
 extern int okdoor(coordxy, coordxy);
 extern void dodoor(coordxy, coordxy, struct mkroom *) NONNULLARG3;
-extern void mktrap(int, int, struct mkroom *, coord *) NO_NNARGS;
+extern void mktrap(int, unsigned, struct mkroom *, coord *) NO_NNARGS;
 extern void mkstairs(coordxy, coordxy, char, struct mkroom *, boolean);
 extern void mkinvokearea(void);
 extern void mineralize(int, int, int, int, boolean);
@@ -1768,6 +1769,7 @@ extern void copy_mextra(struct monst *, struct monst *);
 extern void dealloc_mextra(struct monst *);
 extern boolean usmellmon(struct permonst *);
 extern void mimic_hit_msg(struct monst *, short);
+extern void adj_erinys(unsigned);
 
 /* ### mondata.c ### */
 

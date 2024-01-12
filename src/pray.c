@@ -209,7 +209,7 @@ in_trouble(void)
         return TROUBLE_REGION;
     if (critically_low_hp(FALSE))
         return TROUBLE_HIT;
-    if (u.ulycn >= LOW_PM)
+    if (ismnum(u.ulycn))
         return TROUBLE_LYCANTHROPE;
     if (near_capacity() >= EXT_ENCUMBER && AMAX(A_STR) - ABASE(A_STR) > 3)
         return TROUBLE_COLLAPSING;
@@ -1612,7 +1612,7 @@ offer_different_alignment_altar(
             consume_offering(otmp);
             pline("%s accepts your allegiance.", a_gname());
 
-            uchangealign(altaralign, 0);
+            uchangealign(altaralign, A_CG_CONVERT);
             /* Beware, Conversion is costly */
             change_luck(-3);
             u.ublesscnt += 300;
@@ -1809,6 +1809,9 @@ dosacrifice(void)
 
     if (!on_altar() || u.uswallow) {
         You("are not standing on an altar.");
+        return ECMD_OK;
+    } else if (Confusion || Stunned || Hallucination) {
+        You("are too impaired to perform the rite.");
         return ECMD_OK;
     }
     highaltar = (levl[u.ux][u.uy].altarmask & AM_SANCTUM);

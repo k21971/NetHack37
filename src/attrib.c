@@ -338,7 +338,7 @@ poisoned(
 
     /* suppress killer prefix if it already has one */
     i = name_to_mon(pkiller, (int *) 0);
-    if (i >= LOW_PM && (mons[i].geno & G_UNIQ)) {
+    if (ismnum(i) && (mons[i].geno & G_UNIQ)) {
         kprefix = KILLED_BY;
         if (!type_is_pname(&mons[i]))
             pkiller = the(pkiller);
@@ -837,7 +837,7 @@ is_innate(int propidx)
     int innateness;
 
     /* innately() would report FROM_FORM for this; caller wants specificity */
-    if (propidx == DRAIN_RES && u.ulycn >= LOW_PM)
+    if (propidx == DRAIN_RES && ismnum(u.ulycn))
         return FROM_LYCN;
     if (propidx == FAST && Very_fast)
         return FROM_NONE; /* can't become very fast innately */
@@ -1219,8 +1219,14 @@ adjalign(int n)
     int newalign = u.ualign.record + n;
 
     if (n < 0) {
+        unsigned newabuse = u.ualign.abuse - n;
+
         if (newalign < u.ualign.record)
             u.ualign.record = newalign;
+        if (newabuse > u.ualign.abuse) {
+            u.ualign.abuse = newabuse;
+            adj_erinys(newabuse);
+        }
     } else if (newalign > u.ualign.record) {
         u.ualign.record = newalign;
         if (u.ualign.record > ALIGNLIM)
@@ -1231,7 +1237,7 @@ adjalign(int n)
 /* change hero's alignment type, possibly losing use of artifacts */
 void
 uchangealign(int newalign,
-             int reason) /* 0==conversion, 1==helm-of-OA on, 2==helm-of-OA off */
+             int reason) /* A_CG_CONVERT, A_CG_HELM_ON, or A_CG_HELM_OFF */
 {
     aligntyp oldalign = u.ualign.type;
 
@@ -1239,7 +1245,7 @@ uchangealign(int newalign,
     /* You/Your/pline message with call flush_screen(), triggering bot(),
        so the actual data change needs to come before the message */
     disp.botl = TRUE; /* status line needs updating */
-    if (reason == 0) {
+    if (reason == A_CG_CONVERT) {
         /* conversion via altar */
         livelog_printf(LL_ALIGNMENT, "permanently converted to %s",
                        aligns[1 - newalign].adj);
@@ -1251,18 +1257,21 @@ uchangealign(int newalign,
             (u.ualign.type != oldalign) ? "sudden " : "");
     } else {
         /* putting on or taking off a helm of opposite alignment */
-        if (reason == 1) {
+        u.ualign.type = (aligntyp) newalign;
+        if (reason == A_CG_HELM_ON) {
+            adjalign(-7); /* for abuse -- record will be cleared shortly */
+            Your("mind oscillates %s.", Hallucination ? "wildly" : "briefly");
+            make_confused(rn1(2, 3), FALSE);
+            if (Is_astralevel(&u.uz) || ((unsigned) rn2(50) < u.ualign.abuse))
+                summon_furies(Is_astralevel(&u.uz) ? 0 : 1);
             /* don't livelog taking it back off */
             livelog_printf(LL_ALIGNMENT, "used a helm to turn %s",
                            aligns[1 - newalign].adj);
-        }
-        u.ualign.type = (aligntyp) newalign;
-        if (reason == 1)
-            Your("mind oscillates %s.", Hallucination ? "wildly" : "briefly");
-        else if (reason == 2)
+        } else if (reason == A_CG_HELM_OFF) {
             Your("mind is %s.", Hallucination
                                     ? "much of a muchness"
                                     : "back in sync with your body");
+        }
     }
     if (u.ualign.type != oldalign) {
         u.ualign.record = 0; /* slate is wiped clean */
