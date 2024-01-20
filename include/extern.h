@@ -2569,6 +2569,7 @@ extern void save_regions(NHFILE *) NONNULLARG1;
 extern void rest_regions(NHFILE *) NONNULLARG1;
 extern void region_stats(const char *, char *, long *, long *) NONNULLPTRS;
 extern NhRegion *create_gas_cloud(coordxy, coordxy, int, int);
+extern NhRegion *create_gas_cloud_selection(struct selectionvar *, int);
 extern boolean region_danger(void);
 extern void region_safety(void);
 
@@ -3775,6 +3776,7 @@ extern void start_melt_ice_timeout(coordxy, coordxy, long);
 extern void melt_ice_away(union any *, long) NONNULLARG1;
 extern int zap_over_floor(coordxy, coordxy, int, boolean *,
                           boolean, short) NONNULLARG4;
+extern void mon_spell_hits_spot(struct monst *, int, coordxy x, coordxy y);
 extern void fracture_rock(struct obj *) NONNULLARG1;
 extern boolean break_statue(struct obj *) NONNULLARG1;
 extern int u_adtyp_resistance_obj(int);

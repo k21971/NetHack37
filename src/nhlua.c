@@ -95,9 +95,9 @@ static boolean nhcore_call_available[NUM_NHCORE_CALLS];
  * Note that we use it for both memory use tracking and instruction counting.
  */
 typedef struct nhl_user_data {
+    lua_State *L;       /* because the allocator needs it */
     uint32_t flags;     /* from nhl_sandbox_info */
 
-    uint32_t inuse;
     uint32_t memlimit;
 
     uint32_t steps;     /* current counter */
@@ -1875,6 +1875,11 @@ traceback_handler(lua_State *L)
     return 1;
 }
 
+static uint32_t
+nhl_getmeminuse(lua_State *L){
+    return lua_gc(L, LUA_GCCOUNT) * 1024 + lua_gc(L, LUA_GCCOUNTB);
+}
+
 /* lua_pcall with our traceback handler and memory and instruction step
  * limiting.
  *  On error, traceback will be on top of stack */
@@ -1919,7 +1924,7 @@ nhl_pcall(lua_State *L, int nargs, int nresults, const char *name)
     if (nud && nud->memlimit && gl.loglua) {
         lua_gc(L, LUA_GCCOLLECT);
         livelog_printf(LL_DEBUG, "LUASTATS PMEM %d:%s %lu", nud->sid,
-                       nud->name, (long unsigned) nud->inuse);
+                       nud->name, (long unsigned) nhl_getmeminuse(L));
     }
 #endif
     return rv;
@@ -2143,12 +2148,12 @@ nhl_done(lua_State *L)
             if (nud && nud->memlimit && !nud->perpcall) {
                 lua_gc(L, LUA_GCCOLLECT);
                 livelog_printf(LL_DEBUG, "LUASTATS DMEM %d:%s %lu", nud->sid,
-                               nud->name, (long unsigned) nud->inuse);
+                               nud->name, (long unsigned) nhl_getmeminuse(L));
             }
         }
+        lua_close(L);
         if (nud)
             nhl_alloc(NULL, nud, 0, 0); // free nud
-        lua_close(L);
     }
     iflags.in_lua = FALSE;
 }
@@ -2250,7 +2255,7 @@ RESTORE_WARNING_CONDEXPR_IS_CONSTANT
  *     PMEM memory in use after lua_pcall returns
  *  SID     a small integer identifying the Lua VM instance
  *  TAG     a string from the nhl_luapcall call
- *  DATA    memory: rough number of bytes in use by the VM(see NHL_ALLOC_ADJUST)
+ *  DATA    memory: rough number of bytes in use by the VM
  *          steps: rough number of steps by the VM(see NHL_SB_STEPSIZE)
  */
 #ifdef NHL_SANDBOX
@@ -2726,33 +2731,21 @@ UNSAFEIO:
 
 RESTORE_WARNING_CONDEXPR_IS_CONSTANT
 
-/*
- * All we can do is approximate the amount of storage used.  Every allocator
- * has different overhead and uses that overhead differently.  Since we're
- * really just trying to prevent egregious use, we default to a minimum
- * allocation size of 16 and if you know better about your allocator (and
- * it's worth the processing time), it can be overridden.
- */
-#ifndef NHL_ALLOC_ADJUST
-#define NHL_ALLOC_ADJUST(d) d = (((d) + 15) & ~15)
-#endif
 static void *
-nhl_alloc(void *ud, void *ptr, size_t osize, size_t nsize)
+nhl_alloc(void *ud, void *ptr, size_t osize UNUSED, size_t nsize)
 {
     nhl_user_data *nud = ud;
 
     if (nsize == 0) {
-        if (ptr != NULL)
+        if (ptr != NULL) {
             free(ptr);
+        }
         return NULL;
     }
 
-    if (nud && nud->memlimit) { /* this state is size limited */
-        uint32_t delta = !ptr ? nsize : nsize - osize;
-
-        NHL_ALLOC_ADJUST(delta);
-        nud->inuse += delta;
-        if (nud->inuse > nud->memlimit)
+    /* Check nud->L because it will be NULL during state init. */
+    if (nud && nud->L && nud->memlimit) { /* this state is size limited */
+        if (nhl_getmeminuse(nud->L) > nud->memlimit)
             return NULL;
     }
 
@@ -2822,15 +2815,13 @@ nhlL_newstate(nhl_sandbox_info *sbi, const char *name)
         nud = nhl_alloc(NULL, NULL, 0, sizeof (struct nhl_user_data));
         if (!nud)
             return 0;
+        nud->L = NULL;
         nud->memlimit = sbi->memlimit;
         nud->perpcall = 0; /* set up below, if needed */
         nud->steps = 0;
         nud->osteps = 0;
         nud->flags = sbi->flags; /* save reporting flags */
         nud->statctr = 0;
-        uint32_t sz = sizeof (struct nhl_user_data);
-        NHL_ALLOC_ADJUST(sz);
-        nud->inuse = sz;
 
         if (name) {
             nud->name = name;
@@ -2842,6 +2833,7 @@ nhlL_newstate(nhl_sandbox_info *sbi, const char *name)
     if (!L)
         panic("NULL lua_newstate");
 
+    if(nud) nud->L = L;
     lua_atpanic(L, nhl_panic);
 #if LUA_VERSION_NUM == 504
     lua_setwarnf(L, nhl_warn, L);
