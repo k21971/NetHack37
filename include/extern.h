@@ -144,6 +144,7 @@ extern boolean confers_luck(struct obj *) NONNULLPTRS;
 extern boolean arti_reflects(struct obj *);
 extern boolean shade_glare(struct obj *) NONNULLPTRS;
 extern boolean restrict_name(struct obj *, const char *) NONNULLPTRS;
+extern boolean attacks(int, struct obj *);
 extern boolean defends(int, struct obj *);
 extern boolean defends_when_carried(int, struct obj *);
 extern boolean protects(struct obj *, boolean);
@@ -191,6 +192,7 @@ extern void exercise(int, boolean);
 extern void exerchk(void);
 extern void init_attr(int);
 extern void redist_attr(void);
+extern void vary_init_attr(void);
 extern void adjabil(int, int);
 extern int newhp(void);
 extern int minuhpmax(int);
@@ -2093,6 +2095,7 @@ extern int choose_disco_sort(int);
 extern int dodiscovered(void);
 extern int doclassdisco(void);
 extern void rename_disco(void);
+extern void get_sortdisco(char *opts, boolean cnf) NONNULLARG1;
 
 /* ### objects.c ### */
 
