@@ -949,29 +949,27 @@ fill_ordinary_room(
             supply_chest->olocked = !!(rn2(6));
 
             do {
-                /* 50% this is a potion of healing */
-                if (rn2(2)) {
-                    otyp = POT_HEALING;
-                } else {
-                    static const int supply_items[] = {
-                        POT_EXTRA_HEALING,
-                        POT_SPEED,
-                        POT_GAIN_ENERGY,
-                        SCR_ENCHANT_WEAPON,
-                        SCR_ENCHANT_ARMOR,
-                        SCR_CONFUSE_MONSTER,
-                        SCR_SCARE_MONSTER,
-                        WAN_DIGGING,
-                        SPE_HEALING,
-                    };
+                static const int supply_items[] = {
+                    POT_EXTRA_HEALING,
+                    POT_SPEED,
+                    POT_GAIN_ENERGY,
+                    SCR_ENCHANT_WEAPON,
+                    SCR_ENCHANT_ARMOR,
+                    SCR_CONFUSE_MONSTER,
+                    SCR_SCARE_MONSTER,
+                    WAN_DIGGING,
+                    SPE_HEALING,
+                };
 
-                    otyp = ROLL_FROM(supply_items);
-                }
+                /* 50% this is a potion of healing */
+                otyp = rn2(2) ? POT_HEALING : ROLL_FROM(supply_items);
                 otmp = mksobj(otyp, TRUE, FALSE);
-                if (otyp == POT_HEALING && rn2(2))
+                if (otyp == POT_HEALING && rn2(2)) {
                     otmp->quan = 2;
+                    otmp->owt = weight(otmp);
+                }
                 cursed = otmp->cursed;
-                add_to_container(supply_chest, otmp);
+                add_to_container(supply_chest, otmp); /* owt updated below */
 
                 ++tryct;
                 if (tryct == 50) {
@@ -1004,20 +1002,28 @@ fill_ordinary_room(
 
                 otmp = mkobj(oclass, FALSE);
                 if (oclass == SPBOOK_no_NOVEL) {
-                    /* bias towards lower level by generating again
-                       and taking the lower-level book */
-                    struct obj *otmp2 = mkobj(oclass, FALSE);
+                    int pass, maxpass = (depth(&u.uz) > 2) ? 2 : 3;
 
-                    if (objects[otmp->otyp].oc_level
-                        <= objects[otmp2->otyp].oc_level) {
-                        dealloc_obj(otmp2);
-                    } else {
-                        dealloc_obj(otmp);
-                        otmp = otmp2;
+                    /* bias towards lower level by generating again
+                       and taking the lower-level book; do that three
+                       times if on level 1 or 2, twice when deeper */
+                    for (pass = 1; pass <= maxpass; ++pass) {
+                        struct obj *otmp2 = mkobj(oclass, FALSE);
+
+                        if (objects[otmp->otyp].oc_level
+                            <= objects[otmp2->otyp].oc_level) {
+                            dealloc_obj(otmp2);
+                        } else {
+                            dealloc_obj(otmp);
+                            otmp = otmp2;
+                        }
                     }
                 }
-                add_to_container(supply_chest, otmp);
+                add_to_container(supply_chest, otmp); /* owt updated below */
             }
+
+            /* add_to_container() doesn't update the container's weight */
+            supply_chest->owt = weight(supply_chest);
 
             skip_chests = TRUE; /* don't want a second chest in this room */
         }
@@ -1029,7 +1035,8 @@ fill_ordinary_room(
      *  of rooms; about 5 - 7.5% for 2 boxes, least likely
      *  when few rooms; chance for 3 or more is negligible.
      */
-    if (!rn2(gn.nroom * 5 / 2) && somexyspace(croom, &pos) && !skip_chests)
+    /*assert(gn.nroom > 0); // must be true because we're filling a room*/
+    if (!skip_chests && !rn2(gn.nroom * 5 / 2) && somexyspace(croom, &pos))
         (void) mksobj_at(rn2(3) ? LARGE_BOX : CHEST,
                          pos.x, pos.y, TRUE, FALSE);
 
@@ -1686,7 +1693,7 @@ mktrap_victim(struct trap *ttmp)
            we're on dlvl 2 (1 is impossible) and b) we pass a coin
            flip */
         if (kind == SLP_GAS_TRAP && !(lvl <= 2 && rn2(2)))
-            victim_mnum = PM_HUMAN;
+            goto human;
         break;
     case 1: case 2:
         victim_mnum = PM_DWARF;
@@ -1699,24 +1706,28 @@ mktrap_victim(struct trap *ttmp)
         victim_mnum = PM_GNOME;
         /* 10% chance of a candle too */
         if (!rn2(10)) {
-            otmp = mksobj(rn2(4) ? TALLOW_CANDLE : WAX_CANDLE,
-                          TRUE, FALSE);
+            otmp = mksobj(rn2(4) ? TALLOW_CANDLE : WAX_CANDLE, TRUE, FALSE);
             otmp->quan = 1;
-            otmp->blessed = 0;
-            otmp->cursed = 1;
+            curse(otmp);
             otmp->owt = weight(otmp);
             place_object(otmp, x, y);
         }
         break;
     default:
-        /* the most common race */
-        victim_mnum = PM_HUMAN;
+ human:
+        /* human, can be any role; all fake player monsters are human;
+           we probably ought to generate and attach montraits for fake
+           players that force them to be low level in case they get
+           resurrected; PM_HUMAN is a placeholder monster primarily
+           used for zombie, mummy, and vampire corpses */
+        victim_mnum = !rn2(25) ? PM_HUMAN : rn1(PM_WIZARD - PM_ARCHEOLOGIST,
+                                                PM_ARCHEOLOGIST);
+        /* no role-specific equipment provided */
         break;
     }
-    otmp = mkcorpstat(CORPSE, NULL, &mons[victim_mnum], x, y,
-                      CORPSTAT_INIT);
+    otmp = mkcorpstat(CORPSE, NULL, &mons[victim_mnum], x, y, CORPSTAT_INIT);
     if (otmp)
-        otmp->age -= (TAINT_AGE + 1); /* died too long ago to eat */
+        otmp->age -= (TAINT_AGE + 1); /* died too long ago to safely eat */
 }
 
 /* mktrap(): select trap type and location, then use maketrap() to create it;

@@ -1352,6 +1352,9 @@ some uses of mons[obj->corpsenm] weren't excluding obj->corpsenm==NON_PM (-1)
 if a covetous monster tried to teleport next to the hero but the level was
 	completely full, it would be booted off the level (set to migrate
 	back if the hero left and returned) instead of just staying put
+if loadstone was unIDed but had been assigned a type name and you failed to
+	pick one up, the message referred to it as "gray stone" rather than
+	"stone called <assigned name>"
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -1835,6 +1838,20 @@ farlook at something that was on top of an engraving or grave would report
 	the engraving text or headstone epitaph along with the 'something'
 when carrying 52 items (excluding gold), hero couldn't pick up a thrown,
 	stolen, or dropped item which was split off from a still-carried stack
+supply chests on early levels weighed the same as empty chests until something
+	was added or removed
+stacked pair of potions of healing in supply chest weighed same as one potion;
+	drinking one of the two gave a healing message, then both had their
+	weight updated as their stack was split; if close to an encumbrance
+	threshold, new weight would trigger an encumbrance increase message,
+	immediately followed a decrease message when the potion got used up
+bounds checking for object name formatting inadvertently introduced a change
+	that hid BUC prefix for charged rings
+debug fuzzer was triggering out of bounds array access in loseexp() if
+	life-saving at level 1 used blessed restore ability to regain lost
+	levels and restored those all the way to level 30; introducing an
+	assert(u.ulevel < MAXULEV) changed bounds issue to assertion failure
+strength less than 25 was unintentionally being capped at 18/07
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository

@@ -1718,7 +1718,7 @@ static int
 rottenfood(struct obj *obj)
 {
     pline("Blecch!  %s %s!",
-          is_metallic(obj) ? "Awful" : "Rotten", foodword(obj));
+          is_rottable(obj) ? "Rotten" : "Awful", foodword(obj));
     if (!rn2(4)) {
         if (Hallucination)
             You_feel("rather trippy.");
@@ -2949,6 +2949,8 @@ doeat(void)
 
     if (!dont_start)
         start_eating(otmp, already_partly_eaten);
+    else
+        otmp->owt = weight(otmp);
     return ECMD_TIME;
 }
 

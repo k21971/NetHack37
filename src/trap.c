@@ -1049,6 +1049,88 @@ check_in_air(struct monst *mtmp, unsigned trflags)
             || ((is_you ? Flying : is_flyer(mtmp->data)) && !plunged));
 }
 
+/* is trap ttmp harmless to monster mtmp? */
+boolean
+m_harmless_trap(struct monst *mtmp, struct trap *ttmp)
+{
+    struct permonst *mdat = mtmp->data;
+
+    /* this handles most of the traps, but those are still included
+       in the switch case below for completeness */
+    if (!Sokoban && floor_trigger(ttmp->ttyp) && check_in_air(mtmp, 0L))
+        return TRUE;
+
+    switch (ttmp->ttyp) {
+    case ARROW_TRAP:
+        break;
+    case DART_TRAP:
+        break;
+    case ROCKTRAP:
+        break;
+    case SQKY_BOARD:
+        break;
+    case BEAR_TRAP:
+        if (mdat->msize <= MZ_SMALL || amorphous(mdat)
+            || is_whirly(mdat) || unsolid(mdat))
+            return TRUE;
+        break;
+    case LANDMINE:
+        break;
+    case ROLLING_BOULDER_TRAP:
+        break;
+    case SLP_GAS_TRAP:
+        if (resists_sleep(mtmp) || defended(mtmp, AD_SLEE))
+            return TRUE;
+        break;
+    case RUST_TRAP:
+        if (mdat != &mons[PM_IRON_GOLEM])
+            return TRUE;
+        break;
+    case FIRE_TRAP:
+        if (resists_fire(mtmp) || defended(mtmp, AD_FIRE))
+            return TRUE;
+        break;
+    case PIT:
+        /*FALLTHRU*/
+    case SPIKED_PIT:
+        /*FALLTHRU*/
+    case HOLE:
+        /*FALLTHRU*/
+    case TRAPDOOR:
+        if (is_clinger(mdat) && !Sokoban)
+            return TRUE;
+        break;
+    case TELEP_TRAP:
+        break;
+    case LEVEL_TELEP:
+        break;
+    case MAGIC_PORTAL:
+        break;
+    case WEB:
+        if (amorphous(mdat) || webmaker(mdat)
+            || is_whirly(mdat) || unsolid(mdat))
+            return TRUE;
+        break;
+    case STATUE_TRAP:
+        return TRUE;
+    case MAGIC_TRAP:
+        return TRUE; /* usually */
+    case ANTI_MAGIC:
+        if (resists_magm(mtmp) || defended(mtmp, AD_MAGM))
+            return TRUE;
+        break;
+    case POLY_TRAP:
+        break;
+    case VIBRATING_SQUARE:
+        return TRUE;
+    default:
+        impossible("m_harmless_trap: unknown trap %i", ttmp->ttyp);
+        break;
+    }
+
+    return FALSE;
+}
+
 static int
 trapeffect_arrow_trap(
     struct monst *mtmp,
@@ -1671,7 +1753,6 @@ trapeffect_pit(
         boolean already_known = trap->tseen ? TRUE : FALSE;
         boolean deliberate = FALSE;
         int steed_article = ARTICLE_THE;
-        int oldumort;
 
         /* suppress article in various steed messages when using its
            name (which won't occur when hallucinating) */
@@ -1749,7 +1830,8 @@ trapeffect_pit(
         set_utrap((unsigned) rn1(6, 2), TT_PIT);
         if (!steedintrap(trap, (struct obj *) 0)) {
             if (ttype == SPIKED_PIT) {
-                oldumort = u.umortality;
+                int oldumort = u.umortality;
+
                 losehp(Maybe_Half_Phys(rnd(conj_pit ? 4 : adj_pit ? 6 : 10)),
                        /* note: these don't need locomotion() handling;
                           if fatal while poly'd and Unchanging, the
@@ -1792,13 +1874,10 @@ trapeffect_pit(
             exercise(A_DEX, FALSE);
         }
     } else {
-        int tt = trap->ttyp;
         boolean in_sight = canseemon(mtmp) || (mtmp == u.usteed);
         boolean trapkilled = FALSE;
         boolean forcetrap = ((trflags & FORCETRAP) != 0);
-        boolean inescapable = (forcetrap
-                               || ((tt == HOLE || tt == PIT)
-                                   && Sokoban && !trap->madeby_u));
+        boolean inescapable = (forcetrap || (Sokoban && !trap->madeby_u));
         struct permonst *mptr = mtmp->data;
         const char *fallverb;
 
@@ -1814,7 +1893,7 @@ trapeffect_pit(
                 return Trap_Effect_Finished;
             }
             if (!inescapable)
-                return Trap_Effect_Finished;               /* avoids trap */
+                return Trap_Effect_Finished; /* avoids trap */
             fallverb = "is dragged"; /* sokoban pit */
         }
         if (!passes_walls(mptr))
@@ -1830,7 +1909,7 @@ trapeffect_pit(
         }
         mselftouch(mtmp, "Falling, ", FALSE);
         if (DEADMONSTER(mtmp) || thitm(0, mtmp, (struct obj *) 0,
-                                       rnd((tt == PIT) ? 6 : 10), FALSE))
+                                       rnd((ttype == PIT) ? 6 : 10), FALSE))
             trapkilled = TRUE;
 
         return trapkilled ? Trap_Killed_Mon : mtmp->mtrapped
@@ -1858,9 +1937,7 @@ trapeffect_hole(
         struct permonst *mptr = mtmp->data;
         boolean in_sight = canseemon(mtmp) || (mtmp == u.usteed);
         boolean forcetrap = ((trflags & FORCETRAP) != 0);
-        boolean inescapable = (forcetrap
-                               || ((tt == HOLE || tt == PIT)
-                                   && Sokoban && !trap->madeby_u));
+        boolean inescapable = (forcetrap || (Sokoban && !trap->madeby_u));
 
         if (!Can_fall_thru(&u.uz)) {
             impossible("mintrap: %ss cannot exist on this level.",
@@ -1928,14 +2005,10 @@ trapeffect_level_telep(
         seetrap(trap);
         level_tele_trap(trap, trflags);
     } else {
-        int tt = trap->ttyp;
         boolean in_sight = canseemon(mtmp) || (mtmp == u.usteed);
         boolean forcetrap = ((trflags & FORCETRAP) != 0);
-        boolean inescapable = (forcetrap
-                               || ((tt == HOLE || tt == PIT)
-                                   && Sokoban && !trap->madeby_u));
 
-        return mlevel_tele_trap(mtmp, trap, inescapable, in_sight);
+        return mlevel_tele_trap(mtmp, trap, forcetrap, in_sight);
     }
     return Trap_Effect_Finished;
 }
