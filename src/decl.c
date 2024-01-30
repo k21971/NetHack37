@@ -1098,4 +1098,5 @@ sa_victual(
 {
     return;
 }
+
 /*decl.c*/
