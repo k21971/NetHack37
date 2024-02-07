@@ -528,6 +528,7 @@ moveloop_core(void)
         lua_getglobal(gl.luacore, "nh_callback_run");
         lua_pushstring(gl.luacore, nhcb_name[NHCB_END_TURN]);
         nhl_pcall_handle(gl.luacore, 1, 0, "moveloop_core", NHLpa_panic);
+        lua_settop(gl.luacore, 0);
     }
 }
 
@@ -1118,6 +1119,7 @@ struct enum_dump monsdump[] = {
     { NUMMONS, "NUMMONS" },
     { NON_PM, "NON_PM" },
     { LOW_PM, "LOW_PM" },
+    { HIGH_PM, "HIGH_PM" },
     { SPECIAL_PM, "SPECIAL_PM" }
 };
 struct enum_dump objdump[] = {

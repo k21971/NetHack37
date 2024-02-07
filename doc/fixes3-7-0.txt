@@ -1854,6 +1854,10 @@ debug fuzzer was triggering out of bounds array access in loseexp() if
 	levels and restored those all the way to level 30; introducing an
 	assert(u.ulevel < MAXULEV) changed bounds issue to assertion failure
 strength less than 25 was unintentionally being capped at 18/07
+if an amulet of flying gets stolen while hero is over lava without other
+	protection against lava, it will be destroyed even though it isn't
+	flammable, then attempting to format it for messages will trigger an
+	impossible warning about "glorkum", then a crash occurs
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
@@ -2141,6 +2145,9 @@ tty: have <return> dismiss pick-none menus instead of acting like '>' (not
 tty: menu search via ':' would clobber part of the menu with a status line
 	refresh if the menu was tall enough to cover that
 tty: add support for petattr
+tty: if a ^C interrupt occurred while DECgraphics characters were being drawn
+	on the map, the "Really quit?" prompt would be illegible due to being
+	rendered with VT line drawing characters
 Unix: when user name is used as default character name, keep hyphenated value
 	intact instead stripping off dash and whatever follows as if that
 	specified role/race/&c (worked once upon a time; broken since 3.3.0)
