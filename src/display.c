@@ -1,4 +1,4 @@
-/* NetHack 3.7	display.c	$NHDT-Date: 1682758082 2023/04/29 08:48:02 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.216 $ */
+/* NetHack 3.7	display.c	$NHDT-Date: 1707462961 2024/02/09 07:16:01 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.231 $ */
 /* Copyright (c) Dean Luick, with acknowledgements to Kevin Darcy */
 /* and Dave Cohrs, 1990.                                          */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -128,6 +128,7 @@ static void display_monster(coordxy, coordxy,
                             struct monst *, int, boolean) NONNULLPTRS;
 static int swallow_to_glyph(int, int);
 static void display_warning(struct monst *) NONNULLARG1;
+static boolean next_to_gas(struct monst *, coordxy, coordxy) NONNULLARG1;
 
 static int check_pos(coordxy, coordxy, int);
 static void get_bkglyph_and_framecolor(coordxy x, coordxy y, int *, uint32 *);
@@ -650,6 +651,25 @@ warning_of(struct monst *mon)
     return wl;
 }
 
+/* returns True if mon is adjacent and would be seen if vision wasn't
+   blocked by being in a gas cloud (implicit; caller has already checked) */
+static boolean
+next_to_gas(
+    struct monst *mon,
+    coordxy mx, coordxy my) /* won't match mon->mx,my if long worm's tail */
+{
+    int r = (u.xray_range > 1) ? u.xray_range : 1;
+
+    if (distu(mx, my) > r * (r + 1))
+        return FALSE;
+    /* decide whether monster at <mx,my> could be seen without couldsee()
+       because the gas cloud inhibits that (don't need to check infravision
+       when monster is adjacent) */
+    if (Blind || !_mon_visible(mon))
+        return FALSE;
+    return TRUE;
+}
+
 /* map or status window might not be ready for output during level creation
    or game restoration (something like u.usteed which affects display of
    the hero and also a status condition might not be set up yet) */
@@ -907,14 +927,27 @@ newsym(coordxy x, coordxy y)
          * Normal region shown only on accessible positions, but
          * poison clouds and steam clouds also shown above lava,
          * pools and moats.
-         * However, sensed monsters take precedence over all regions.
+         * However, sensed monsters (via detection or telepathy or
+         * warning) take precedence over all regions.
+         * Adjacent monsters also take precedence if they would be
+         * seen when there's no gas region.
+         *
+         * FIXME:
+         *  The adjacency checking here works when the hero is outside
+         *  the region and the monster is inside, and when they're both
+         *  inside, but not when the hero is inside and monster outside
+         *  (because 'reg' will be Null for mon's <x,y>).  Checking
+         *  whether hero is inside a region for every newsym() seems
+         *  excessive.  The hero is usually blind when in a gas cloud
+         *  so the problem is less noticeable then it might otherwise be.
          */
-        if (reg
-            && (ACCESSIBLE(lev->typ)
-                || (reg->visible && is_pool_or_lava(x, y)))
-            && (!mon || worm_tail || !sensemon(mon))) {
-            show_region(reg, x, y);
-            return;
+        if (reg && (ACCESSIBLE(lev->typ)
+                    || (reg->visible && is_pool_or_lava(x, y)))) {
+            if (!(mon && (((sensemon(mon) || mon_warning(mon)) && !worm_tail)
+                          || next_to_gas(mon, x, y)))) { /* even if tail */
+                show_region(reg, x, y);
+                return;
+            }
         }
 
         if (u_at(x, y)) {
@@ -944,7 +977,7 @@ newsym(coordxy x, coordxy y)
                 display_monster(x, y, mon,
                                 see_it ? PHYSICALLY_SEEN : DETECTED,
                                 worm_tail);
-            } else if (mon && mon_warning(mon) && !is_worm_tail(mon)) {
+            } else if (mon && mon_warning(mon) && !worm_tail) {
                 display_warning(mon);
             } else if (glyph_is_invisible(lev->glyph)) {
                 map_invisible(x, y);
@@ -963,7 +996,7 @@ newsym(coordxy x, coordxy y)
                    && ((see_it = (tp_sensemon(mon) || MATCH_WARN_OF_MON(mon)
                                   || (see_with_infrared(mon)
                                       && mon_visible(mon)))) != 0
-                       || Detect_monsters)) {
+                       || (Detect_monsters && !is_worm_tail(mon)))) {
             /* Seen or sensed monsters are printed every time.
                This also gets rid of any invisibility glyph. */
             display_monster(x, y, mon, see_it ? 0 : DETECTED,
