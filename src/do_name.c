@@ -44,8 +44,8 @@ nextmbuf(void)
     return bufs[bufidx];
 }
 
-/* function for getpos() to highlight desired map locations.
- * parameter value 0 = initialize, 1 = highlight, 2 = done
+/* Callback function for getpos() to highlight desired map locations.
+ * Parameter TRUE: initialize and highlight, FALSE: done (remove highlights).
  */
 static void (*getpos_hilitefunc)(boolean) = (void (*)(boolean)) 0;
 static boolean (*getpos_getvalid)(coordxy, coordxy)
@@ -763,7 +763,7 @@ truncate_to_map(coordxy *cx, coordxy *cy, schar dx, schar dy)
 }
 
 /* called when ^R typed; if '$' is being shown for valid spots, remove that;
-   if alternate background color is being show for that, redraw it */
+   if alternate background color is being shown for that, redraw it */
 static void
 getpos_refresh(void)
 {
@@ -2191,7 +2191,7 @@ some_mon_nam(struct monst *mtmp)
 char *
 Monnam(struct monst *mtmp)
 {
-    register char *bp = mon_nam(mtmp);
+    char *bp = mon_nam(mtmp);
 
     *bp = highc(*bp);
     return  bp;
@@ -2200,7 +2200,7 @@ Monnam(struct monst *mtmp)
 char *
 noit_Monnam(struct monst *mtmp)
 {
-    register char *bp = noit_mon_nam(mtmp);
+    char *bp = noit_mon_nam(mtmp);
 
     *bp = highc(*bp);
     return  bp;

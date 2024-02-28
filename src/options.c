@@ -1,4 +1,4 @@
-/* NetHack 3.7	options.c	$NHDT-Date: 1708124177 2024/02/16 22:56:17 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.707 $ */
+/* NetHack 3.7	options.c	$NHDT-Date: 1708737173 2024/02/24 01:12:53 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.709 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Michael Allison, 2008. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -96,7 +96,7 @@ enum requests {
 };
 /* these aren't the same as set_xxx in optlist.h */
 enum option_phases {
-    builtin_opt,  /* compiled-in default value of an option */
+    builtin_opt=1,/* compiled-in default value of an option */
     syscf_opt,    /* sysconf setting of an option, overrides builtin */
     rc_file_opt,  /* player's run-time config file setting, overrides syscf */
     environ_opt,  /* player's environment NETHACKOPTIONS, overrides rc_file */
@@ -461,7 +461,7 @@ ask_do_tutorial(void)
  */
 boolean
 parseoptions(
-    register char *opts,
+    char *opts,
     boolean tinitial,
     boolean tfrom_file)
 {
@@ -1449,7 +1449,7 @@ optfn_disclose(int optidx, int req, boolean negated, char *opts, char *op)
                                              DISCLOSE_NO_WITHOUT_PROMPT,
                                              DISCLOSE_SPECIAL_WITHOUT_PROMPT,
                                              '\0' };
-            register char c, *dop;
+            char c, *dop;
 
             c = lowc(*op);
             if (c == 'k')
@@ -6708,6 +6708,15 @@ initoptions(void)
     int i;
 
     /*
+     * Most places that call initoptions_init()/initoptions() would
+     * have the calls next to each other, so instead of adding
+     * initoptions_init() everywhere, just add it where it's needed in
+     * a non-adjacent place and call it here for all the other cases.
+     */
+    if(go.opt_phase != builtin_opt)
+         initoptions_init();
+
+    /*
      * Call each option function with an init flag and give it a chance
      * to make any preparations that it might require.  We do this
      * whether or not the option itself is ever specified; that's
@@ -8250,8 +8259,8 @@ collect_menu_keys(
 int
 fruitadd(char *str, struct fruit *replace_fruit)
 {
-    register int i;
-    register struct fruit *f;
+    int i;
+    struct fruit *f;
     int highest_fruit_id = 0, globpfx;
     char buf[PL_FSIZ], altname[PL_FSIZ];
     boolean user_specified = (str == gp.pl_fruit);
@@ -9492,7 +9501,7 @@ option_help(void)
 {
     char buf[BUFSZ], buf2[BUFSZ];
     const char *optname;
-    register int i;
+    int i;
     winid datawin;
 
     datawin = create_nhwindow(NHW_TEXT);

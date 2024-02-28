@@ -33,6 +33,7 @@
  *  NONNULLARG3     The 3rd argument is declared nonnull.
  *  NONNULLARG4     The 4th argument is declared nonnull (not used).
  *  NONNULLARG5     The 5th argument is declared nonnull.
+ *  NONNULLARG6     The 6th argument is declared nonnull.
  *  NONNULLARG7     The 7th argument is declared nonnull (bhit).
  *  NONNULLARG12    The 1st and 2nd arguments are declared nonnull.
  *  NONNULLARG23    The 2nd and 3rd arguments are declared nonnull.
@@ -1117,6 +1118,7 @@ extern void end_running(boolean);
 extern void nomul(int);
 extern void unmul(const char *);
 extern int saving_grace(int);
+extern void showdamage(int);
 extern void losehp(int, const char *, schar) ;
 extern int weight_cap(void);
 extern int inv_weight(void);
@@ -1135,36 +1137,39 @@ extern boolean digit(char);
 extern boolean letter(char);
 extern char highc(char);
 extern char lowc(char);
-extern char *lcase(char *) NONNULLARG1;
-extern char *ucase(char *) NONNULLARG1;
-extern char *upstart(char *);
-extern char *upwords(char *) NONNULLARG1;
-extern char *mungspaces(char *) NONNULLARG1;
-extern char *trimspaces(char *) NONNULLARG1;
-extern char *strip_newline(char *) NONNULLARG1;
-extern char *stripchars(char *, const char *, const char *) NONNULLPTRS;
-extern char *stripdigits(char *) NONNULLARG1;
-extern char *eos(char *) NONNULLARG1;
-extern const char *c_eos(const char *) NONNULLARG1;
+extern char *lcase(char *) NONNULL NONNULLARG1;
+extern char *ucase(char *) NONNULL NONNULLARG1;
+extern char *upstart(char *); /* ought to be changed to NONNULL NONNULLARG1
+                               * and the code changed to not allow NULL arg */
+extern char *upwords(char *) NONNULL NONNULLARG1;
+extern char *mungspaces(char *) NONNULL NONNULLARG1;
+extern char *trimspaces(char *) NONNULL NONNULLARG1;
+extern char *strip_newline(char *) NONNULL NONNULLARG1;
+extern char *eos(char *) NONNULL NONNULLARG1;
+extern const char *c_eos(const char *) NONNULL NONNULLARG1;
 extern unsigned Strlen_(const char *, const char *, int) NONNULLPTRS;
 extern boolean str_start_is(const char *, const char *, boolean) NONNULLPTRS;
 extern boolean str_end_is(const char *, const char *) NONNULLPTRS;
 extern int str_lines_maxlen(const char *);
-extern char *strkitten(char *, char) NONNULLARG1;
+extern char *strkitten(char *, char) NONNULL NONNULLARG1;
 extern void copynchars(char *, const char *, int) NONNULLARG12;
 extern char chrcasecpy(int, int);
-extern char *strcasecpy(char *, const char *) NONNULLPTRS;
-extern char *s_suffix(const char *) NONNULLARG1;
-extern char *ing_suffix(const char *) NONNULLARG1;
-extern char *xcrypt(const char *, char *) NONNULLPTRS;
+extern char *strcasecpy(char *, const char *) NONNULL NONNULLPTRS;
+extern char *s_suffix(const char *) NONNULL NONNULLARG1;
+extern char *ing_suffix(const char *) NONNULL NONNULLARG1;
+extern char *xcrypt(const char *, char *) NONNULL NONNULLPTRS;
 extern boolean onlyspace(const char *) NONNULLARG1;
-extern char *tabexpand(char *) NONNULLARG1;
-extern char *visctrl(char);
-extern char *strsubst(char *, const char *, const char *);
+extern char *tabexpand(char *) NONNULL NONNULLARG1;
+extern char *visctrl(char) NONNULL;
+extern char *stripchars(char *, const char *,
+                                            const char *) NONNULL NONNULLPTRS;
+extern char *stripdigits(char *) NONNULL NONNULLARG1;
+extern char *strsubst(char *, const char *, const char *) NONNULL NONNULLPTRS;
 extern int strNsubst(char *, const char *, const char *, int) NONNULLPTRS;
-extern const char *findword(const char *, const char *, int, boolean);
-extern const char *ordin(int);
-extern char *sitoa(int);
+extern const char *findword(const char *, const char *, int,
+                                                         boolean) NONNULLARG2;
+extern const char *ordin(int) NONNULL;
+extern char *sitoa(int) NONNULL;
 extern int sgn(int);
 extern int rounddiv(long, int);
 extern int dist2(coordxy, coordxy, coordxy, coordxy);
@@ -1189,11 +1194,11 @@ extern void reseed_random(int(*fn)(int));
 extern time_t getnow(void);
 extern int getyear(void);
 #if 0
-extern char *yymmdd(time_t);
+extern char *yymmdd(time_t) NONNULL;
 #endif
 extern long yyyymmdd(time_t);
 extern long hhmmss(time_t);
-extern char *yyyymmddhhmmss(time_t);
+extern char *yyyymmddhhmmss(time_t) NONNULL;
 extern time_t time_from_yyyymmddhhmmss(char *);
 extern int phase_of_the_moon(void);
 extern boolean friday_13th(void);
@@ -1540,6 +1545,7 @@ extern void topologize(struct mkroom *) NONNULLARG1;
 extern void place_branch(branch *, coordxy, coordxy) NO_NNARGS;
 extern boolean occupied(coordxy, coordxy);
 extern int okdoor(coordxy, coordxy);
+extern boolean maybe_sdoor(int);
 extern void dodoor(coordxy, coordxy, struct mkroom *) NONNULLARG3;
 extern void mktrap(int, unsigned, struct mkroom *, coord *) NO_NNARGS;
 extern void mkstairs(coordxy, coordxy, char, struct mkroom *, boolean);
@@ -2363,7 +2369,7 @@ extern boolean autopick_testobj(struct obj *, boolean) NONNULLARG1;
 
 /* ### pline.c ### */
 
-#if defined(DUMPLOG) || defined(DUMPHTML)
+#if defined(DUMPLOG) || defined(DUMPHTML) || defined(DUMPLOG_CORE)
 extern void dumplogmsg(const char *);
 extern void dumplogfreemessages(void);
 #endif
@@ -3802,8 +3808,7 @@ extern boolean break_statue(struct obj *) NONNULLARG1;
 extern int u_adtyp_resistance_obj(int);
 extern boolean inventory_resistance_check(int);
 extern char *item_what(int);
-extern void destroy_item(int, int);
-extern int destroy_mitem(struct monst *, int, int) NONNULLARG1;
+extern int destroy_items(struct monst *, int, int) NONNULLARG1;
 extern int resist(struct monst *, char, int, int) NONNULLARG1;
 extern void makewish(void);
 extern const char *flash_str(int, boolean) NONNULL;

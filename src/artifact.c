@@ -244,8 +244,8 @@ artifact_name(
     short *otyp_p,    /* secondary output */
     boolean fuzzy)    /* whether to allow extra or omitted spaces or dashes */
 {
-    register const struct artifact *a;
-    register const char *aname;
+    const struct artifact *a;
+    const char *aname;
 
     if (!strncmpi(name, "the ", 4))
         name += 4;
@@ -268,7 +268,7 @@ artifact_name(
 boolean
 exist_artifact(int otyp, const char *name)
 {
-    register const struct artifact *a;
+    const struct artifact *a;
     struct arti_info *arex;
 
     if (otyp && *name)
@@ -287,7 +287,7 @@ artifact_exists(
     boolean mod,      /* True: exists, False: being un-created */
     unsigned flgs)    /* ONAME_xyz flags; not relevant if !mod */
 {
-    register const struct artifact *a;
+    const struct artifact *a;
 
     if (otmp && *name)
         for (a = artilist + 1; a->otyp; a++)
@@ -487,7 +487,7 @@ shade_glare(struct obj *obj)
 boolean
 restrict_name(struct obj *otmp, const char *name)
 {
-    register const struct artifact *a;
+    const struct artifact *a;
     const char *aname, *odesc, *other;
     boolean sametype[NUM_OBJECTS];
     int i, lo, hi, otyp = otmp->otyp, ocls = objects[otyp].oc_class;
@@ -629,10 +629,10 @@ void
 set_artifact_intrinsic(struct obj *otmp, boolean on, long wp_mask)
 {
     long *mask = 0;
-    register const struct artifact *art, *oart = get_artifact(otmp);
-    register struct obj *obj;
-    register uchar dtyp;
-    register long spfx;
+    const struct artifact *art, *oart = get_artifact(otmp);
+    struct obj *obj;
+    uchar dtyp;
+    long spfx;
 
     if (oart == &artilist[ART_NONARTIFACT])
         return;
@@ -809,7 +809,7 @@ static boolean touch_blasted; /* for retouch_object() */
 int
 touch_artifact(struct obj *obj, struct monst *mon)
 {
-    register const struct artifact *oart = get_artifact(obj);
+    const struct artifact *oart = get_artifact(obj);
     boolean badclass, badalign, self_willed, yours;
 
     touch_blasted = FALSE;
@@ -880,7 +880,7 @@ touch_artifact(struct obj *obj, struct monst *mon)
 boolean
 arti_immune(struct obj *obj, int dtyp)
 {
-    register const struct artifact *weap = get_artifact(obj);
+    const struct artifact *weap = get_artifact(obj);
 
     if (weap == &artilist[ART_NONARTIFACT])
         return FALSE;
@@ -992,7 +992,7 @@ spec_abon(struct obj *otmp, struct monst *mon)
 int
 spec_dbon(struct obj *otmp, struct monst *mon, int tmp)
 {
-    register const struct artifact *weap = get_artifact(otmp);
+    const struct artifact *weap = get_artifact(otmp);
 
     if ((weap == &artilist[ART_NONARTIFACT])
         || (weap->attk.adtyp == AD_PHYS /* check for `NO_ATTK' */
@@ -1390,14 +1390,12 @@ artifact_hit(
                                 ? "vaporizes part of"
                                 : "burns",
                       hittee, !gs.spec_dbon_applies ? '.' : '!');
-        if (!rn2(4))
-            (void) destroy_mitem(mdef, POTION_CLASS, AD_FIRE);
-        if (!rn2(4))
-            (void) destroy_mitem(mdef, SCROLL_CLASS, AD_FIRE);
-        if (!rn2(7))
-            (void) destroy_mitem(mdef, SPBOOK_CLASS, AD_FIRE);
-        if (!rn2(4))
+        if (!rn2(4)) {
+            int itemdmg = destroy_items(mdef, AD_FIRE, *dmgptr);
+            if (!youdefend)
+                *dmgptr += itemdmg; /* item destruction dmg */
             ignite_items(mdef->minvent);
+        }
         if (youdefend && Slimed)
             burn_away_slime();
         return realizes_damage;
@@ -1407,8 +1405,11 @@ artifact_hit(
             pline_The("ice-cold blade %s %s%c",
                       !gs.spec_dbon_applies ? "hits" : "freezes", hittee,
                       !gs.spec_dbon_applies ? '.' : '!');
-        if (!rn2(4))
-            (void) destroy_mitem(mdef, POTION_CLASS, AD_COLD);
+        if (!rn2(4)) {
+            int itemdmg = destroy_items(mdef, AD_COLD, *dmgptr);
+            if (!youdefend)
+                *dmgptr += itemdmg; /* item destruction dmg */
+        }
         return realizes_damage;
     }
     if (attacks(AD_ELEC, otmp)) {
@@ -1418,10 +1419,11 @@ artifact_hit(
                       hittee, !gs.spec_dbon_applies ? '.' : '!');
         if (gs.spec_dbon_applies)
             wake_nearto(mdef->mx, mdef->my, 4 * 4);
-        if (!rn2(5))
-            (void) destroy_mitem(mdef, RING_CLASS, AD_ELEC);
-        if (!rn2(5))
-            (void) destroy_mitem(mdef, WAND_CLASS, AD_ELEC);
+        if (!rn2(5)) {
+            int itemdmg = destroy_items(mdef, AD_ELEC, *dmgptr);
+            if (!youdefend)
+                *dmgptr += itemdmg; /* item destruction dmg */
+        }
         return realizes_damage;
     }
     if (attacks(AD_MAGM, otmp)) {
@@ -1665,7 +1667,7 @@ doinvoke(void)
 static int
 arti_invoke(struct obj *obj)
 {
-    register const struct artifact *oart = get_artifact(obj);
+    const struct artifact *oart = get_artifact(obj);
     if (!obj) {
         impossible("arti_invoke without obj");
         return ECMD_OK;

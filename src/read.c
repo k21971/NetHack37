@@ -65,7 +65,7 @@ learnscrolltyp(short scrolltyp)
 
 /* also called from teleport.c for scroll of teleportation */
 void
-learnscroll(struct obj* sobj)
+learnscroll(struct obj *sobj)
 {
     /* it's implied that sobj->dknown is set;
        we couldn't be reading this scroll otherwise */
@@ -75,7 +75,7 @@ learnscroll(struct obj* sobj)
 
 /* max spe is +99, min is -99 */
 static void
-cap_spe(struct obj* obj)
+cap_spe(struct obj *obj)
 {
     if (obj) {
         if (abs(obj->spe) > SPE_LIM)
@@ -84,7 +84,7 @@ cap_spe(struct obj* obj)
 }
 
 static char *
-erode_obj_text(struct obj* otmp, char* buf)
+erode_obj_text(struct obj *otmp, char *buf)
 {
     int erosion = greatest_erosion(otmp);
 
@@ -95,7 +95,7 @@ erode_obj_text(struct obj* otmp, char* buf)
 }
 
 char *
-tshirt_text(struct obj* tshirt, char* buf)
+tshirt_text(struct obj *tshirt, char *buf)
 {
     static const char *const shirt_msgs[] = {
         /* Scott Bigham */
@@ -248,7 +248,7 @@ hawaiian_design(struct obj *shirt, char *buf)
 }
 
 char *
-apron_text(struct obj* apron, char* buf)
+apron_text(struct obj *apron, char *buf)
 {
     static const char *const apron_msgs[] = {
         "Kiss the cook",
@@ -290,7 +290,7 @@ static const char *const candy_wrappers[] = {
 
 /* return the text of a candy bar's wrapper */
 const char *
-candy_wrapper_text(struct obj* obj)
+candy_wrapper_text(struct obj *obj)
 {
     /* modulo operation is just bullet proofing; 'spe' is already in range */
     return candy_wrappers[obj->spe % SIZE(candy_wrappers)];
@@ -298,7 +298,7 @@ candy_wrapper_text(struct obj* obj)
 
 /* assign a wrapper to a candy bar stack */
 void
-assign_candy_wrapper(struct obj* obj)
+assign_candy_wrapper(struct obj *obj)
 {
     if (obj->otyp == CANDY_BAR) {
         /* skips candy_wrappers[0] */
@@ -309,7 +309,7 @@ assign_candy_wrapper(struct obj* obj)
 
 /* getobj callback for object to read */
 static int
-read_ok(struct obj* obj)
+read_ok(struct obj *obj)
 {
     if (!obj)
         return GETOBJ_EXCLUDE;
@@ -327,7 +327,7 @@ int
 doread(void)
 {
     static const char find_any_braille[] = "feel any Braille writing.";
-    register struct obj *scroll;
+    struct obj *scroll;
     boolean confused, nodisappear;
     int otyp;
 
@@ -644,7 +644,7 @@ doread(void)
 RESTORE_WARNING_FORMAT_NONLITERAL
 
 static void
-stripspe(register struct obj* obj)
+stripspe(struct obj *obj)
 {
     if (obj->blessed || obj->spe <= 0) {
         pline1(nothing_happens);
@@ -659,13 +659,13 @@ stripspe(register struct obj* obj)
 }
 
 static void
-p_glow1(register struct obj* otmp)
+p_glow1(struct obj *otmp)
 {
     pline("%s briefly.", Yobjnam2(otmp, Blind ? "vibrate" : "glow"));
 }
 
 static void
-p_glow2(register struct obj* otmp, register const char* color)
+p_glow2(struct obj *otmp, const char *color)
 {
     pline("%s%s%s for a moment.", Yobjnam2(otmp, Blind ? "vibrate" : "glow"),
           Blind ? "" : " ", Blind ? "" : hcolor(color));
@@ -673,7 +673,7 @@ p_glow2(register struct obj* otmp, register const char* color)
 
 /* getobj callback for object to charge */
 int
-charge_ok(struct obj* obj)
+charge_ok(struct obj *obj)
 {
     if (!obj)
         return GETOBJ_EXCLUDE;
@@ -713,9 +713,9 @@ charge_ok(struct obj* obj)
 /* recharge an object; curse_bless is -1 if the recharging implement
    was cursed, +1 if blessed, 0 otherwise. */
 void
-recharge(struct obj* obj, int curse_bless)
+recharge(struct obj *obj, int curse_bless)
 {
-    register int n;
+    int n;
     boolean is_cursed, is_blessed;
 
     is_cursed = curse_bless < 0;
@@ -1096,7 +1096,7 @@ static void
 seffect_enchant_armor(struct obj **sobjp)
 {
     struct obj *sobj = *sobjp;
-    register schar s;
+    schar s;
     boolean special_armor;
     boolean same_color;
     struct obj *otmp = some_armor(&gy.youmonst);
@@ -1352,8 +1352,8 @@ seffect_scare_monster(struct obj **sobjp)
     int otyp = sobj->otyp;
     boolean scursed = sobj->cursed;
     boolean confused = (Confusion != 0);
-    register int ct = 0;
-    register struct monst *mtmp;
+    int ct = 0;
+    struct monst *mtmp;
 
     for (mtmp = fmon; mtmp; mtmp = mtmp->nmon) {
         if (DEADMONSTER(mtmp))
@@ -1388,7 +1388,7 @@ seffect_remove_curse(struct obj **sobjp)
     boolean sblessed = sobj->blessed;
     boolean scursed = sobj->cursed;
     boolean confused = (Confusion != 0);
-    register struct obj *obj, *nxto;
+    struct obj *obj, *nxto;
     long wornmask;
 
     You_feel(!Hallucination
@@ -2225,8 +2225,8 @@ drop_boulder_on_player(
 boolean
 drop_boulder_on_monster(coordxy x, coordxy y, boolean confused, boolean byu)
 {
-    register struct obj *otmp2;
-    register struct monst *mtmp;
+    struct obj *otmp2;
+    struct monst *mtmp;
 
     /* Make the object(s) */
     otmp2 = mksobj(confused ? ROCK : BOULDER, FALSE, FALSE);
@@ -2577,7 +2577,7 @@ do_class_genocide(void)
             else if (immunecnt || class == S_invisible)
                 You("aren't permitted to genocide such monsters.");
             else if (wizard && buf[0] == '*') {
-                register struct monst *mtmp, *mtmp2;
+                struct monst *mtmp, *mtmp2;
 
                 gonecnt = 0;
                 for (mtmp = fmon; mtmp; mtmp = mtmp2) {
@@ -2882,7 +2882,7 @@ do_genocide(
 }
 
 void
-punish(struct obj* sobj)
+punish(struct obj *sobj)
 {
     /* angrygods() calls this with NULL sobj arg */
     struct obj *reuse_ball = (sobj && sobj->otyp == HEAVY_IRON_BALL)

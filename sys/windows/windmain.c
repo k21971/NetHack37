@@ -119,7 +119,7 @@ void copy_symbols_content(void);
 #ifdef PORT_HELP
 void port_help(void);
 #endif
-void windows_raw_print(const char* str);
+void windows_raw_print(const char *str);
 
 
 
@@ -1141,7 +1141,7 @@ windows_exepath(void)
 }
 
 char *
-translate_path_variables(const char* str, char* buf)
+translate_path_variables(const char *str, char *buf)
 {
     const char *src;
     char evar[BUFSZ], *dest, *envp, *eptr = (char *) 0;
@@ -1195,7 +1195,7 @@ translate_path_variables(const char* str, char* buf)
 
 /*ARGSUSED*/
 void
-windows_raw_print(const char* str)
+windows_raw_print(const char *str)
 {
     if (str)
         fprintf(stdout, "%s\n", str);
@@ -1205,7 +1205,7 @@ windows_raw_print(const char* str)
 
 /*ARGSUSED*/
 void
-windows_raw_print_bold(const char* str)
+windows_raw_print_bold(const char *str)
 {
     windows_raw_print(str);
     return;
@@ -1233,7 +1233,7 @@ windows_nh_poskey(int *x UNUSED, int *y UNUSED, int *mod UNUSED)
 
 /*ARGSUSED*/
 char
-windows_yn_function(const char* query UNUSED, const char* resp UNUSED,
+windows_yn_function(const char *query UNUSED, const char *resp UNUSED,
                     char def UNUSED)
 {
     return '\033';
@@ -1241,7 +1241,7 @@ windows_yn_function(const char* query UNUSED, const char* resp UNUSED,
 
 /*ARGSUSED*/
 static void
-windows_getlin(const char* prompt UNUSED, char* outbuf)
+windows_getlin(const char *prompt UNUSED, char *outbuf)
 {
     Strcpy(outbuf, "\033");
 }
@@ -1250,7 +1250,7 @@ windows_getlin(const char* prompt UNUSED, char* outbuf)
 static int
 eraseoldlocks(void)
 {
-    register int i;
+    int i;
 
     /* cannot use maxledgerno() here, because we need to find a lock name
      * before starting everything (including the dungeon initialization
@@ -1408,7 +1408,7 @@ gotlock:
 #endif /* PC_LOCKING */
 
 boolean
-file_exists(const char* path)
+file_exists(const char *path)
 {
     struct stat sb;
 
@@ -1427,7 +1427,7 @@ RESTORE_WARNING_UNREACHABLE_CODE
   does not exist, it returns TRUE.
  */
 boolean
-file_newer(const char* a_path, const char* b_path)
+file_newer(const char *a_path, const char *b_path)
 {
     struct stat a_sb = { 0 };
     struct stat b_sb = { 0 };
@@ -1454,7 +1454,7 @@ file_newer(const char* a_path, const char* b_path)
 int
 tty_self_recover_prompt(void)
 {
-    register int c, ci, ct, pl, retval = 0;
+    int c, ci, ct, pl, retval = 0;
     /* for saving/replacing functions, if needed */
     struct window_procs saved_procs = {0};
 
@@ -1522,7 +1522,7 @@ tty_self_recover_prompt(void)
 int
 other_self_recover_prompt(void)
 {
-    register int c, ci, ct, pl, retval = 0;
+    int c, ci, ct, pl, retval = 0;
     boolean ismswin = WINDOWPORT(mswin),
             iscurses = WINDOWPORT(curses);
 

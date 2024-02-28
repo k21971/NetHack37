@@ -692,7 +692,7 @@ number_leashed(void)
 void
 o_unleash(struct obj *otmp)
 {
-    register struct monst *mtmp;
+    struct monst *mtmp;
 
     for (mtmp = fmon; mtmp; mtmp = mtmp->nmon)
         if (mtmp->m_id == (unsigned) otmp->leashmon) {
@@ -707,7 +707,7 @@ o_unleash(struct obj *otmp)
 void
 m_unleash(struct monst *mtmp, boolean feedback)
 {
-    register struct obj *otmp;
+    struct obj *otmp;
 
     if (feedback) {
         if (canseemon(mtmp))
@@ -726,8 +726,8 @@ m_unleash(struct monst *mtmp, boolean feedback)
 void
 unleash_all(void)
 {
-    register struct obj *otmp;
-    register struct monst *mtmp;
+    struct obj *otmp;
+    struct monst *mtmp;
 
     for (otmp = gi.invent; otmp; otmp = otmp->nobj)
         if (otmp->otyp == LEASH)
@@ -910,8 +910,8 @@ next_to_u(void)
 void
 check_leash(coordxy x, coordxy y)
 {
-    register struct obj *otmp;
-    register struct monst *mtmp;
+    struct obj *otmp;
+    struct monst *mtmp;
 
     for (otmp = gi.invent; otmp; otmp = otmp->nobj) {
         if (otmp->otyp != LEASH || otmp->leashmon == 0)
@@ -1180,7 +1180,7 @@ use_mirror(struct obj *obj)
 static void
 use_bell(struct obj **optr)
 {
-    register struct obj *obj = *optr;
+    struct obj *obj = *optr;
     struct monst *mtmp;
     boolean wakem = FALSE, learno = FALSE,
             ordinary = (obj->otyp != BELL_OF_OPENING || !obj->spe),
@@ -1365,8 +1365,8 @@ use_candelabrum(struct obj *obj)
 static void
 use_candle(struct obj **optr)
 {
-    register struct obj *obj = *optr;
-    register struct obj *otmp;
+    struct obj *obj = *optr;
+    struct obj *otmp;
     const char *s = (obj->quan != 1) ? "candles" : "candle";
     char qbuf[QBUFSZ], qsfx[QBUFSZ], *q;
     boolean was_lamplit;
@@ -2514,7 +2514,7 @@ figurine_location_checks(struct obj *obj, coord *cc, boolean quietly)
 static int
 use_figurine(struct obj **optr)
 {
-    register struct obj *obj = *optr;
+    struct obj *obj = *optr;
     coordxy x, y;
     coord cc;
 
@@ -3007,7 +3007,10 @@ use_whip(struct obj *obj)
                can reach the floor so could just pick an item up, but
                allow snagging by whip too. */
             otmp = gl.level.objects[u.ux][u.uy];
-            if (otmp && otmp->otyp == CORPSE && otmp->corpsenm == PM_HORSE) {
+            if (otmp && otmp->otyp == CORPSE
+                && (otmp->corpsenm == PM_HORSE
+                    || otmp->corpsenm == little_to_big(PM_HORSE) /* warhorse */
+                    || otmp->corpsenm == big_to_little(PM_HORSE))) { /* pony */
                 pline("Why beat a dead horse?");
                 return ECMD_TIME;
             }
@@ -3779,7 +3782,7 @@ discard_broken_wand(void)
 {
     struct obj *obj;
 
-    obj = gc.current_wand; /* [see dozap() and destroy_item()] */
+    obj = gc.current_wand; /* [see dozap() and destroy_items()] */
     gc.current_wand = 0;
     if (obj)
         delobj(obj);
@@ -3800,9 +3803,9 @@ do_break_wand(struct obj *obj)
 {
 #define BY_OBJECT ((struct monst *) 0)
     static const char nothing_else_happens[] = "But nothing else happens...";
-    register int i;
+    int i;
     coordxy x, y;
-    register struct monst *mon;
+    struct monst *mon;
     int dmg, damage;
     boolean affects_objects;
     boolean shop_damage = FALSE;
@@ -3837,8 +3840,8 @@ do_break_wand(struct obj *obj)
         costly_alteration(obj, COST_DSTROY);
     }
 
-    gc.current_wand = obj; /* destroy_item might reset this */
-    freeinv(obj);       /* hide it from destroy_item instead... */
+    gc.current_wand = obj; /* destroy_items might reset this */
+    freeinv(obj);       /* hide it from destroy_items instead... */
     setnotworn(obj);    /* so we need to do this ourselves */
 
     if (!zappable(obj)) {
@@ -4092,7 +4095,7 @@ int
 doapply(void)
 {
     struct obj *obj;
-    register int res = ECMD_TIME;
+    int res = ECMD_TIME;
 
     if (nohands(gy.youmonst.data)) {
         You("aren't able to use or apply tools in your current form.");

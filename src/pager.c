@@ -1787,7 +1787,7 @@ do_look(int mode, coord *click_cc)
         if (found) {
             /* use putmixed() because there may be an encoded glyph present */
             putmixed(WIN_MESSAGE, 0, out_str);
-#if defined(DUMPLOG) || defined (DUMPHTML)
+#if defined(DUMPLOG) || defined (DUMPHTML) || defined(DUMPLOG_CORE)
             {
                 char dmpbuf[BUFSZ];
 
@@ -2205,7 +2205,7 @@ doquickwhatis(void)
 int
 doidtrap(void)
 {
-    register struct trap *trap;
+    struct trap *trap;
     int tt, glyph;
     coordxy x, y;
 

@@ -433,7 +433,7 @@ calc_mattacku_vars(
  *              take care of it...
  */
 int
-mattacku(register struct monst *mtmp)
+mattacku(struct monst *mtmp)
 {
     struct attack *mattk, alt_attk;
     int i, j = 0, tmp, sum[NATTK];
@@ -1063,7 +1063,7 @@ magic_negation(struct monst *mon)
  * returns MM_ flags
 */
 static int
-hitmu(register struct monst *mtmp, register struct attack *mattk)
+hitmu(struct monst *mtmp, struct attack *mattk)
 {
     struct permonst *mdat = mtmp->data;
     struct permonst *olduasmon = gy.youmonst.data;
@@ -1733,7 +1733,7 @@ gazemu(struct monst *mtmp, struct attack *mattk)
             if (cancelled) {
                 react = rn1(2, 4); /* "irritated" || "inflamed" */
             } else {
-                int dmg = d(2, 6), lev = (int) mtmp->m_lev;
+                int dmg = d(2, 6), orig_dmg = dmg, lev = (int) mtmp->m_lev;
 
                 pline("%s attacks you with a fiery gaze!", Monnam(mtmp));
                 stop_occupation();
@@ -1749,14 +1749,10 @@ gazemu(struct monst *mtmp, struct attack *mattk)
                 burn_away_slime();
                 if (lev > rn2(20))
                     (void) burnarmor(&gy.youmonst);
-                if (lev > rn2(20))
-                    destroy_item(SCROLL_CLASS, AD_FIRE);
-                if (lev > rn2(20))
-                    destroy_item(POTION_CLASS, AD_FIRE);
-                if (lev > rn2(25))
-                    destroy_item(SPBOOK_CLASS, AD_FIRE);
-                if (lev > rn2(20))
+                if (lev > rn2(20)) {
+                    (void) destroy_items(&gy.youmonst, AD_FIRE, orig_dmg);
                     ignite_items(gi.invent);
+                }
                 if (dmg)
                     mdamageu(mtmp, dmg);
             }
@@ -1814,11 +1810,13 @@ mdamageu(struct monst *mtmp, int n)
     disp.botl = TRUE;
     if (Upolyd) {
         u.mh -= n;
+        showdamage(n);
         if (u.mh < 1)
             rehumanize();
     } else {
         n = saving_grace(n);
         u.uhp -= n;
+        showdamage(n);
         if (u.uhp < 1)
             done_in_by(mtmp, DIED);
     }

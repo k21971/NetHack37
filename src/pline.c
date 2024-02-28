@@ -17,7 +17,7 @@ static void execplinehandler(const char *);
 #ifdef USER_SOUNDS
 extern void maybe_play_sound(const char *);
 #endif
-#if defined(DUMPLOG) || defined(DUMPHTML)
+#if defined(DUMPLOG) || defined(DUMPHTML) || defined(DUMPLOG_CORE)
 
 /* keep the most recent DUMPLOG_MSG_COUNT messages */
 void
@@ -205,7 +205,7 @@ vpline(const char *line, va_list the_args)
     }
     msgtyp = MSGTYP_NORMAL;
 
-#if defined(DUMPLOG) || defined(DUMPHTML)
+#if defined(DUMPLOG) || defined(DUMPHTML) || defined(DUMPLOG_CORE)
     /* We hook here early to have options-agnostic output.
      * Unfortunately, that means Norep() isn't honored (general issue) and
      * that short lines aren't combined into one longer one (tty behavior).

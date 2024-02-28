@@ -266,16 +266,16 @@ NH_abort(char *why USED_FOR_CRASHREPORT)
 #  endif
 # endif
 # ifdef __linux__
-#  include <openssl/md4.h>
+#  include "nhmd4.h"
 #  define HASH_CONTEXTPTR(CTXP) \
-     unsigned char tmp[MD4_DIGEST_LENGTH]; \
-     MD4_CTX CTXP ## _; \
-     MD4_CTX *CTXP = &CTXP ## _
-#  define HASH_INIT(ctxp) !MD4_Init(ctxp)
-#  define HASH_UPDATE(ctx, ptr, len) !MD4_Update(ctx, ptr, len)
-#  define HASH_FINISH(ctxp) !MD4_Final(tmp, ctxp)
-#  define HASH_RESULT_SIZE(ctxp) MD4_DIGEST_LENGTH
-#  define HASH_RESULT(ctx, inp) *inp = (unsigned char *)ctx
+     unsigned char tmp[NHMD4_DIGEST_LENGTH]; \
+     NHMD4_CTX CTXP ## _; \
+     NHMD4_CTX *CTXP = &CTXP ## _
+#  define HASH_INIT(ctxp) (nhmd4_init(ctxp),0)
+#  define HASH_UPDATE(ctx, ptr, len) (nhmd4_update(ctx, ptr, len),0)
+#  define HASH_FINISH(ctxp) (nhmd4_final(ctxp, tmp),0)
+#  define HASH_RESULT_SIZE(ctxp) NHMD4_RESULTLEN
+#  define HASH_RESULT(ctx, inp) *inp = tmp
 #  define HASH_CLEANUP(ctxp)
 #  define HASH_OFLAGS O_RDONLY
 #  define HASH_BINFILE_DECL char binfile[PATH_MAX+1];
@@ -539,7 +539,7 @@ submit_web_report(int cos, const char *msg, const char *why){
 #endif  // !WIN32
     }
 
-#ifdef DUMPLOG
+#ifdef DUMPLOG_CORE
         // config.h turns this on, but make it easy to turn off if needed
     if(cos==1) {
         int k;
@@ -1193,6 +1193,7 @@ dump_plines(void)
         }
     }
 }
+#endif  /* DUMPLOG */
 
 #ifdef CRASHREPORT
 // lineno==0 gives the most recent message (e.g. "Do you want to call panic..."
@@ -1216,7 +1217,6 @@ get_saved_pline(int lineno){
     return NULL;
 }
 #endif  /* CRASHREPORT */
-#endif  /* DUMPLOG */
 
 /*ARGSUSED*/
 static void
@@ -1447,8 +1447,8 @@ savelife(int how)
 static void
 get_valuables(struct obj *list) /* inventory or container contents */
 {
-    register struct obj *obj;
-    register int i;
+    struct obj *obj;
+    int i;
 
     /* find amulets and gems, ignoring all artifacts */
     for (obj = list; obj; obj = obj->nobj)
@@ -1484,7 +1484,7 @@ sort_valuables(
     struct valuable_data list[],
     int size) /* max value is less than 20 */
 {
-    register int i, j;
+    int i, j;
     struct valuable_data ltmp;
 
     /* move greater quantities to the front of the list */
@@ -2113,8 +2113,8 @@ really_done(int how)
     if (how == ESCAPED || how == ASCENDED) {
         struct monst *mtmp;
         struct obj *otmp;
-        register struct val_list *val;
-        register int i;
+        struct val_list *val;
+        int i;
 
         for (val = gv.valuables; val->list; val++)
             for (i = 0; i < val->size; i++) {
@@ -2283,7 +2283,7 @@ container_contents(
     boolean all_containers,
     boolean reportempty)
 {
-    register struct obj *box, *obj;
+    struct obj *box, *obj;
     char buf[BUFSZ];
     boolean cat, dumping = iflags.in_dumplog;
 
