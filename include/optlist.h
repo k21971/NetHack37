@@ -408,6 +408,9 @@ static int optfn_##a(int, int, boolean, char *, char *);
     NHOPTB(mention_decor, Advanced, 0, opt_in, set_in_game,
            Off, Yes, No, No, NoAlias, &flags.mention_decor, Term_False,
            "give feedback when walking over interesting features")
+    NHOPTB(mention_map, Advanced, 0, opt_in, set_in_game,
+           Off, Yes, No, No, NoAlias, &a11y.glyph_updates, Term_False,
+           "give feedback when interesting map locations change")
     NHOPTB(mention_walls, Advanced, 0, opt_in, set_in_game,
            Off, Yes, No, No, NoAlias, &flags.mention_walls, Term_False,
            "give feedback when walking into walls")
@@ -638,6 +641,9 @@ static int optfn_##a(int, int, boolean, char *, char *);
            Off, Yes, No, No, NoAlias, (boolean *) 0, Term_False,
            (char *)0)
 #endif
+    NHOPTB(showvers, Status, 0, opt_in, set_in_game,
+           Off, Yes, No, No, NoAlias, &flags.showvers, Term_False,
+           "show version info on status line")
     NHOPTB(silent, Advanced, 0, opt_out, set_in_game,
            On, Yes, No, No, NoAlias, &flags.silent, Term_False,
            "don't use terminal bell")
@@ -776,6 +782,8 @@ static int optfn_##a(int, int, boolean, char *, char *);
     NHOPTB(verbose, Advanced, 0, opt_out, set_in_game,
            On, Yes, No, No, NoAlias, &flags.verbose, Term_False,
            (char *)0)
+    NHOPTC(versinfo, Advanced, 80, opt_out, set_in_game,
+           No, Yes, No, Yes, NoAlias, "extra information for 'showvers'")
 #ifdef MSDOS
     NHOPTC(video, Advanced, 20, opt_in, set_in_config,
                 No, Yes, No, No, NoAlias, "method of video updating")
