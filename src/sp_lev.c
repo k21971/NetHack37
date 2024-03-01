@@ -67,6 +67,10 @@ static void fill_empty_maze(void);
 static void splev_initlev(lev_init *);
 static boolean generate_way_out_method(coordxy nx, coordxy ny,
                                        struct selectionvar *ov);
+static void l_push_wid_hei_table(lua_State *, int, int);
+static boolean good_stair_loc(coordxy, coordxy);
+static void ensure_way_out(void);
+
 #if 0
 /* macosx complains that these are unused */
 static long sp_code_jmpaddr(long, long);
@@ -3491,7 +3495,7 @@ lspo_object(lua_State *L)
             0,       /* buried */
             0,       /* lit */
             0, 0, 0, 0, /* eroded, locked, trapped, recharged */
-            0, 0, 0, 0, /* invis, greased, broken, achievment */
+            0, 0, 0, 0, /* invis, greased, broken, achievement */
     };
 #if 0
     int nparams = 0;
@@ -7062,7 +7066,7 @@ static const struct luaL_Reg nhl_functions[] = {
  - automatically add shuffle(array)
  - automatically add align = { "law", "neutral", "chaos" } and shuffle it.
    (remove from lua files)
- - grab the header comments from des-files and add add them to the lua files
+ - grab the header comments from des-files and add them to the lua files
 
 */
 

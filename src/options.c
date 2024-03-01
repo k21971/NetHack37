@@ -26,6 +26,9 @@ NEARDATA struct instance_flags iflags; /* provide linkage */
 #define PREV_MSGS 0
 #endif
 
+static char *color_attr_to_str(color_attr *);
+static boolean color_attr_parse_str(color_attr *, char *);
+
 /*
  *  NOTE:  If you add (or delete) an option, please review the following:
  *             doc/options.txt
@@ -161,7 +164,7 @@ static const struct paranoia_opts {
        latter requires at least two letters; "e"at vs "ex"plore,
        "cont"inue eating vs "C"onfirm; "wand"-break vs "Were"-change,
        both require at least two letters during config processing but use
-       one letter with case-senstivity for 'm O's interactive menu;
+       one letter with case-sensitivity for 'm O's interactive menu;
        if any entry or alias beginning with 'n' gets added, aside from "none",
        the parsing to accept "nofoo" to mean "!foo" will need fixing */
     { PARANOID_CONFIRM, "Confirm", 1, "Paranoia", 2,
@@ -263,7 +266,7 @@ static NEARDATA const char *perminv_modes[][3] = {
  *      + a number or '#' - reserved for counts
  *      + an upper or lower case US ASCII letter - used for accelerators
  *      + ESC - reserved for escaping the menu
- *      + NULL, CR or LF - reserved for commiting the selection(s).  NULL
+ *      + NULL, CR or LF - reserved for committing the selection(s).  NULL
  *        is kind of odd, but the tty's xwaitforspace() will return it if
  *        someone hits a <ret>.
  *      + a default object class symbol - used for object class accelerators
@@ -3222,7 +3225,7 @@ optfn_pickup_types(
                     op = tbuf; /* restore */
                 else if (abuf[0] == 'm')
                     use_menu = TRUE;
-                /* note: abuf[0]=='a' is already handled via clearing the
+                /* note: abuf[0]=='a' is already handled via clearing
                    the old value (above) as a default action */
             }
             if (use_menu) {
@@ -6382,7 +6385,7 @@ handler_windowborders(void)
         mode_name = windowborders_text[i];
         any.a_int = i + 1;
         /* index 'i' matches the numeric setting for windowborders,
-           so allow corresponding digit as group accellerator */
+           so allow corresponding digit as group accelerator */
         add_menu(tmpwin, &nul_glyphinfo, &any, 'a' + i, '0' + i,
                  ATR_NONE, clr, mode_name, MENU_ITEMFLAGS_NONE);
     }
@@ -6896,7 +6899,7 @@ initoptions_init(void)
             && !strcmpi(windowprocs.name, gc.cmdline_windowsys))
             /* ignore any windowtype:foo in RC file or NETHACKOPTIONS */
             iflags.windowtype_locked = TRUE;
-        /* should't need cmdline_windowsys beyond here */
+        /* shouldn't need cmdline_windowsys beyond here */
         free((genericptr_t) gc.cmdline_windowsys),
             gc.cmdline_windowsys = NULL;
     }
@@ -9540,7 +9543,7 @@ int
 sym_val(const char *strval) /* up to 4*BUFSZ-1 long; only first few
                                chars matter */
 {
-    char buf[QBUFSZ], tmp[QBUFSZ]; /* to hold trucated copy of 'strval' */
+    char buf[QBUFSZ], tmp[QBUFSZ]; /* to hold truncated copy of 'strval' */
 
     buf[0] = '\0';
     if (!strval[0] || !strval[1]) { /* empty, or single character */

@@ -24,6 +24,7 @@ static void m_initthrow(struct monst *, int, int);
 static void m_initweap(struct monst *);
 static void m_initinv(struct monst *);
 static boolean makemon_rnd_goodpos(struct monst *, mmflags_nht, coord *);
+static void init_mextra(struct mextra *);
 
 #define m_initsgrp(mtmp, x, y, mmf) m_initgrp(mtmp, x, y, 3, mmf)
 #define m_initlgrp(mtmp, x, y, mmf) m_initgrp(mtmp, x, y, 10, mmf)
@@ -188,7 +189,7 @@ m_initweap(struct monst *mtmp)
                 if (!rn2(3)) {
                     /* lance and dwarvish mattock used to be in midst of
                        the polearms but use different skills from polearms
-                       and aren't appropriates choices for human soliders */
+                       and aren't appropriates choices for human soldiers */
                     do {
                         w1 = rn1(BEC_DE_CORBIN - PARTISAN + 1, PARTISAN);
                     } while (objects[w1].oc_skill != P_POLEARMS);

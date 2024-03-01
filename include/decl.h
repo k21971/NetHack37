@@ -750,7 +750,7 @@ struct instance_globals_o {
     boolean opt_need_promptstyle;
 
     /* pickup.c */
-    int oldcap; /* last encumberance */
+    int oldcap; /* last encumbrance */
 
     /* restore.c */
     struct fruit *oldfruit;

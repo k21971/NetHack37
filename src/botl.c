@@ -17,6 +17,7 @@ const char *const enc_stat[] = {
 
 static void bot_via_windowport(void);
 static void stat_update_time(void);
+static char *get_strength_str(void);
 
 /* limit of the player's name in the status window */
 #define BOTL_NSIZ 16

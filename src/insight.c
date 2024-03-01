@@ -6,7 +6,7 @@
  * Enlightenment and Conduct+Achievements and Vanquished+Extinct+Geno'd
  * and stethoscope/probing feedback.
  *
- * Most code used to reside in cmd.c, presumeably because ^X was originally
+ * Most code used to reside in cmd.c, presumably because ^X was originally
  * a wizard mode command and the majority of those are in that file.
  * Some came from end.c where it is used during end of game disclosure.
  * And some came from priest.c that had once been in pline.c.
@@ -35,6 +35,7 @@ static int QSORTCALLBACK vanqsort_cmp(const genericptr, const genericptr);
 static int num_extinct(void);
 static int num_gone(int, int *);
 static char *size_str(int);
+static void item_resistance_message(int, const char *, int);
 
 extern const char *const hu_stat[];  /* hunger status from eat.c */
 extern const char *const enc_stat[]; /* encumbrance status from botl.c */
@@ -1033,7 +1034,7 @@ status_enlightenment(int mode, int final)
         Sprintf(buf, "%s blind",
                 (HBlinded & FROMOUTSIDE) != 0L ? "permanently"
                 : (HBlinded & FROMFORM) ? "innately"
-                  /* better phrasing desparately wanted... */
+                  /* better phrasing desperately wanted... */
                   : Blindfolded_only ? "deliberately"
                     /* timed, possibly combined with blindfold */
                     : "temporarily");
@@ -1747,7 +1748,7 @@ attributes_enlightenment(
                     (u.uhitinc < 0) ? "increasing"
                     : (u.uhitinc < 4 * gu.urole.spelarmr / 5)
                       ? "partly offsetting"
-                      : (u.uhitinc < gu.urole.spelarmr) ? "nearly offseting"
+                      : (u.uhitinc < gu.urole.spelarmr) ? "nearly offsetting"
                         : "overcoming");
         you_have(buf, "");
     }
@@ -1984,7 +1985,7 @@ doattributes(void)
 }
 
 void
-youhiding(boolean via_enlghtmt, /* englightment line vs topl message */
+youhiding(boolean via_enlghtmt, /* enlightenment line vs topl message */
           int msgflag)          /* for variant message phrasing */
 {
     char *bp, buf[BUFSZ];
@@ -2615,7 +2616,7 @@ vanqsort_cmp(
     case VANQ_ALPHA_MIX:
         name1 = mons[indx1].pmnames[NEUTRAL];
         name2 = mons[indx2].pmnames[NEUTRAL];
-        res = strcmpi(name1, name2); /* caseblind alhpa, low to high */
+        res = strcmpi(name1, name2); /* caseblind alpha, low to high */
         break;
     case VANQ_MCLS_HTOL:
     case VANQ_MCLS_LTOH:
@@ -2906,7 +2907,7 @@ num_extinct(void)
     return n;
 }
 
-/* collect both genocides and extintctions, skipping uniques */
+/* collect both genocides and extinctions, skipping uniques */
 static int
 num_gone(int mvflags, int *mindx)
 {

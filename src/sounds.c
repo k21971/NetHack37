@@ -14,6 +14,7 @@ static int domonnoise(struct monst *);
 static int dochat(void);
 static struct monst *responsive_mon_at(int, int);
 static int mon_in_room(struct monst *, int);
+static boolean oracle_sound(struct monst *);
 
 /* this easily could be a macro, but it might overtax dumb compilers */
 static int
@@ -1461,7 +1462,7 @@ tiphat(void)
     for (range = 1; range <= BOLT_LIM + 1; ++range) {
         x += u.dx, y += u.dy;
         if (!isok(x, y) || (range > 1 && !couldsee(x, y))) {
-            /* switch back to coordinates for previous interation's 'mtmp' */
+            /* switch back to coordinates for previous iteration's 'mtmp' */
             x -= u.dx, y -= u.dy;
             break;
         }
