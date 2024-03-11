@@ -216,7 +216,7 @@ steps:
     sed -i '/^#[ 	]*define SHELL/d'          include/unixconf.h
     sed -i '/^#[ 	]*define SUSPEND/d'        include/unixconf.h
     make fetch-lua
-    make WANT_WIN_ALL=1 all
+    make WANT_WIN_ALL=1 NOCRASHREPORT=1 all
   condition: and(eq( variables['Agent.OS'], 'Linux' ), eq( variables.buildTarget, 'minimal'))
   displayName: 'Building linux minimal build'
   workingDirectory: $(Agent.BuildDirectory)/$(netHackPath)
