@@ -14,28 +14,29 @@
 
 #include "hack.h"
 
-static void enlght_out(const char *);
-static void enlght_line(const char *, const char *, const char *,
+staticfn void enlght_out_attr(int, const char *);
+staticfn void enlght_out(const char *);
+staticfn void enlght_line(const char *, const char *, const char *,
                         const char *);
-static char *enlght_combatinc(const char *, int, int, char *);
-static void enlght_halfdmg(int, int);
-static boolean walking_on_water(void);
-static boolean cause_known(int);
-static char *attrval(int, int, char *);
-static char *fmt_elapsed_time(char *, int);
-static void background_enlightenment(int, int);
-static void basics_enlightenment(int, int);
-static void characteristics_enlightenment(int, int);
-static void one_characteristic(int, int, int);
-static void status_enlightenment(int, int);
-static void weapon_insight(int);
-static void attributes_enlightenment(int, int);
-static void show_achievements(int);
-static int QSORTCALLBACK vanqsort_cmp(const genericptr, const genericptr);
-static int num_extinct(void);
-static int num_gone(int, int *);
-static char *size_str(int);
-static void item_resistance_message(int, const char *, int);
+staticfn char *enlght_combatinc(const char *, int, int, char *);
+staticfn void enlght_halfdmg(int, int);
+staticfn boolean walking_on_water(void);
+staticfn boolean cause_known(int);
+staticfn char *attrval(int, int, char *);
+staticfn char *fmt_elapsed_time(char *, int);
+staticfn void background_enlightenment(int, int);
+staticfn void basics_enlightenment(int, int);
+staticfn void characteristics_enlightenment(int, int);
+staticfn void one_characteristic(int, int, int);
+staticfn void status_enlightenment(int, int);
+staticfn void weapon_insight(int);
+staticfn void attributes_enlightenment(int, int);
+staticfn void show_achievements(int);
+staticfn int QSORTCALLBACK vanqsort_cmp(const genericptr, const genericptr);
+staticfn int num_extinct(void);
+staticfn int num_gone(int, int *);
+staticfn char *size_str(int);
+staticfn void item_resistance_message(int, const char *, int);
 
 extern const char *const hu_stat[];  /* hunger status from eat.c */
 extern const char *const enc_stat[]; /* encumbrance status from botl.c */
@@ -112,7 +113,7 @@ static struct ll_achieve_msg achieve_msg [] = {
 #define you_have_X(something) \
     enl_msg(You_, have, (const char *) "", (something), "")
 
-static void
+staticfn void
 enlght_out_attr(int attr, const char *buf)
 {
     if (ge.en_via_menu) {
@@ -121,13 +122,13 @@ enlght_out_attr(int attr, const char *buf)
         putstr(ge.en_win, attr, buf);
 }
 
-static void
+staticfn void
 enlght_out(const char *buf)
 {
     enlght_out_attr(ATR_NONE, buf);
 }
 
-static void
+staticfn void
 enlght_line(
     const char *start,
     const char *middle,
@@ -160,7 +161,7 @@ enlght_line(
 }
 
 /* format increased chance to hit or damage or defense (Protection) */
-static char *
+staticfn char *
 enlght_combatinc(const char *inctyp, int incamt, int final, char *outbuf)
 {
     const char *modif, *bonus;
@@ -197,7 +198,7 @@ enlght_combatinc(const char *inctyp, int incamt, int final, char *outbuf)
 }
 
 /* report half physical or half spell damage */
-static void
+staticfn void
 enlght_halfdmg(int category, int final)
 {
     const char *category_name;
@@ -220,7 +221,7 @@ enlght_halfdmg(int category, int final)
 }
 
 /* is hero actively using water walking capability on water (or lava)? */
-static boolean
+staticfn boolean
 walking_on_water(void)
 {
     if (u.uinwater || Levitation || Flying)
@@ -263,7 +264,7 @@ trap_predicament(char *outbuf, int final, boolean wizxtra)
 /* check whether hero is wearing something that player definitely knows
    confers the target property; item must have been seen and its type
    discovered but it doesn't necessarily have to be fully identified */
-static boolean
+staticfn boolean
 cause_known(
     int propindx) /* index of a property which can be conveyed by worn item */
 {
@@ -283,7 +284,7 @@ cause_known(
 }
 
 /* format a characteristic value, accommodating Strength's strangeness */
-static char *
+staticfn char *
 attrval(
     int attrindx,
     int attrvalue,
@@ -310,7 +311,7 @@ attrval(
    (note: for a list of more than two entries, nethack usually includes the
    [style-wise] optional comma before "and" but in this instance it does not)
  */
-static char *
+staticfn char *
 fmt_elapsed_time(char *outbuf, int final)
 {
     int fieldcnt;
@@ -438,7 +439,7 @@ enlightenment(
 
 /*ARGSUSED*/
 /* display role, race, alignment and such to en_win */
-static void
+staticfn void
 background_enlightenment(int unused_mode UNUSED, int final)
 {
     const char *role_titl, *rank_titl;
@@ -697,7 +698,7 @@ background_enlightenment(int unused_mode UNUSED, int final)
 /* hit points, energy points, armor class -- essential information which
    doesn't fit very well in other categories */
 /*ARGSUSED*/
-static void
+staticfn void
 basics_enlightenment(int mode UNUSED, int final)
 {
     static char Power[] = "energy points (spell power)";
@@ -796,7 +797,7 @@ basics_enlightenment(int mode UNUSED, int final)
 }
 
 /* characteristics: expanded version of bottom line strength, dexterity, &c */
-static void
+staticfn void
 characteristics_enlightenment(int mode, int final)
 {
     char buf[BUFSZ];
@@ -815,7 +816,7 @@ characteristics_enlightenment(int mode, int final)
 }
 
 /* display one attribute value for characteristics_enlightenment() */
-static void
+staticfn void
 one_characteristic(int mode, int final, int attrindx)
 {
     extern const char *const attrname[]; /* attrib.c */
@@ -909,7 +910,7 @@ one_characteristic(int mode, int final, int attrindx)
 }
 
 /* status: selected obvious capabilities, assorted troubles */
-static void
+staticfn void
 status_enlightenment(int mode, int final)
 {
     boolean magic = (mode & MAGICENLIGHTENMENT) ? TRUE : FALSE;
@@ -1238,7 +1239,7 @@ status_enlightenment(int mode, int final)
 }
 
 /* extracted from status_enlightenment() to reduce clutter there */
-static void
+staticfn void
 weapon_insight(int final)
 {
     char buf[BUFSZ];
@@ -1436,7 +1437,7 @@ weapon_insight(int final)
     } /* skill applies */
 }
 
-static void
+staticfn void
 item_resistance_message(
     int adtyp,
     const char *prot_message,
@@ -1455,7 +1456,7 @@ item_resistance_message(
 }
 
 /* attributes: intrinsics and the like, other non-obvious capabilities */
-static void
+staticfn void
 attributes_enlightenment(
     int unused_mode UNUSED,
     int final)
@@ -2204,7 +2205,7 @@ show_conduct(int final)
  *      Achievements (see 'enum achievements' in you.h).
  */
 
-static void
+staticfn void
 show_achievements(
     int final) /* 'final' is used "behind the curtain" by enl_foo() macros */
 {
@@ -2561,7 +2562,8 @@ show_gamelog(int final)
  *      Vanquished monsters.
  */
 
-/* the two uppercase choices are implemented but suppressed from menu */
+/* the two uppercase choices are implemented but suppressed from menu.
+   also used in options.c */
 const char *const vanqorders[NUM_VANQ_ORDER_MODES][3] = {
     { "t", "traditional: by monster level",
            "traditional: by monster level, by internal monster index" },
@@ -2581,7 +2583,7 @@ const char *const vanqorders[NUM_VANQ_ORDER_MODES][3] = {
            "by count, low to high, by internal index within tied count" },
 };
 
-static int QSORTCALLBACK
+staticfn int QSORTCALLBACK
 vanqsort_cmp(
     const genericptr vptr1,
     const genericptr vptr2)
@@ -2893,7 +2895,7 @@ num_genocides(void)
 }
 
 /* return a count of the number of extinct species */
-static int
+staticfn int
 num_extinct(void)
 {
     int i, n = 0;
@@ -2908,7 +2910,7 @@ num_extinct(void)
 }
 
 /* collect both genocides and extinctions, skipping uniques */
-static int
+staticfn int
 num_gone(int mvflags, int *mindx)
 {
     uchar mflg = (uchar) mvflags;
@@ -3124,7 +3126,7 @@ align_str(aligntyp alignment)
     return "unknown";
 }
 
-static char *
+staticfn char *
 size_str(int msize)
 {
     static char outbuf[40];

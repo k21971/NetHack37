@@ -28,30 +28,30 @@
 struct chain_lightning_queue;
 struct chain_lightning_zap;
 
-static int spell_let_to_idx(char);
-static boolean cursed_book(struct obj * bp);
-static boolean confused_book(struct obj *);
-static void deadbook_pacify_undead(struct monst *);
-static void deadbook(struct obj *);
-static int learn(void);
-static boolean rejectcasting(void);
-static boolean getspell(int *);
-static int QSORTCALLBACK spell_cmp(const genericptr, const genericptr);
-static void sortspells(void);
-static boolean spellsortmenu(void);
-static boolean dospellmenu(const char *, int, int *);
-static int percent_success(int);
-static char *spellretention(int, char *);
-static int throwspell(void);
-static void cast_protection(void);
-static void cast_chain_lightning(void);
-static void spell_backfire(int);
-static boolean spelleffects_check(int, int *, int *);
-static const char *spelltypemnemonic(int);
-static boolean can_center_spell_location(coordxy, coordxy);
-static void display_spell_target_positions(boolean);
-static boolean spell_aim_step(genericptr_t, coordxy, coordxy);
-static void propagate_chain_lightning(struct chain_lightning_queue *,
+staticfn int spell_let_to_idx(char);
+staticfn boolean cursed_book(struct obj * bp);
+staticfn boolean confused_book(struct obj *);
+staticfn void deadbook_pacify_undead(struct monst *);
+staticfn void deadbook(struct obj *);
+staticfn int learn(void);
+staticfn boolean rejectcasting(void);
+staticfn boolean getspell(int *);
+staticfn int QSORTCALLBACK spell_cmp(const genericptr, const genericptr);
+staticfn void sortspells(void);
+staticfn boolean spellsortmenu(void);
+staticfn boolean dospellmenu(const char *, int, int *);
+staticfn int percent_success(int);
+staticfn char *spellretention(int, char *);
+staticfn int throwspell(void);
+staticfn void cast_protection(void);
+staticfn void cast_chain_lightning(void);
+staticfn void spell_backfire(int);
+staticfn boolean spelleffects_check(int, int *, int *);
+staticfn const char *spelltypemnemonic(int);
+staticfn boolean can_center_spell_location(coordxy, coordxy);
+staticfn void display_spell_target_positions(boolean);
+staticfn boolean spell_aim_step(genericptr_t, coordxy, coordxy);
+staticfn void propagate_chain_lightning(struct chain_lightning_queue *,
             struct chain_lightning_zap);
 
 /* The roles[] table lists the role-specific values for tuning
@@ -110,7 +110,7 @@ static void propagate_chain_lightning(struct chain_lightning_queue *,
 static const char explodes[] = "radiates explosive energy";
 
 /* convert a letter into a number in the range 0..51, or -1 if not a letter */
-static int
+staticfn int
 spell_let_to_idx(char ilet)
 {
     int indx;
@@ -125,7 +125,7 @@ spell_let_to_idx(char ilet)
 }
 
 /* TRUE: book should be destroyed by caller */
-static boolean
+staticfn boolean
 cursed_book(struct obj *bp)
 {
     boolean was_in_use;
@@ -184,7 +184,7 @@ cursed_book(struct obj *bp)
 }
 
 /* study while confused: returns TRUE if the book is destroyed */
-static boolean
+staticfn boolean
 confused_book(struct obj *spellbook)
 {
     boolean gone = FALSE;
@@ -206,7 +206,7 @@ confused_book(struct obj *spellbook)
 }
 
 /* pacify or tame an undead monster */
-static void
+staticfn void
 deadbook_pacify_undead(struct monst *mtmp)
 {
     if ((is_undead(mtmp->data) || is_vampshifter(mtmp))
@@ -226,7 +226,7 @@ deadbook_pacify_undead(struct monst *mtmp)
 
 /* special effects for The Book of the Dead; reading it while blind is
    allowed so that needs to be taken into account too */
-static void
+staticfn void
 deadbook(struct obj *book2)
 {
     struct monst *mtmp;
@@ -352,7 +352,7 @@ book_cursed(struct obj *book)
 
 DISABLE_WARNING_FORMAT_NONLITERAL
 
-static int
+staticfn int
 learn(void)
 {
     int i;
@@ -668,7 +668,7 @@ age_spells(void)
 
 /* return True if spellcasting is inhibited;
    only covers a small subset of reasons why casting won't work */
-static boolean
+staticfn boolean
 rejectcasting(void)
 {
     /* rejections which take place before selecting a particular spell */
@@ -696,7 +696,7 @@ rejectcasting(void)
  * Return TRUE if a spell was picked, with the spell index in the return
  * parameter.  Otherwise return FALSE.
  */
-static boolean
+staticfn boolean
 getspell(int *spell_no)
 {
     int nspells, idx;
@@ -807,7 +807,7 @@ docast(void)
     return ECMD_FAIL;
 }
 
-static const char *
+staticfn const char *
 spelltypemnemonic(int skill)
 {
     switch (skill) {
@@ -921,7 +921,7 @@ struct chain_lightning_queue {
 
    zap is passed by value, so the move-forward doesn't change the passed
    argument. */
-static void
+staticfn void
 propagate_chain_lightning(
     struct chain_lightning_queue *clq,
     struct chain_lightning_zap zap)
@@ -972,7 +972,7 @@ propagate_chain_lightning(
     tmp_at(zap.x, zap.y);
 }
 
-static void
+staticfn void
 cast_chain_lightning(void)
 {
     struct chain_lightning_queue clq = {
@@ -1053,7 +1053,7 @@ cast_chain_lightning(void)
 }
 
 
-static void
+staticfn void
 cast_protection(void)
 {
     int l = u.ulevel, loglev = 0,
@@ -1130,7 +1130,7 @@ cast_protection(void)
 }
 
 /* attempting to cast a forgotten spell will cause disorientation */
-static void
+staticfn void
 spell_backfire(int spell)
 {
     long duration = (long) ((spellev(spell) + 1) * 3), /* 6..24 */
@@ -1169,7 +1169,7 @@ spell_backfire(int spell)
     return;
 }
 
-static boolean
+staticfn boolean
 spelleffects_check(int spell, int *res, int *energy)
 {
     int chance;
@@ -1541,7 +1541,7 @@ spelleffects(int spell_otyp, boolean atme, boolean force)
 }
 
 /*ARGSUSED*/
-static boolean
+staticfn boolean
 spell_aim_step(genericptr_t arg UNUSED, coordxy x, coordxy y)
 {
     if (!isok(x,y))
@@ -1553,7 +1553,7 @@ spell_aim_step(genericptr_t arg UNUSED, coordxy x, coordxy y)
 }
 
 /* not quite the same as throwspell limits, but close enough */
-static boolean
+staticfn boolean
 can_center_spell_location(coordxy x, coordxy y)
 {
     if (distmin(u.ux, u.uy, x, y) > 10)
@@ -1561,7 +1561,7 @@ can_center_spell_location(coordxy x, coordxy y)
     return (isok(x, y) && cansee(x, y) && !(IS_STWALL(levl[x][y].typ)));
 }
 
-static void
+staticfn void
 display_spell_target_positions(boolean on_off)
 {
     coordxy x, y, dx, dy;
@@ -1589,7 +1589,7 @@ display_spell_target_positions(boolean on_off)
 }
 
 /* Choose location where spell takes effect. */
-static int
+staticfn int
 throwspell(void)
 {
     coord cc, uc;
@@ -1804,7 +1804,7 @@ static const char *const spl_sortchoices[NUM_SPELL_SORTBY] = {
 };
 
 /* qsort callback routine */
-static int QSORTCALLBACK
+staticfn int QSORTCALLBACK
 spell_cmp(const genericptr vptr1, const genericptr vptr2)
 {
     /*
@@ -1861,7 +1861,7 @@ spell_cmp(const genericptr vptr1, const genericptr vptr2)
 /* sort the index used for display order of the "view known spells"
    list (sortmode == SORTBY_xxx), or sort the spellbook itself to make
    the current display order stick (sortmode == SORTRETAINORDER) */
-static void
+staticfn void
 sortspells(void)
 {
     int i;
@@ -1910,7 +1910,7 @@ sortspells(void)
 }
 
 /* called if the [sort spells] entry in the view spells menu gets chosen */
-static boolean
+staticfn boolean
 spellsortmenu(void)
 {
     winid tmpwin;
@@ -1995,7 +1995,7 @@ DISABLE_WARNING_FORMAT_NONLITERAL
 /* shows menu of known spells, with options to sort them.
    return FALSE on cancel, TRUE otherwise.
    spell_no is set to the internal spl_book index, if any selected */
-static boolean
+staticfn boolean
 dospellmenu(
     const char *prompt,
     int splaction, /* SPELLMENU_CAST, SPELLMENU_VIEW, or gs.spl_book[] index */
@@ -2088,7 +2088,7 @@ dospellmenu(
 
 RESTORE_WARNING_FORMAT_NONLITERAL
 
-static int
+staticfn int
 percent_success(int spell)
 {
     /* Intrinsic and learned ability are combined to calculate
@@ -2210,7 +2210,7 @@ percent_success(int spell)
     return chance;
 }
 
-static char *
+staticfn char *
 spellretention(int idx, char * outbuf)
 {
     long turnsleft, percent, accuracy;
