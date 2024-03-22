@@ -1,4 +1,4 @@
-NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1396 $ $NHDT-Date: 1709928001 2024/03/08 20:00:01 $
+NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1402 $ $NHDT-Date: 1711034372 2024/03/21 15:19:32 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -1373,6 +1373,16 @@ when a spellbook was polymorphed into a novel and then incrementing spestudied
 walking on ice can make you slide in a random direction
 if an adjacent statue was a in a pit, you could break it with a pick-axe even
 	though you're conceptually at the wrong elevation to reach it
+using '#adjust c c' to collect all invent items compatible with the one in
+	slot c prefixed the inventory update message with "Merging:" rather
+	than "Collecting:" if there was at least one compatible stack; when
+	there weren't any compatible stacks and it was effectively a no-op,
+	the prefix used was "Collecting", lacking its intended colon
+using '#adjust c d' or '#adjust d c' after splitting slot c via '#adjust Nc d'
+	for N less than c's stack size swapped c and d instead of re-merging
+	them even though merging was the intended behavior (the 3.6 change
+	that caused this was intended to avoid collecting other compatible
+	stacks while still merging the two specified ones)
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -1892,6 +1902,8 @@ setting perm_invent in RC file before setting windowtype (whether later in
 	depending upon whether the default windowtype supported it
 if hero was wielding potion(s) of unholy water and a magic trap gave its
 	remove curse effect, scroll of remove curse would become discovered
+object discoveries during the tutorial carried over when normal play resumed;
+	counts of monsters created and vanquished carried over too
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
@@ -2522,6 +2534,7 @@ if hero is punished or tethered to a buried iron ball and has no inventory (or
 'showvers' option (and companion 'versinfo' option) to include program version
 	in the status display so that it will be visible for screenshots or
 	during streaming video
+'query_menu' option to use a menu when asked certain yes/no questions
 
 
 Platform- and/or Interface-Specific New Features
