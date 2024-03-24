@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1710792423 2024/03/18 20:07:03 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1398 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1711213872 2024/03/23 17:11:12 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1400 $ */
 /* Copyright (c) Steve Creps, 1988.                               */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -319,6 +319,11 @@ extern void free_menu_coloring(void);
 extern int count_menucolors(void);
 extern int32 check_enhanced_colors(char *) NONNULLARG1;
 extern const char *wc_color_name(int32) NONNULL;
+extern int32_t rgbstr_to_int32(const char *rgbstr);
+extern boolean closest_color(uint32_t lcolor, uint32_t *closecolor, int *clridx);
+extern int color_distance(uint32_t, uint32_t);
+extern boolean onlyhexdigits(const char *buf);
+extern uint32 get_nhcolor_from_256_index(int idx);
 
 /* ### cmd.c ### */
 
@@ -1011,6 +1016,12 @@ extern NHFILE *create_savefile(void);
 extern NHFILE *open_savefile(void);
 extern int delete_savefile(void);
 extern NHFILE *restore_saved_game(void);
+extern int check_panic_save(void);
+#ifdef SELECTSAVED
+extern char *plname_from_file(const char *, boolean) NONNULLARG1;
+#endif
+extern char **get_saved_games(void);
+extern void free_saved_games(char **);
 extern void nh_compress(const char *);
 extern void nh_uncompress(const char *);
 extern boolean lock_file(const char *, int, int) NONNULLARG1;
@@ -1033,11 +1044,6 @@ extern int read_sym_file(int);
 extern void paniclog(const char *, const char *) NONNULLPTRS;
 extern void testinglog(const char *, const char *, const char *);
 extern int validate_prefix_locations(char *);
-#ifdef SELECTSAVED
-extern char *plname_from_file(const char *, boolean) NONNULLARG1;
-#endif
-extern char **get_saved_games(void);
-extern void free_saved_games(char **);
 #ifdef SELF_RECOVER
 extern boolean recover_savefile(void);
 extern void assure_syscf_file(void);
@@ -1086,6 +1092,29 @@ extern int getpos(coord *, boolean, const char *) NONNULLARG1;
 extern void getpos_sethilite(void(*f)(boolean), boolean(*d)(coordxy,coordxy));
 extern boolean mapxy_valid(coordxy, coordxy);
 extern boolean gather_locs_interesting(coordxy, coordxy, int);
+
+/* ### glyphs.c ### */
+
+extern int glyphrep_to_custom_map_entries(const char *op,
+                                          int *glyph) NONNULLPTRS;
+extern int add_custom_urep_entry(const char *symset_name, int glyphidx,
+                                 uint32 utf32ch, const uint8 *utf8str,
+                                 enum graphics_sets which_set) NONNULLARG1;
+extern int add_custom_nhcolor_entry(const char *customization_name,
+                                    int glyphidx, uint32 nhcolor,
+                                    enum graphics_sets which_set) NONNULLARG1;
+int set_map_nhcolor(glyph_map *gm, uint32 nhcolor) NONNULLARG1;
+extern int unicode_val(const char *);
+extern int glyphrep(const char *) NONNULLARG1;
+extern int match_glyph(char *) NONNULLARG1;
+extern void dump_all_glyphids(FILE *fp) NONNULLARG1;
+extern void fill_glyphid_cache(void);
+extern void free_glyphid_cache(void);
+extern boolean glyphid_cache_status(void);
+extern void apply_customizations(enum graphics_sets which_set);
+extern void purge_custom_entries(enum graphics_sets which_set);
+extern void purge_all_custom_entries(void);
+extern void dump_glyphids(void);
 
 /* ### hack.c ### */
 
@@ -1407,9 +1436,6 @@ extern void runtime_info_init(void);
 extern const char *do_runtime_info(int *) NO_NNARGS;
 extern void release_runtime_info(void);
 extern char *mdlib_version_string(char *, const char *) NONNULL NONNULLPTRS;
-#ifdef ENHANCED_SYMBOLS
-extern void dump_glyphids(void);
-#endif
 
 /* ### mhitm.c ### */
 
@@ -3010,12 +3036,7 @@ extern const struct symparse *match_sym(char *) NONNULLARG1;
 extern void savedsym_free(void);
 extern void savedsym_strbuf(strbuf_t *) NONNULLARG1;
 extern boolean parsesymbols(char *, int) NONNULLARG1;
-#ifdef ENHANCED_SYMBOLS
-extern struct customization_detail *find_matching_symset_customiz(
-               const char *symset_name, int custtype,
-               enum graphics_sets which_set) NONNULLARG1;
-extern void apply_customizations_to_symset(enum graphics_sets which_set);
-#endif
+extern void clear_all_glyphmap_colors(void);
 
 /* ### sys.c ### */
 
@@ -3337,6 +3358,7 @@ extern void tty_utf8graphics_fixup(void);
 
 #ifdef UNIX
 extern void getlock(void);
+extern void ask_about_panic_save(void);
 extern void regularize(char *) NONNULLARG1;
 #if defined(TIMED_DELAY) && !defined(msleep) && defined(SYSV)
 extern void msleep(unsigned);
@@ -3363,21 +3385,10 @@ extern int hide_privileges(boolean);
 /* ### utf8map.c ### */
 
 #ifdef ENHANCED_SYMBOLS
-extern int glyphrep(const char *) NONNULLARG1;
 extern char *mixed_to_utf8(char *buf, size_t bufsz, const char *str,
                            int *) NONNULLARG1;
-extern int match_glyph(char *) NONNULLARG1;
-extern void dump_all_glyphids(FILE *fp) NONNULLARG1;
-extern void fill_glyphid_cache(void);
-extern void free_glyphid_cache(void);
-extern boolean glyphid_cache_status(void);
-extern int glyphrep_to_custom_map_entries(const char *op, int *glyph) NONNULLPTRS;
 void free_all_glyphmap_u(void);
-int add_custom_urep_entry(const char *symset_name, int glyphidx,
-                          uint32 utf32ch, const uint8 *utf8str, long ucolor,
-                          enum graphics_sets which_set) NONNULLARG1;
-int set_map_u(glyph_map *gm, uint32 utf32ch, const uint8 *utf8str,
-              long ucolor) NONNULLPTRS;
+int set_map_u(glyph_map *gm, uint32 utf32ch, const uint8 *utf8str) NONNULLPTRS;
 #endif /* ENHANCED_SYMBOLS */
 
 /* ### vault.c ### */

@@ -81,6 +81,7 @@ extern const char ynchars[];
 extern const char ynqchars[];
 extern const char ynaqchars[];
 extern const char ynNaqchars[];
+extern const char rightleftchars[];
 extern NEARDATA long yn_number;
 extern struct restore_info restoreinfo;
 extern NEARDATA struct savefile_info sfcap, sfrestinfo, sfsaveinfo;
@@ -892,9 +893,8 @@ struct instance_globals_s {
 
     /* symbols.c */
     struct symsetentry symset[NUM_GRAPHICS];
-#ifdef ENHANCED_SYMBOLS
-    struct symset_customization sym_customizations[NUM_GRAPHICS + 1]; /* adds UNICODESET */
-#endif
+    /* adds UNICODESET */
+    struct symset_customization sym_customizations[NUM_GRAPHICS + 1][custom_count];
     nhsym showsyms[SYM_MAX]; /* symbols to be displayed */
 
     /* files.c */
