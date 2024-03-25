@@ -5229,6 +5229,9 @@ optfn_boolean(
             go.opt_need_redraw = TRUE;
             go.opt_need_glyph_reset = TRUE;
             break;
+        case opt_customcolors:
+            go.opt_reset_customizations = TRUE;
+            break;
         case opt_menucolors:
         case opt_guicolor:
             update_inventory();
@@ -8391,6 +8394,7 @@ doset_simple_menu(void)
 
     go.opt_need_redraw = FALSE;
     go.opt_need_glyph_reset = FALSE;
+    go.opt_reset_customizations = FALSE;
     pick_cnt = select_menu(tmpwin, PICK_ONE, &pick_list);
     /* note:  without the complication of a preselected entry, a PICK_ONE
        menu returning pick_cnt > 0 implies exactly 1 */
@@ -8481,13 +8485,18 @@ doset_simple(void)
         }
         if (go.opt_need_promptstyle)
             adjust_menu_promptstyle(WIN_INVEN, &iflags.menu_headings);
+        if (go.opt_reset_customizations) {
+            reset_customizations();
+            docrt_flags(opt_crt_flags);
+        }
+
 /*
  *      I don't think the status window requires updating between
  *      simplemenu iterations.
         if (disp.botl || disp.botlx) {
             bot();
         }
-  */
+ */
     } while (pickedone > 0);
     give_opt_msg = TRUE;
     return ECMD_OK;
@@ -8730,6 +8739,10 @@ doset(void) /* changing options via menu by Per Liboriussen */
 
     if (go.opt_need_glyph_reset) {
         reset_glyphmap(gm_optionchange);
+    }
+    if (go.opt_reset_customizations) {
+        reset_customizations();
+        docrt();
     }
     if (go.opt_need_redraw) {
         check_gold_symbol();
