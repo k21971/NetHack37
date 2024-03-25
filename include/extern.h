@@ -320,7 +320,7 @@ extern int count_menucolors(void);
 extern int32 check_enhanced_colors(char *) NONNULLARG1;
 extern const char *wc_color_name(int32) NONNULL;
 extern int32_t rgbstr_to_int32(const char *rgbstr);
-extern boolean closest_color(uint32_t lcolor, uint32_t *closecolor, int *clridx);
+extern boolean closest_color(uint32_t lcolor, uint32_t *closecolor, uint16 *clridx);
 extern int color_distance(uint32_t, uint32_t);
 extern boolean onlyhexdigits(const char *buf);
 extern uint32 get_nhcolor_from_256_index(int idx);
@@ -1107,7 +1107,7 @@ struct customization_detail *find_matching_customization(
                                              const char *customization_name,
                                              enum customization_types custtype,
                                              enum graphics_sets which_set);
-int set_map_nhcolor(glyph_map *gm, uint32 nhcolor) NONNULLARG1;
+int set_map_customcolor(glyph_map *gm, uint32 nhcolor) NONNULLARG1;
 extern int unicode_val(const char *);
 extern int glyphrep(const char *) NONNULLARG1;
 extern int match_glyph(char *) NONNULLARG1;
@@ -1115,12 +1115,13 @@ extern void dump_all_glyphids(FILE *fp) NONNULLARG1;
 extern void fill_glyphid_cache(void);
 extern void free_glyphid_cache(void);
 extern boolean glyphid_cache_status(void);
-extern void apply_customizations(enum graphics_sets which_set);
+extern void apply_customizations(enum graphics_sets which_set,
+                                 enum do_customizations docustomize);
 extern void purge_custom_entries(enum graphics_sets which_set);
 extern void purge_all_custom_entries(void);
 extern void dump_glyphids(void);
 extern void clear_all_glyphmap_colors(void);
-extern void reset_customizations(void);
+extern void reset_customcolors(void);
 
 /* ### hack.c ### */
 
@@ -3395,6 +3396,7 @@ extern char *mixed_to_utf8(char *buf, size_t bufsz, const char *str,
 void free_all_glyphmap_u(void);
 int set_map_u(glyph_map *gm, uint32 utf32ch, const uint8 *utf8str) NONNULLPTRS;
 #endif /* ENHANCED_SYMBOLS */
+extern void reset_customsymbols(void);
 
 /* ### vault.c ### */
 

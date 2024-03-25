@@ -449,12 +449,16 @@ add_custom_nhcolor_entry(
 }
 
 void
-apply_customizations(enum graphics_sets which_set)
+apply_customizations(
+        enum graphics_sets which_set,
+        enum do_customizations docustomize)
 {
     glyph_map *gmap;
     struct customization_detail *details;
     struct symset_customization *sc;
-    boolean at_least_one = FALSE;
+    boolean at_least_one = FALSE,
+            do_colors = ((docustomize & do_custom_colors) != 0),
+            do_symbols = ((docustomize & do_custom_symbols) != 0);
     int custs;
 
     for (custs = 0; custs < (int) custom_count; ++custs) {
@@ -466,18 +470,20 @@ apply_customizations(enum graphics_sets which_set)
             details = sc->details;
             while (details) {
 #ifdef ENHANCED_SYMBOLS
-                if (sc->custtype == custom_ureps) {
-                    gmap = &glyphmap[details->content.urep.glyphidx];
-                    if (gs.symset[which_set].handling == H_UTF8)
-                        (void) set_map_u(gmap,
-                                         details->content.urep.u.utf32ch,
-                                         details->content.urep.u.utf8str);
+                if (iflags.customsymbols && do_symbols) {
+                    if (sc->custtype == custom_ureps) {
+                        gmap = &glyphmap[details->content.urep.glyphidx];
+                        if (gs.symset[which_set].handling == H_UTF8)
+                            (void) set_map_u(gmap,
+                                             details->content.urep.u.utf32ch,
+                                             details->content.urep.u.utf8str);
+                    }
                 }
 #endif
-                if (iflags.customcolors) {
+                if (iflags.customcolors && do_colors) {
                     if (sc->custtype == custom_nhcolor) {
                         gmap = &glyphmap[details->content.ccolor.glyphidx];
-                        (void) set_map_nhcolor(gmap,
+                        (void) set_map_customcolor(gmap,
                                                details->content.ccolor.nhcolor);
                     }
                 }
@@ -563,6 +569,8 @@ shuffle_customizations(void)
         struct unicode_representation *tmp_u[NUM_OBJECTS];
 #endif
         uint32 tmp_customcolor[NUM_OBJECTS];
+        uint16 tmp_color256idx[NUM_OBJECTS];
+
         int duplicate[NUM_OBJECTS];
 
         for (i = 0; i < NUM_OBJECTS; i++) {
@@ -571,6 +579,7 @@ shuffle_customizations(void)
             tmp_u[i] = (struct unicode_representation *) 0;
 #endif
             tmp_customcolor[i] = 0;
+            tmp_color256idx[i] = 0;
         }
         for (i = 0; i < NUM_OBJECTS; i++) {
             int idx = objects[i].oc_descr_idx;
@@ -586,8 +595,10 @@ shuffle_customizations(void)
                 struct unicode_representation *other = tmp_u[duplicate[idx]];
 #endif
                 uint32 other_customcolor = tmp_customcolor[duplicate[idx]];
+                uint16 other_color256idx = tmp_color256idx[duplicate[idx]];
 
                 tmp_customcolor[i] = other_customcolor;
+                tmp_color256idx[i] = other_color256idx;
 #ifdef ENHANCED_SYMBOLS
                 tmp_u[i] = (struct unicode_representation *)
                            alloc(sizeof *tmp_u[i]);
@@ -599,6 +610,7 @@ shuffle_customizations(void)
 #endif
             } else {
                 tmp_customcolor[i] = obj_glyphs[idx].customcolor;
+                tmp_color256idx[i] = obj_glyphs[idx].color256idx;
 #ifdef ENHANCED_SYMBOLS
                 tmp_u[i] = obj_glyphs[idx].u;
 #endif
@@ -612,6 +624,7 @@ shuffle_customizations(void)
                     obj_glyphs[idx].u = NULL;
 #endif
                     obj_glyphs[idx].customcolor = 0;
+                    obj_glyphs[idx].color256idx = 0;
                 }
             }
         }
@@ -625,6 +638,7 @@ shuffle_customizations(void)
             obj_glyphs[i].u = tmp_u[i];
 #endif
             obj_glyphs[i].customcolor = tmp_customcolor[i];
+            obj_glyphs[i].color256idx = tmp_color256idx[i];
         }
     }
 }
@@ -1045,13 +1059,14 @@ clear_all_glyphmap_colors(void)
     for (glyph = 0; glyph < MAX_GLYPH; ++glyph) {
         if (glyphmap[glyph].customcolor)
             glyphmap[glyph].customcolor = 0;
+        glyphmap[glyph].color256idx = 0;
     }
 }
 
-void reset_customizations(void)
+void reset_customcolors(void)
 {
     clear_all_glyphmap_colors();
-    apply_customizations(gc.currentgraphics);
+    apply_customizations(gc.currentgraphics, do_custom_colors);
 }
 
 /* not used yet */
