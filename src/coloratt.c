@@ -219,8 +219,6 @@ static struct nethack_color colortable[] = {
   { rgb_color, 154, 138, "white",                   "#FFFFFF", 255, 255, 255 },
 };
 
-static const char hex[] = "00112233445566778899aAbBcCdDeEfF";
-
 int32
 colortable_to_int32(struct nethack_color *cte)
 {
@@ -784,13 +782,14 @@ wc_color_name(int32 colorindx)
     return result;
 }
 
+/* hexdd[] is defined in decl.c */
 boolean
 onlyhexdigits(const char *buf)
 {
     const char *dp = buf;
 
     for (dp = buf; *dp; ++dp) {
-        if (!(strchr(hex, *dp) || *dp == '-'))
+        if (!(strchr(hexdd, *dp) || *dp == '-'))
             return FALSE;
     }
     return TRUE;
