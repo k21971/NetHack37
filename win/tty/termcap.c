@@ -36,6 +36,10 @@ static void kill_hilite(void);
 /* (see tcap.h) -- nh_CM, nh_ND, nh_CD, nh_HI,nh_HE, nh_US,nh_UE, ul_hack */
 struct tc_lcl_data tc_lcl_data = { 0, 0, 0, 0, 0, 0, 0, FALSE };
 
+static char *nh_VI = (char *) 0; /* cursor_invisible */
+static char *nh_VE = (char *) 0; /* cursor_normal */
+/*static char *nh_VS = (char *) 0;*/ /* cursor_visible (highlighted cursor) */
+
 static char *HO, *CL, *CE, *UP, *XD, *BC, *SO, *SE, *TI, *TE;
 static char *VS, *VE;
 static char *ME, *MR, *MB, *MH, *MD;
@@ -279,6 +283,12 @@ tty_startup(int *wid, int *hgt)
     ME = Tgetstr(nhStr("me")); /* turn off all attributes */
     if (!ME)
         ME = SE ? SE : nullstr; /* default to SE value */
+
+    nh_VI = Tgetstr(nhStr("vi"));
+    nh_VE = Tgetstr(nhStr("ve"));
+    /*nh_VS = Tgetstr(nhStr("vs"));*/
+    if (!nh_VI || !nh_VE /*|| !nh_VS*/ )
+        nh_VI = nh_VE = /*nh_VS =*/ (char *) 0;
 
     /* Get rid of padding numbers for nh_HI and nh_HE.  Hope they
      * aren't really needed!!!  nh_HI and nh_HE are outputted to the
@@ -1473,6 +1483,16 @@ term_start_bgcolor(int color)
     char tmp[8];
     Sprintf(tmp, "\033[%dm", ((color % 8) + 40));
     xputs(tmp);
+}
+
+/* hide or show cursor */
+void
+term_curs_set(int visibility)
+{
+    if (!visibility && nh_VI)
+        xputs(nh_VI);
+    else if (visibility && nh_VE)
+        xputs(nh_VE);
 }
 
 #ifndef SEP2

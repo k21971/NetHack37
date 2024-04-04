@@ -191,6 +191,7 @@ extern void term_start_color(int color);
 extern void term_start_bgcolor(int color);
 extern void term_start_extracolor(uint32, uint16);
 extern void term_end_extracolor(void); /* termcap.c, consoletty.c */
+extern void term_curs_set(int);
 
 /* ### topl.c ### */
 
