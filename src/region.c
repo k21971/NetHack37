@@ -1041,6 +1041,7 @@ inside_gas_cloud(genericptr_t p1, genericptr_t p2)
 {
     NhRegion *reg = (NhRegion *) p1;
     struct monst *mtmp = (struct monst *) p2;
+    struct monst *umon = mtmp ? mtmp : &gy.youmonst;
     int dam = reg->arg.a_int;
 
     /*
@@ -1049,7 +1050,7 @@ inside_gas_cloud(genericptr_t p1, genericptr_t p2)
      */
 
     /* fog clouds maintain gas clouds, even poisonous ones */
-    if (reg->ttl < 20 && mtmp && mtmp->data == &mons[PM_FOG_CLOUD])
+    if (reg->ttl < 20 && umon && umon->data == &mons[PM_FOG_CLOUD])
         reg->ttl += 5;
 
     if (dam < 1)
@@ -1083,9 +1084,12 @@ inside_gas_cloud(genericptr_t p1, genericptr_t p2)
         mtmp = (struct monst *) p2;
 
         if (m_poisongas_ok(mtmp) != M_POISONGAS_OK) {
-            if (cansee(mtmp->mx, mtmp->my))
-                pline("%s coughs!", Monnam(mtmp));
-            wake_nearto(mtmp->mx, mtmp->my, 2);
+            if (!is_silent(mtmp->data)) {
+                if (cansee(mtmp->mx, mtmp->my)
+                    || (distu(mtmp->mx, mtmp->my) < 8))
+                    pline("%s coughs!", Monnam(mtmp));
+                wake_nearto(mtmp->mx, mtmp->my, 2);
+            }
             if (heros_fault(reg))
                 setmangry(mtmp, TRUE);
             if (haseyes(mtmp->data) && mtmp->mcansee) {
@@ -1141,6 +1145,13 @@ create_gas_cloud(coordxy x, coordxy y, int cloudsize, int damage)
     int curridx;
     int newidx = 1; /* initial spot is already taken */
     boolean inside_cloud = is_hero_inside_gas_cloud();
+
+    /* a single-point cloud on hero and it deals no damage.
+       probably a natural cause of being polyed. don't message about it */
+    if (!gc.context.mon_moving && u_at(x, y) && cloudsize == 1
+        && (!damage
+            || (damage && m_poisongas_ok(&gy.youmonst) == M_POISONGAS_OK)))
+        inside_cloud = TRUE;
 
     if (cloudsize > MAX_CLOUD_SIZE) {
         impossible("create_gas_cloud: cloud too large (%d)!", cloudsize);
