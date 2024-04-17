@@ -269,6 +269,7 @@ extern boolean exp_percent_changing(void);
 extern int stat_cap_indx(void);
 extern int stat_hunger_indx(void);
 extern const char *bl_idx_to_fldname(int);
+extern void repad_with_dashes(char *);
 extern void condopt(int, boolean *, boolean);
 extern int parse_cond_option(boolean, char *);
 extern boolean cond_menu(void);
@@ -325,6 +326,11 @@ extern boolean closest_color(uint32_t lcolor, uint32_t *closecolor, uint16 *clri
 extern int color_distance(uint32_t, uint32_t);
 extern boolean onlyhexdigits(const char *buf);
 extern uint32 get_nhcolor_from_256_index(int idx);
+#ifdef CHANGE_COLOR
+extern int count_alt_palette(void);
+extern int alternative_palette(char *);
+extern void change_palette(void);
+#endif
 
 /* ### cmd.c ### */
 
@@ -1559,6 +1565,7 @@ extern void movebubbles(void);
 extern void water_friction(void);
 extern void save_waterlevel(NHFILE *) NONNULLARG1;
 extern void restore_waterlevel(NHFILE *) NONNULLARG1;
+extern void maybe_adjust_hero_bubble(void);
 
 /* ### mkobj.c ### */
 
@@ -1848,6 +1855,7 @@ extern boolean m_can_break_boulder(struct monst *) NONNULLARG1;
 extern void m_break_boulder(struct monst *, coordxy, coordxy) NONNULLARG1;
 extern int dochug(struct monst *) NONNULLARG1;
 extern boolean m_digweapon_check(struct monst *, coordxy, coordxy) NONNULLARG1;
+extern boolean m_avoid_kicked_loc(struct monst *, coordxy, coordxy) NONNULLARG1;
 extern int m_move(struct monst *, int) NONNULLARG1;
 extern int m_move_aggress(struct monst *, coordxy, coordxy) NONNULLARG1;
 extern void dissolve_bars(coordxy, coordxy);
@@ -2848,6 +2856,7 @@ extern void globby_bill_fixup(struct obj *, struct obj *) NONNULLARG12;
 /*extern void globby_donation(struct obj *, struct obj *); */
 extern void credit_report(struct monst *shkp, int idx,
                           boolean silent) NONNULLARG1;
+extern void use_unpaid_trapobj(struct obj *, coordxy, coordxy) NONNULLARG1;
 
 /* ### shknam.c ### */
 

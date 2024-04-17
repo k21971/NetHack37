@@ -803,6 +803,14 @@ tty_resume_nhwindows(void)
     docrt();
 }
 
+#ifdef CHANGE_COLOR
+char *
+tty_get_color_string(void)
+{
+    return (char *) 0;
+}
+#endif /* CHANGE_COLOR */
+
 void
 tty_exit_nhwindows(const char *str)
 {
@@ -3941,6 +3949,14 @@ term_curs_set(int visibility UNUSED)
     /* nothing */
 }
 
+#ifdef CHANGE_COLOR
+void
+tty_change_color(int color UNUSED, long rgb UNUSED, int reverse UNUSED)
+{
+    /* nothing */
+}
+#endif /* CHANGE_COLOR */
+
 #endif  /* NO_TERMS */
 
 void
@@ -4200,7 +4216,7 @@ static int condattr(long, unsigned long *);
 static unsigned long *tty_colormasks;
 static long tty_condition_bits;
 static struct tty_status_fields tty_status[2][MAXBLSTATS]; /* 2: NOW,BEFORE */
-static int hpbar_percent, hpbar_color;
+static int hpbar_percent, hpbar_crit_hp;
 extern const struct conditions_t conditions[CONDITION_COUNT];
 
 static const char *const encvals[3][6] = {
@@ -4288,7 +4304,7 @@ tty_status_init(void)
         tty_status[BEFORE][i] = tty_status[NOW][i];
     }
     tty_condition_bits = 0L;
-    hpbar_percent = 0, hpbar_color = NO_COLOR;
+    hpbar_percent = hpbar_crit_hp = 0;
 #endif /* STATUS_HILITES */
 
     /* let genl_status_init do most of the initialization */
@@ -4468,8 +4484,10 @@ tty_status_update(
         if (iflags.wc2_hitpointbar) {
             /* Special additional processing for hitpointbar */
             hpbar_percent = percent;
-            hpbar_color = (color & 0x00FF);
-            tty_status[NOW][BL_TITLE].color = hpbar_color;
+            hpbar_crit_hp = critically_low_hp(TRUE) ? 1 : 0;
+            tty_status[NOW][BL_TITLE].color = (color & 0x00FF);
+            attrmask = HL_INVERSE | (hpbar_crit_hp ? HL_BLINK : 0);
+            tty_status[NOW][BL_TITLE].attr = term_attr_fixup(attrmask);
             tty_status[NOW][BL_TITLE].dirty = TRUE;
         }
         break;
@@ -5050,7 +5068,7 @@ render_status(void)
                      */
                     /* hitpointbar using hp percent calculation */
                     int bar_len, bar_pos = 0;
-                    char bar[MAXCO], *bar2 = (char *) 0, savedch = '\0';
+                    char bar[30 + 1], *bar2 = (char *) 0, savedch = '\0';
                     boolean twoparts = (hpbar_percent < 100);
 
                     /* force exactly 30 characters, padded with spaces
@@ -5058,10 +5076,14 @@ render_status(void)
                     if (strlen(text) != 30) {
                         Sprintf(bar, "%-30.30s", text);
                         Strcpy(status_vals[BL_TITLE], bar);
-                    } else
+                    } else {
                         Strcpy(bar, text);
+                    }
+                    if (hpbar_crit_hp)
+                        repad_with_dashes(bar);
                     bar_len = (int) strlen(bar); /* always 30 */
                     tlth = bar_len + 2;
+                    attrmask = 0; /* for the second part only case: dead */
                     /* when at full HP, the whole title will be highlighted;
                        when injured or dead, there will be a second portion
                        which is not highlighted */
@@ -5078,19 +5100,25 @@ render_status(void)
                     }
                     tty_putstatusfield("[", x++, y);
                     if (*bar) { /* always True, unless twoparts+dead (0 HP) */
-                        term_start_attr(ATR_INVERSE);
-                        if (iflags.hilite_delta && hpbar_color != NO_COLOR)
-                            term_start_color(hpbar_color);
+                        coloridx = tty_status[NOW][BL_TITLE].color;
+                        attrmask = tty_status[NOW][BL_TITLE].attr;
+                        Begin_Attr(attrmask);
+                        if (iflags.hilite_delta && coloridx != NO_COLOR)
+                            term_start_color(coloridx);
                         tty_putstatusfield(bar, x, y);
                         x += (int) strlen(bar);
-                        if (iflags.hilite_delta && hpbar_color != NO_COLOR)
+                        if (iflags.hilite_delta && coloridx != NO_COLOR)
                             term_end_color();
-                        term_end_attr(ATR_INVERSE);
+                        End_Attr(attrmask);
                     }
-                    if (twoparts) { /* no highlighting for second part */
+                    if (twoparts) {
+                        if ((attrmask & HL_BLINK) != 0)
+                            term_start_attr(ATR_BLINK);
                         *bar2 = savedch;
                         tty_putstatusfield(bar2, x, y);
                         x += (int) strlen(bar2);
+                        if ((attrmask & HL_BLINK) != 0)
+                            term_end_attr(ATR_BLINK);
                     }
                     tty_putstatusfield("]", x++, y);
                 } else {

@@ -1,4 +1,4 @@
-/* NetHack 3.7	mkmaze.c	$NHDT-Date: 1704830842 2024/01/09 20:07:22 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.158 $ */
+/* NetHack 3.7	mkmaze.c	$NHDT-Date: 1712454188 2024/04/07 01:43:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.163 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Pasi Kallinen, 2018. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -817,6 +817,7 @@ stolen_booty(void)
     if (mtmp) {
         mtmp = christen_monst(mtmp, upstart(gang));
         mtmp->mpeaceful = 0;
+        set_malign(mtmp);
         shiny_orc_stuff(mtmp);
         migrate_orc(mtmp, ORC_LEADER);
     }
@@ -1488,6 +1489,9 @@ fumaroles(void)
 #define gbxmax (gx.xmax - 1)
 #define gbymax (gy.ymax - 1)
 
+/* the bubble hero is in */
+static struct bubble *hero_bubble = NULL;
+
 staticfn void set_wportal(void);
 staticfn void mk_bubble(coordxy, coordxy, int);
 staticfn void mv_bubble(struct bubble *, coordxy, coordxy, boolean);
@@ -1511,6 +1515,8 @@ movebubbles(void)
         set_wportal();
 
     vision_recalc(2);
+
+    hero_bubble = NULL;
 
     if (Is_waterlevel(&u.uz)) {
         /* keep attached ball&chain separate from bubble objects */
@@ -1582,6 +1588,7 @@ movebubbles(void)
 
                             cons->next = b->cons;
                             b->cons = cons;
+                            hero_bubble = b;
                         }
                         if ((btrap = t_at(x, y)) != 0) {
                             cons = (struct container *) alloc(sizeof *cons);
@@ -1872,6 +1879,22 @@ mk_bubble(coordxy x, coordxy y, int n)
     b->next = (struct bubble *) 0;
     ge.ebubbles = b;
     mv_bubble(b, 0, 0, TRUE);
+}
+
+/* maybe change the movement direction of the bubble hero is in */
+void
+maybe_adjust_hero_bubble(void)
+{
+    if (!Is_waterlevel(&u.uz))
+        return;
+
+    if (!u.dx && !u.dy)
+        return;
+
+    if (hero_bubble && !rn2(2)) {
+        hero_bubble->dx = u.dx;
+        hero_bubble->dy = u.dy;
+    }
 }
 
 /*

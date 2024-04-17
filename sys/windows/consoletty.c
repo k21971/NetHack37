@@ -293,6 +293,27 @@ char erase_char, kill_char;
 #define DEFTEXTCOLOR ttycolors[7]
 static INPUT_RECORD bogus_key;
 
+/*
+Windows console palette:
+Color Name      Console Legacy RGB Values  New Default RGB Values
+BLACK           0,0,0	                   12,12,12
+DARK_BLUE       0,0,128                    0,55,218
+DARK_GREEN      0,128,0                    19,161,14
+DARK_CYAN       0,128,128                  58,150,221
+DARK_RED        128,0,0                    197,15,31
+DARK_MAGENTA    128,0,128                  136,23,152
+DARK_YELLOW     128,128,0                  193,156,0
+DARK_WHITE      192,192,192                204,204,204
+BRIGHT_BLACK    128,128,128                118,118,118
+BRIGHT_BLUE     0,0,255                    59,120,255
+BRIGHT_GREEN    0,255,0                    22,198,12
+BRIGHT_CYAN     0,255,255                  97,214,214
+BRIGHT_RED      255,0,0                    231,72,86
+BRIGHT_MAGENTA  255,0,255                  180,0,158
+BRIGHT_YELLOW   255,255,0                  249,241,165
+WHITE           255,255,255                242,242,242
+*/
+
 #ifdef VIRTUAL_TERMINAL_SEQUENCES
 long customcolors[CLR_MAX];
 const char *esc_seq_colors[CLR_MAX];
@@ -2077,8 +2098,13 @@ void
 check_and_set_font(void)
 {
     if (!check_font_widths()) {
-        raw_print("WARNING: glyphs too wide in console font."
-                  "  Changing code page to 437 and font to Consolas\n");
+        const char *msg = "WARNING: glyphs too wide in console font."
+                          " Changing code page to 437 and font to Consolas";
+
+        if (iflags.window_inited)
+            pline ("%s", msg);
+        else
+            raw_printf("%s\n", msg);
         set_known_good_console_font();
     }
 }
@@ -3891,5 +3917,4 @@ nh340_checkinput(
     }
     return mode ? 0 : ch;
 }
-
 #endif /* WIN32 */
