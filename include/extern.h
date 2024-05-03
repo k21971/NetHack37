@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1711213872 2024/03/23 17:11:12 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1400 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1713334799 2024/04/17 06:19:59 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1420 $ */
 /* Copyright (c) Steve Creps, 1988.                               */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -400,6 +400,7 @@ extern int extcmds_match(const char *, int, int **);
 extern const char *key2extcmddesc(uchar);
 extern boolean bind_specialkey(uchar, const char *);
 extern void parseautocomplete(char *, boolean);
+extern void all_options_autocomplete(strbuf_t *);
 extern void lock_mouse_buttons(boolean);
 extern void reset_commands(boolean);
 extern void update_rest_on_space(void);
@@ -1782,6 +1783,7 @@ extern boolean defended(struct monst *, int) NONNULLARG1;
 extern boolean resists_drli(struct monst *) NONNULLARG1;
 extern boolean resists_magm(struct monst *) NONNULLARG1;
 extern boolean resists_blnd(struct monst *) NONNULLARG1;
+extern boolean resists_blnd_by_arti(struct monst *) NONNULLARG1;
 extern boolean can_blnd(struct monst *, struct monst *,
                         uchar, struct obj *) NONNULLARG2;
 extern boolean ranged_attk(struct permonst *) NONNULLARG1;
@@ -2252,7 +2254,7 @@ extern void msgtype_free(void);
 extern char *self_lookat(char *) NONNULL NONNULLARG1;
 extern char *monhealthdescr(struct monst *mon, boolean,
                             char *) NONNULL NONNULLARG3;
-extern void mhidden_description(struct monst *, boolean, char *) NONNULLPTRS;
+extern void mhidden_description(struct monst *, unsigned, char *) NONNULLPTRS;
 extern boolean object_from_map(int, coordxy, coordxy,
                                struct obj **) NONNULLPTRS;
 extern const char *waterbody_name(coordxy, coordxy) NONNULL;
@@ -2816,7 +2818,7 @@ extern long contained_gold(struct obj *, boolean) NONNULLARG1;
 extern void picked_container(struct obj *) NONNULLARG1;
 extern void gem_learned(int);
 extern void alter_cost(struct obj *, long) NONNULLARG1;
-extern long unpaid_cost(struct obj *, boolean) NONNULLARG1;
+extern long unpaid_cost(struct obj *, uchar) NONNULLARG1;
 extern boolean billable(struct monst **, struct obj *, char,
                         boolean) NONNULLARG12;
 extern void addtobill(struct obj *, boolean, boolean, boolean) NONNULLARG1;
@@ -3848,7 +3850,7 @@ extern int dozap(void);
 extern int zapyourself(struct obj *, boolean) NONNULLARG1;
 extern void ubreatheu(struct attack *) NONNULLARG1;
 extern int lightdamage(struct obj *, boolean, int) NONNULLARG1;
-extern boolean flashburn(long);
+extern boolean flashburn(long, boolean);
 extern boolean cancel_monst(struct monst *, struct obj *, boolean, boolean,
                             boolean) NONNULLARG12;
 extern void zapsetup(void);

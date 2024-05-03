@@ -1407,11 +1407,16 @@ doname_base(
         if (obj->otyp == LEASH && obj->leashmon != 0) {
             struct monst *mlsh = find_mid(obj->leashmon, FM_FMON);
 
-            if (!mlsh) {
-                impossible("leashed monster not on this level");
-                obj->leashmon = 0;
-            } else {
+            if (mlsh && !DEADMONSTER(mlsh)) {
                 ConcatF1(bp, 0, " (attached to %s)", noit_mon_nam(mlsh));
+            } else {
+                if (mlsh) /*&& DEADMONSTER(mlsh)*/
+                    impossible("leashed %s #%u is dead",
+                               mon_pmname(mlsh), (unsigned) obj->leashmon);
+                else
+                    impossible("leashed monster #%u not found",
+                               (unsigned) obj->leashmon);
+                obj->leashmon = 0;
             }
             break;
         }
@@ -1624,7 +1629,7 @@ doname_base(
         ; /* don't attempt to obtain any shop pricing, even if 'with_price' */
     } else if (is_unpaid(obj)) { /* in inventory or in container in invent */
         char pricebuf[40];
-        long quotedprice = unpaid_cost(obj, TRUE);
+        long quotedprice = unpaid_cost(obj, COST_CONTENTS);
 
         /* separately formatted suffix avoids need for ConcatF3() */
         Sprintf(pricebuf, "%ld %s", quotedprice, currency(quotedprice));

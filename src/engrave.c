@@ -1,4 +1,4 @@
-/* NetHack 3.7	engrave.c	$NHDT-Date: 1664616835 2022/10/01 09:33:55 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.131 $ */
+/* NetHack 3.7	engrave.c	$NHDT-Date: 1713657576 2024/04/20 23:59:36 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.157 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -765,10 +765,16 @@ doengrave_sfx_item(struct _doengrave_ctx *de)
         if (is_art(de->otmp, ART_FIRE_BRAND)) {
             de->type = BURN; /* doesn't dull weapon */
         } else if (is_blade(de->otmp)) {
-            if ((int) de->otmp->spe > -3)
-                de->type = ENGRAVE;
+            /* if non-blade or welded or too dull, engraving type stays set
+               to DUST; feedback for that is only given for bladed weapons */
+            if (welded(de->otmp))
+                pline("%s can only scratch the %s.",
+                      Yname2(de->otmp), surface(u.ux, u.uy));
+            else if ((int) de->otmp->spe <= -3)
+                pline("%s too dull for engraving.",
+                      Yobjnam2(de->otmp, "are"));
             else
-                pline("%s too dull for engraving.", Yobjnam2(de->otmp, "are"));
+                de->type = ENGRAVE;
         }
         break;
 
@@ -802,7 +808,8 @@ doengrave_sfx_item(struct _doengrave_ctx *de)
                               de->frosted ? "frosty" : "dusty");
                     de->dengr = TRUE;
                 } else {
-                    pline("%s can't wipe out this engraving.", Yname2(de->otmp));
+                    pline("%s can't wipe out this engraving.",
+                          Yname2(de->otmp));
                 }
             } else {
                 pline("%s %s.", Yobjnam2(de->otmp, "get"),
@@ -835,7 +842,8 @@ doengrave_ctx_verb(struct _doengrave_ctx *de)
 {
     switch (de->type) {
     default:
-        de->everb = de->adding ? "add to the weird writing on" : "write strangely on";
+        de->everb = de->adding ? "add to the weird writing on"
+                               : "write strangely on";
         break;
     case DUST:
         de->everb = de->adding ? "add to the writing in" : "write in";
@@ -900,7 +908,7 @@ doengrave(void)
     if (!u_can_engrave())
         return ECMD_FAIL;
 
-    de = (struct _doengrave_ctx *) alloc(sizeof(struct _doengrave_ctx));
+    de = (struct _doengrave_ctx *) alloc(sizeof (struct _doengrave_ctx));
     doengrave_ctx_init(de);
 
     gm.multi = 0;              /* moves consumed */
@@ -1024,7 +1032,8 @@ doengrave(void)
     }
     /* Early exit for some implements. */
     if (!de->ptext) {
-        if (de->otmp && de->otmp->oclass == WAND_CLASS && !can_reach_floor(TRUE))
+        if (de->otmp && de->otmp->oclass == WAND_CLASS
+            && !can_reach_floor(TRUE))
             cant_reach_floor(u.ux, u.uy, FALSE, TRUE);
         de->ret = ECMD_TIME;
         goto doengr_exit;
@@ -1071,7 +1080,8 @@ doengrave(void)
                     /* defer deletion until after we *know* we're engraving */
                     de->eow = TRUE;
                 }
-            } else if (de->type == DUST || de->type == MARK || de->type == ENGR_BLOOD) {
+            } else if (de->type == DUST || de->type == MARK
+                       || de->type == ENGR_BLOOD) {
                 You("cannot wipe out the message that is %s the %s here.",
                     (de->oep->engr_type == BURN)
                         ? (de->frosted ? "melted into" : "burned into")
@@ -1084,7 +1094,8 @@ doengrave(void)
                     You("will overwrite the current message.");
                 de->eow = TRUE;
             }
-        } else if (de->oep && Strlen(de->oep->engr_txt[actual_text]) >= BUFSZ - 1) {
+        } else if (de->oep
+                   && Strlen(de->oep->engr_txt[actual_text]) >= BUFSZ - 1) {
             There("is no room to add anything else here.");
             de->ret = ECMD_TIME;
             goto doengr_exit;
@@ -1097,12 +1108,19 @@ doengrave(void)
 
     /* Tell adventurer what is going on */
     if (de->otmp != &hands_obj)
-        You("%s the %s with %s.", de->everb, de->eloc, doname(de->otmp));
+        You("%s the %s with %s%s.", de->everb, de->eloc,
+            /* since doname() yields "N items" when quantity is more than
+               one, match that by using "1 of" rather than "one of" when
+               informing the player that the stack will be split */
+            (de->type == ENGRAVE && de->otmp->quan > 1L) ? "1 of " : "",
+            doname(de->otmp));
     else
-        You("%s the %s with your %s.", de->everb, de->eloc, body_part(FINGERTIP));
+        You("%s the %s with your %s.",
+            de->everb, de->eloc, body_part(FINGERTIP));
 
     /* Prompt for engraving! */
-    Sprintf(de->qbuf, "What do you want to %s the %s here?", de->everb, de->eloc);
+    Sprintf(de->qbuf, "What do you want to %s the %s here?",
+            de->everb, de->eloc);
     getlin(de->qbuf, de->ebuf);
     /* convert tabs to spaces and condense consecutive spaces to one */
     mungspaces(de->ebuf);
@@ -1255,6 +1273,22 @@ engrave(void)
 
     /* Step 3: affect stylus from engraving - it might wear out. */
     if (dulling_wep) {
+        boolean splitstack = FALSE, dulled = FALSE;
+
+        /* 'dulling_wep' guarantees that 'stylus' is a weapon which is
+           not welded to the hero's hand(s) */
+        if (stylus->quan > 1L) {
+            if (firsttime)
+                pline("One of %s gets dull.", yname(stylus));
+            stylus = gc.context.engraving.stylus = splitobj(stylus, 1L);
+            /* if stack is wielded or quivered, the split-off one isn't */
+            stylus->owornmask = 0L;
+            splitstack = TRUE;
+        } else {
+            /* normal case: stylus->quan==1 */
+            if (firsttime)
+                pline("%s gets dull.", Yname2(stylus));
+        }
         /* Dull the weapon at a rate of -1 enchantment per 2 characters,
          * rounding down.
          * The number of characters obtainable given starting enchantment:
@@ -1263,9 +1297,6 @@ engrave(void)
          * engrave "Elbereth" all at once.
          * However, you can engrave "Elb", then "ere", then "th", by taking
          * advantage of the rounding down. */
-        if (firsttime) {
-            pline("%s dull.", Yobjnam2(stylus, "get"));
-        }
         if (gc.context.engraving.actionct % 2 == 1) { /* 1st,3rd,... action */
             /* deduct a point on 1st, 3rd, 5th, ... turns, unless this is the
              * last character being engraved (a rather convoluted way to round
@@ -1281,8 +1312,18 @@ engrave(void)
                 truncate = TRUE;
             } else if (*endc || gc.context.engraving.actionct == 1) {
                 stylus->spe -= 1;
-                update_inventory();
+                dulled = TRUE;
             }
+        }
+        if (splitstack) {
+            obj_extract_self(stylus);
+            stylus = hold_another_object(stylus, "You drop one %s!",
+                                         doname(stylus), (char *) NULL);
+        } else if (dulled && stylus->known) {
+            /* reflect change in stylus->spe; not needed for splitstack
+               since hold_another_object() does this */
+            prinv((char *) NULL, stylus, 1L);
+            update_inventory();
         }
     } else if (marker) {
         int ink_cost = max(rate / 2, 1); /* Prevent infinite graffiti */
@@ -1444,7 +1485,8 @@ save_engravings(NHFILE *nhfp)
     }
     if (perform_bwrite(nhfp)) {
         if (nhfp->structlevel)
-            bwrite(nhfp->fd, (genericptr_t) &no_more_engr, sizeof no_more_engr);
+            bwrite(nhfp->fd, (genericptr_t) &no_more_engr,
+                   sizeof no_more_engr);
     }
     if (release_data(nhfp))
         head_engr = 0;
@@ -1459,19 +1501,21 @@ rest_engravings(NHFILE *nhfp)
     head_engr = 0;
     while (1) {
         if (nhfp->structlevel)
-            mread(nhfp->fd, (genericptr_t) &lth, sizeof(unsigned));
+            mread(nhfp->fd, (genericptr_t) &lth, sizeof (unsigned));
 
         if (lth == 0)
             return;
         ep = newengr(lth);
         if (nhfp->structlevel) {
-            mread(nhfp->fd, (genericptr_t) ep, sizeof(struct engr) + lth);
+            mread(nhfp->fd, (genericptr_t) ep, sizeof (struct engr) + lth);
         }
         ep->nxt_engr = head_engr;
         head_engr = ep;
-        ep->engr_txt[actual_text] = (char *) (ep + 1);    /* Andreas Bormann */
-        ep->engr_txt[remembered_text] = ep->engr_txt[actual_text] + ep->engr_szeach;
-        ep->engr_txt[pristine_text] = ep->engr_txt[remembered_text] + ep->engr_szeach;
+        ep->engr_txt[actual_text] = (char *) (ep + 1); /* Andreas Bormann */
+        ep->engr_txt[remembered_text] = ep->engr_txt[actual_text]
+                                      + ep->engr_szeach;
+        ep->engr_txt[pristine_text] = ep->engr_txt[remembered_text]
+                                    + ep->engr_szeach;
         while (ep->engr_txt[actual_text][0] == ' ')
             ep->engr_txt[actual_text]++;
         while (ep->engr_txt[remembered_text][0] == ' ')

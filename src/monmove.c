@@ -785,6 +785,7 @@ dochug(struct monst *mtmp)
     /* mind flayers can make psychic attacks! */
     } else if (is_mind_flayer(mdat) && !rn2(20)) {
         mind_blast(mtmp);
+        set_apparxy(mtmp);
         distfleeck(mtmp, &inrange, &nearby, &scared);
     }
 
@@ -859,6 +860,8 @@ dochug(struct monst *mtmp)
 
         if (!status)
             status = m_move(mtmp, 0);
+        if (mon_offmap(mtmp))
+            return 1;
         if (status != MMOVE_DIED)
             distfleeck(mtmp, &inrange, &nearby, &scared); /* recalc */
 

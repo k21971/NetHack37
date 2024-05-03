@@ -1,4 +1,4 @@
-/* NetHack 3.7	uhitm.c	$NHDT-Date: 1711484961 2024/03/26 20:29:21 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.443 $ */
+/* NetHack 3.7	uhitm.c	$NHDT-Date: 1713334817 2024/04/17 06:20:17 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.444 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -6092,16 +6092,41 @@ nohandglow(struct monst *mon)
 
 /* returns 1 if light flash has noticeable effect on 'mtmp', 0 otherwise */
 int
-flash_hits_mon(struct monst *mtmp,
-               struct obj *otmp) /* source of flash */
+flash_hits_mon(
+    struct monst *mtmp,
+    struct obj *otmp) /* source of flash */
 {
     struct rm *lev;
+    coordxy mx = mtmp->mx, my = mtmp->my;
     int tmp, amt, useeit, res = 0;
 
     if (gn.notonhead)
         return 0;
-    lev = &levl[mtmp->mx][mtmp->my];
+    lev = &levl[mx][my];
     useeit = canseemon(mtmp);
+
+    if (M_AP_TYPE(mtmp) != M_AP_NOTHING) {
+        char whatbuf[BUFSZ];
+        int oldglyph = glyph_at(mx, my);
+
+        /* 'altmon' probably doesn't matter here because 'whatbuf' will
+           only be shown if the glyph changes and wakeup() doesn't call
+           seemimic() for M_AP_MONSTER */
+        mhidden_description(mtmp, MHID_ALTMON, whatbuf);
+
+        wakeup(mtmp, FALSE); /* -> seemimic() -> newsym(); also calls
+                              * finish_meating() to end quickmimic */
+
+        /* if glyph has changed then hero saw something happen */
+        if (glyph_at(mx, my) != oldglyph) {
+            pline("That %s is really %s%c", whatbuf,
+                  /* y_monnam()+a_monnam() */
+                  x_monnam(mtmp, mtmp->mtame ? ARTICLE_YOUR : ARTICLE_A,
+                           (char *) 0, 0, FALSE),
+                  mtmp->mtame ? '.' : '!');
+            res = 1;
+        }
+    }
 
     if (mtmp->msleeping && haseyes(mtmp->data)) {
         mtmp->msleeping = 0;
@@ -6111,15 +6136,15 @@ flash_hits_mon(struct monst *mtmp,
         }
     } else if (mtmp->data->mlet != S_LIGHT) {
         if (!resists_blnd(mtmp)) {
-            tmp = dist2(otmp->ox, otmp->oy, mtmp->mx, mtmp->my);
+            tmp = dist2(otmp->ox, otmp->oy, mx, my);
             if (useeit) {
                 pline("%s is blinded by the flash!", Monnam(mtmp));
                 res = 1;
             }
             if (mtmp->data == &mons[PM_GREMLIN]) {
                 /* Rule #1: Keep them out of the light. */
-                amt = otmp->otyp == WAN_LIGHT ? d(1 + otmp->spe, 4)
-                                              : rn2(min(mtmp->mhp, 4));
+                amt = (otmp->otyp == WAN_LIGHT) ? d(1 + otmp->spe, 4)
+                                                : rnd(min(mtmp->mhp, 4));
                 light_hits_gremlin(mtmp, amt);
             }
             if (!DEADMONSTER(mtmp)) {
@@ -6130,12 +6155,16 @@ flash_hits_mon(struct monst *mtmp,
                 mtmp->mcansee = 0;
                 mtmp->mblinded = (tmp < 3) ? 0 : rnd(1 + 50 / tmp);
             }
-        } else if (flags.verbose && useeit) {
-            if (lev->lit)
-                pline("The flash of light shines on %s.", mon_nam(mtmp));
-            else
-                pline("%s is illuminated.", Monnam(mtmp));
-            res = 2; /* 'message has been given' temporary value */
+        } else if (useeit) {
+            if (resists_blnd_by_arti(mtmp))
+                shieldeff(mx, my);
+            if (flags.verbose) {
+                if (lev->lit)
+                    pline("The flash of light shines on %s.", mon_nam(mtmp));
+                else
+                    pline("%s is illuminated.", Monnam(mtmp));
+                res = 2; /* 'message has been given' temporary value */
+            }
         }
     }
     if (res) {

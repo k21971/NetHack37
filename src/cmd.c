@@ -1665,7 +1665,7 @@ struct ext_func_tab extcmdlist[] = {
     { '>',    "down", "go down a staircase",
               /* allows 'm' prefix (for move without autopickup) but not the
                  g/G/F movement modifiers; not flagged as MOVEMENTCMD because
-                 that would would suppress it from dokeylist output */
+                 that would suppress it from dokeylist output */
               dodown, CMD_M_PREFIX, NULL },
     { 'd',    "drop", "drop an item",
               dodrop, 0, NULL },
@@ -2952,6 +2952,8 @@ parseautocomplete(char *autocomplete, boolean condition)
     /* find and modify the extended command */
     for (efp = extcmdlist; efp->ef_txt; efp++) {
         if (!strcmp(autocomplete, efp->ef_txt)) {
+            if (condition == ((efp->flags & AUTOCOMPLETE) ? FALSE : TRUE))
+                efp->flags |= AUTOCOMP_ADJ;
             if (condition)
                 efp->flags |= AUTOCOMPLETE;
             else
@@ -2964,6 +2966,22 @@ parseautocomplete(char *autocomplete, boolean condition)
     raw_printf("Bad autocomplete: invalid extended command '%s'.",
                autocomplete);
     wait_synch();
+}
+
+/* add changed autocompletions to the string buffer in config file format */
+void
+all_options_autocomplete(strbuf_t *sbuf)
+{
+    struct ext_func_tab *efp;
+    char buf[BUFSZ];
+
+    for (efp = extcmdlist; efp->ef_txt; efp++)
+        if ((efp->flags & AUTOCOMP_ADJ) != 0) {
+            Sprintf(buf, "AUTOCOMPLETE=%s%s\n",
+                    (efp->flags & AUTOCOMPLETE) ? "" : "!",
+                    efp->ef_txt);
+            strbuf_append(sbuf, buf);
+        }
 }
 
 /* save&clear the mouse button actions, or restore the saved ones */

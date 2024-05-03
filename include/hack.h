@@ -1,4 +1,4 @@
-/* NetHack 3.7	hack.h	$NHDT-Date: 1701132211 2023/11/28 00:43:31 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.240 $ */
+/* NetHack 3.7	hack.h	$NHDT-Date: 1713334806 2024/04/17 06:20:06 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.253 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Pasi Kallinen, 2017. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -306,6 +306,13 @@ enum cost_alteration_types {
     COST_ROT     = 17, /* rotting attack */
     COST_CORRODE = 18, /* acid damage */
     COST_CRACK   = 19, /* damage to crystal armor */
+};
+
+/* used by unpaid_cost(shk.h) */
+enum unpaid_cost_flags {
+    COST_NOCONTENTS = 0,
+    COST_CONTENTS   = 1,
+    COST_SINGLEOBJ  = 2,
 };
 
 /* read.c, create_particular() & create_particular_parse() */
@@ -767,6 +774,7 @@ struct sinfo {
     int exiting;                /* an exit handler is executing */
     int saving;                 /* creating a save file */
     int restoring;              /* reloading a save file */
+    int in_getlev;              /* in getlev() */
     int in_moveloop;            /* normal gameplay in progress */
     int in_impossible;          /* reporting a warning */
     int in_docrt;               /* in docrt(): redrawing the whole screen */
@@ -943,13 +951,14 @@ typedef struct {
 #define ARTICLE_YOUR 3
 
 /* x_monnam() monster name suppress masks */
-#define SUPPRESS_IT 0x01
-#define SUPPRESS_INVISIBLE 0x02
+#define SUPPRESS_IT            0x01
+#define SUPPRESS_INVISIBLE     0x02
 #define SUPPRESS_HALLUCINATION 0x04
-#define SUPPRESS_SADDLE 0x08
-#define EXACT_NAME 0x0F
-#define SUPPRESS_NAME 0x10
-#define AUGMENT_IT 0x20 /* use "someone" or "something" instead of "it" */
+#define SUPPRESS_SADDLE        0x08
+#define SUPPRESS_MAPPEARANCE   0x10
+#define EXACT_NAME             0x1F
+#define SUPPRESS_NAME 0x20
+#define AUGMENT_IT    0x40 /* use "someone" or "something" instead of "it" */
 
 /* pline (et al) for a single string argument (suppress compiler warning) */
 #define pline1(cstr) pline("%s", cstr)
@@ -1102,6 +1111,11 @@ typedef uint32_t mmflags_nht;     /* makemon MM_ flags */
 #define GP_CHECKSCARY   0x00800000L /* check monster for onscary() */
 #define GP_AVOID_MONPOS 0x01000000L /* don't accept existing mon location */
 /* 25 bits used */
+
+/* flags for mhidden_description() (pager.c; used for mimics and hiders) */
+#define MHID_PREFIX  1 /* include ", mimicking " prefix */
+#define MHID_ARTICLE 2 /* include "a " or "an " after prefix */
+#define MHID_ALTMON  4 /* if mimicking a monster, include that */
 
 /* flags for make_corpse() and mkcorpstat(); 0..7 are recorded in obj->spe */
 #define CORPSTAT_NONE     0x00

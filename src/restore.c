@@ -1008,6 +1008,8 @@ getlev(NHFILE *nhfp, int pid, xint8 lev)
     short tlev;
 #endif
 
+    gp.program_state.in_getlev = TRUE;
+
     if (ghostly)
         clear_id_mapping();
 
@@ -1236,6 +1238,7 @@ getlev(NHFILE *nhfp, int pid, xint8 lev)
 
     if (ghostly)
         clear_id_mapping();
+    gp.program_state.in_getlev = FALSE;
 }
 
 void

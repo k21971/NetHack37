@@ -355,6 +355,9 @@ staticfn void all_options_conds(strbuf_t *);
 staticfn void all_options_menucolors(strbuf_t *);
 staticfn void all_options_msgtypes(strbuf_t *);
 staticfn void all_options_apes(strbuf_t *);
+#ifdef CHANGE_COLOR
+staticfn void all_options_palette(strbuf_t *);
+#endif
 staticfn void remove_autopickup_exception(struct autopickup_exception *);
 staticfn int count_apes(void);
 staticfn int count_cond(void);
@@ -2997,7 +3000,7 @@ optfn_perminv_mode(
         /* use a menu to choose new value for perminv_mode */
         retval = handler_perminv_mode();
     } else if (req == get_val) {
-        /* value shown when examining current option settings; exclosed
+        /* value shown when examining current option settings; enclosed
            within square brackets for 'O', shown as-is when setting value */
         Sprintf(opts, "%s", perminv_modes[iflags.perminv_mode][2]);
         if (iflags.perminv_mode != InvOptNone && !iflags.perm_invent
@@ -9419,6 +9422,26 @@ all_options_apes(strbuf_t *sbuf)
     }
 }
 
+#ifdef CHANGE_COLOR
+staticfn void
+all_options_palette(strbuf_t *sbuf)
+{
+    int clr, n = count_alt_palette();
+    char buf[BUFSZ];
+
+    if (!n)
+        return;
+
+    for (clr = 0; clr < CLR_MAX; ++clr) {
+        if (ga.altpalette[clr] != 0U) {
+            Sprintf(buf, "OPTIONS=palette:%s/#%06x\n",
+                    clr2colorname(clr), COLORVAL(ga.altpalette[clr]));
+            strbuf_append(sbuf, buf);
+        }
+    }
+}
+#endif /* CHANGE_COLOR */
+
 /* return strbuf of all options, to write to file */
 void
 all_options_strbuf(strbuf_t *sbuf)
@@ -9474,11 +9497,15 @@ all_options_strbuf(strbuf_t *sbuf)
     if (opt_set_in_config[pfx_cond_])
         all_options_conds(sbuf);
 
+#ifdef CHANGE_COLOR
+    all_options_palette(sbuf);
+#endif
     get_changed_key_binds(sbuf);
     savedsym_strbuf(sbuf);
     all_options_menucolors(sbuf);
     all_options_msgtypes(sbuf);
     all_options_apes(sbuf);
+    all_options_autocomplete(sbuf);
 #ifdef STATUS_HILITES
     all_options_statushilites(sbuf);
 #endif

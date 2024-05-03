@@ -1,4 +1,4 @@
-/* NetHack 3.7	zap.c	$NHDT-Date: 1710344449 2024/03/13 15:40:49 $  $NHDT-Branch: keni-staticfn $:$NHDT-Revision: 1.525 $ */
+/* NetHack 3.7	zap.c	$NHDT-Date: 1713334819 2024/04/17 06:20:19 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.532 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -423,7 +423,7 @@ bhitm(struct monst *mtmp, struct obj *otmp)
                 mcureblindness(mtmp, canseemon(mtmp));
             if (canseemon(mtmp)) {
                 if (disguised_mimic) {
-                    if (is_obj_mappear(mtmp,STRANGE_OBJECT)) {
+                    if (is_obj_mappear(mtmp, STRANGE_OBJECT)) {
                         /* it can do better now */
                         set_mimic_sym(mtmp);
                         newsym(mtmp->mx, mtmp->my);
@@ -1769,6 +1769,16 @@ poly_obj(struct obj *obj, int id)
             otmp->cursed = FALSE;
         }
     }
+    if (obj->otyp == LEASH && obj->leashmon != 0) {
+        if (otmp->otyp == LEASH) {
+            otmp->leashmon = obj->leashmon;
+            /* clear m_id before delobj(), to avoid o_unleash() by obfree() */
+            obj->leashmon = 0;
+        } else {
+            /* obfree() would do this if we didn't do it here */
+            o_unleash(obj);
+        }
+    }
 
     /* no box contents --KAA */
     if (Has_contents(otmp))
@@ -2657,7 +2667,7 @@ zapyourself(struct obj *obj, boolean ordinary)
             ugolemeffects(AD_ELEC, orig_dmg);
         }
         (void) destroy_items(&gy.youmonst, AD_ELEC, orig_dmg);
-        (void) flashburn((long) rnd(100));
+        (void) flashburn((long) rnd(100), TRUE);
         break;
 
     case SPE_FIREBALL:
@@ -2836,7 +2846,7 @@ zapyourself(struct obj *obj, boolean ordinary)
             damage = 5;
         damage = lightdamage(obj, ordinary, damage);
         damage += rnd(25);
-        if (flashburn((long) damage))
+        if (flashburn((long) damage, FALSE))
             learn_it = TRUE;
         damage = 0; /* reset */
         break;
@@ -2971,13 +2981,23 @@ lightdamage(
 
 /* light[ning] causes blindness */
 boolean
-flashburn(long duration)
+flashburn(long duration, boolean via_lightning)
 {
     if (!resists_blnd(&gy.youmonst)) {
         You(are_blinded_by_the_flash);
         make_blinded(duration, FALSE);
         if (!Blind)
             Your1(vision_clears);
+        return TRUE;
+    }
+    /* if blinding is resisted due to magical equipment (Sunsword), give
+       a sparkle animation (even if also resisted due to being blind)
+       _unless_ this is lightning-induced; we don't want a double sparkle
+       if hero is both lightning resistant and blindness resistant, or
+       worse, have a single sparkle where the player confuses blindness
+       resistance for lightning resistance */
+    if (!via_lightning && resists_blnd_by_arti(&gy.youmonst)) {
+        shieldeff(u.ux, u.uy);
         return TRUE;
     }
     return FALSE;
@@ -3871,27 +3891,31 @@ bhit(
         }
 
         /* if mtmp is a shade and missile passes harmlessly through it,
-           give message and skip it in order to keep going */
-        if (mtmp && (weapon == THROWN_WEAPON || weapon == KICKED_WEAPON)
-            && shade_miss(&gy.youmonst, mtmp, obj, TRUE, TRUE))
+           give message and skip it in order to keep going;
+           if attack is light and mtmp is a mimic pretending to be an
+           object, behave as if there is no monster here (if pretending
+           to be furniture, it will be revealed by flash_hits_mon()) */
+        if (mtmp && (((weapon == THROWN_WEAPON || weapon == KICKED_WEAPON)
+                      && shade_miss(&gy.youmonst, mtmp, obj, TRUE, TRUE))
+                     || (weapon == FLASHED_LIGHT
+                         && M_AP_TYPE(mtmp) == M_AP_OBJECT)))
             mtmp = (struct monst *) 0;
 
         if (mtmp) {
             gn.notonhead = (x != mtmp->mx || y != mtmp->my);
             if (weapon == FLASHED_LIGHT) {
-                /* FLASHED_LIGHT hitting invisible monster should
-                   pass through instead of stop so we call
-                   flash_hits_mon() directly rather than returning
-                   mtmp back to caller.  That allows the flash to
-                   keep on going.  Note that we use mtmp->minvis
-                   not canspotmon() because it makes no difference
-                   whether the hero can see the monster or not. */
+                /* FLASHED_LIGHT hitting invisible monster should pass
+                   through instead of stop so we call flash_hits_mon()
+                   directly rather than returning mtmp back to caller.
+                   That allows the flash to keep on going.  Note that we
+                   use mtmp->minvis not canspotmon() because it makes no
+                   difference whether hero can see the monster or not. */
                 if (mtmp->minvis) {
                     obj->ox = u.ux, obj->oy = u.uy;
                     (void) flash_hits_mon(mtmp, obj);
                 } else {
                     tmp_at(DISP_END, 0);
-                    result = mtmp; /* caller will call flash_hits_mon */
+                    result = mtmp; /* caller will call flash_hits_mon() */
                     goto bhit_done;
                 }
             } else if (weapon == INVIS_BEAM) {
@@ -4065,6 +4089,11 @@ boomhit(struct obj *obj, coordxy dx, coordxy dy)
         dy = ydir[i];
         gb.bhitpos.x += dx;
         gb.bhitpos.y += dy;
+        if (!isok(gb.bhitpos.x, gb.bhitpos.y)) {
+            gb.bhitpos.x -= dx;
+            gb.bhitpos.y -= dy;
+            break;
+        }
         if ((mtmp = m_at(gb.bhitpos.x, gb.bhitpos.y)) != 0) {
             m_respond(mtmp);
             tmp_at(DISP_END, 0);
@@ -4813,7 +4842,7 @@ dobuzz(
                 Your("%s tingles.", body_part(ARM));
             }
             if (damgtype == ZT_LIGHTNING)
-                (void) flashburn((long) d(nd, 50));
+                (void) flashburn((long) d(nd, 50), TRUE);
             stop_occupation();
             nomul(0);
         }
@@ -5022,14 +5051,14 @@ zap_over_floor(
             /* a burning web is too flimsy to notice if you can't see it */
             if (see_it)
                 Norep("A web bursts into flames!");
-            (void) delfloortrap(t);
+            (void) delfloortrap(t), t = (struct trap *) 0;
             if (see_it)
                 newsym(x, y);
         }
         if (is_ice(x, y)) {
             melt_ice(x, y, (char *) 0);
         } else if (is_pool(x, y)) {
-            boolean on_water_level = Is_waterlevel(&u.uz);
+            boolean on_water_level = Is_waterlevel(&u.uz), msggiven = FALSE;
             const char *msgtxt = (!Deaf)
                                  ? "You hear hissing gas." /* Deaf-aware */
                                  : (type >= 0)
@@ -5038,10 +5067,14 @@ zap_over_floor(
 
             /* don't create steam clouds on Plane of Water; air bubble
                movement and gas regions don't understand each other */
-            if (!on_water_level)
+            if (!on_water_level) {
                 create_gas_cloud(x, y, rnd(5), 0); /* 1..5, no damg */
+                if (iflags.last_msg == PLNMSG_ENVELOPED_IN_GAS)
+                    msggiven = TRUE;
+            }
 
             if (lev->typ != POOL) { /* MOAT or DRAWBRIDGE_UP or WATER */
+                t = (struct trap *) 0;
                 if (on_water_level)
                     msgtxt = (see_it || !Deaf) ? "Some water boils." : 0;
                 else if (see_it)
@@ -5055,9 +5088,10 @@ zap_over_floor(
                 if (see_it)
                     msgtxt = "The water evaporates.";
             }
-            if (msgtxt)
+            if (msgtxt && !msggiven)
                 Norep("%s", msgtxt);
-            if (lev->typ == ROOM) {
+
+            if (lev->typ == ROOM) { /* POOL changed to ROOM above */
                 if ((mon = m_at(x, y)) != 0) {
                     /* probably ought to do some hefty damage to any
                        creature caught in boiling water;
@@ -5067,6 +5101,15 @@ zap_over_floor(
                     }
                 }
                 newsym(x, y);
+                if (t) {
+                    /* if water walking/swimming/magical breathing, maybe fall
+                       into the new pit (after the water evaporation message);
+                       if flying or levitating, nothing will happen */
+                    if (u_at(x, y))
+                        dotrap(t, NO_TRAP_FLAGS);
+                    else if (mon)
+                        mintrap(mon, NO_TRAP_FLAGS);
+                }
             }
         } else if (IS_FOUNTAIN(lev->typ)) {
             create_gas_cloud(x, y, rnd(3), 0); /* 1..3, no damage */
