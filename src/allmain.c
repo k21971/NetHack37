@@ -183,6 +183,8 @@ moveloop_core(void)
     do_positionbar();
 #endif
 
+    dobjsfree();
+
     if (gc.context.bypasses)
         clear_bypasses();
 

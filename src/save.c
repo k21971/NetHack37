@@ -1189,6 +1189,7 @@ freedynamicdata(void)
 
     /* move-specific data */
     dmonsfree(); /* release dead monsters */
+    dobjsfree();
     alloc_itermonarr(0U); /* a request of 0 releases existing allocation */
 
     /* level-specific data */

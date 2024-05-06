@@ -736,6 +736,8 @@ struct instance_globals_n {
 
 struct instance_globals_o {
 
+    struct obj *objs_deleted;
+
     /* dbridge.c */
     struct entity occupants[ENTITIES];
 
