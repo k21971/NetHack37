@@ -1,4 +1,4 @@
-NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1428 $ $NHDT-Date: 1713657038 2024/04/20 23:50:38 $
+NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1435 $ $NHDT-Date: 1715984437 2024/05/17 22:20:37 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -567,6 +567,8 @@ perm_invent: when buying shop goods using itemized purchasing while persistent
 	soon as any item was bought (actual item-by-item purchase worked ok)
 perm_invent: making an engraving which reduced known enchantment of a weapon
 	or known charge count of a marker didn't update persistent inventory
+perm_invent: over-reading a spellbook so that in faded to blank didn't update
+	persistent inventory to show that if blank spellbook was already known
 change getloc fastmove keys in number_pad mode from hardcoded HJKL to the
 	run/rush movement keys (meta+number)
 allow using rush/run prefix key in getloc to fastmove the cursor
@@ -1943,6 +1945,10 @@ if a tame or peaceful monster was trapped and blind hero hadn't seen the trap
 	be suggested; but #untrap would fail due "you know of no traps there"
 camera flash hitting a hidden mimic mentioned it as being a mimic but didn't
 	bring it out of hiding
+when chain lightning hit a sleeping monster, the victim didn't wake up
+on medusa-4, Medusa and the downstairs were located in different chambers
+on medusa-3 and medusa-4, Perseus's statue was located in a different chamber
+	from Medusa
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
@@ -2097,6 +2103,9 @@ curses: change petattr attributes, dropping support for curses-only ones
 curses: swap the grey and no-color color initialization
 curses: allow changing default colors with the 'palette' config option
 	(only if compiled with CHANGE_COLOR)
+curses: if messages have been issued during start-up (for instance, warnings
+	about issues in run-time config file), prompt user to press <return>
+	so that they can be read before curses erases the screen
 macOS: Xcode project was failing to build if the path to the NetHack source
 	tree contained a space; the issue was within some shell script code
 	contained within the project
