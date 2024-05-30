@@ -1714,10 +1714,11 @@ trapeffect_fire_trap(
 
             if (thitm(0, mtmp, (struct obj *) 0, num, immolate))
                 trapkilled = TRUE;
-            else
-                /* we know mhp is at least `num' below mhpmax,
-                   so no (mhp > mhpmax) check is needed here */
+            else {
                 mtmp->mhpmax -= rn2(num + 1);
+                if (mtmp->mhp > mtmp->mhpmax)
+                    mtmp->mhp = mtmp->mhpmax;
+            }
         }
         if (burnarmor(mtmp) || rn2(3)) {
             int xtradmg = destroy_items(mtmp, AD_FIRE, orig_dmg);
@@ -3819,13 +3820,14 @@ float_up(void)
     return;
 }
 
+/* a boulder fills a pit or a hole at x,y */
 void
 fill_pit(coordxy x, coordxy y)
 {
     struct obj *otmp;
     struct trap *t;
 
-    if ((t = t_at(x, y)) != 0 && is_pit(t->ttyp)
+    if ((t = t_at(x, y)) != 0 && (is_pit(t->ttyp) || is_hole(t->ttyp))
         && (otmp = sobj_at(BOULDER, x, y)) != 0) {
         obj_extract_self(otmp);
         (void) flooreffects(otmp, x, y, "settle");
@@ -4986,6 +4988,9 @@ drown(void)
         /* avoid "drowned in [a] water" */
         if (!strcmp(pool_of_water, "water"))
             pool_of_water = "deep water", gk.killer.format = KILLED_BY;
+        /* avoid "drowned in _a_ limitless water" on Plane of Water */
+        else if (!strcmp(pool_of_water, "limitless water"))
+            gk.killer.format = KILLED_BY;
         Strcpy(gk.killer.name, pool_of_water);
         done(DROWNING);
         /* oops, we're still alive.  better get out of the water. */
