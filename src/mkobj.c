@@ -1,4 +1,4 @@
-/* NetHack 3.7	mkobj.c	$NHDT-Date: 1715109575 2024/05/07 19:19:35 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.296 $ */
+/* NetHack 3.7	mkobj.c	$NHDT-Date: 1718999849 2024/06/21 19:57:29 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.299 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -447,7 +447,7 @@ copy_oextra(struct obj *obj2, struct obj *obj1)
 }
 
 /*
- * Split obj so that it gets size gets reduced by num. The quantity num is
+ * Split stack so that its size gets reduced by num.  The quantity num is
  * put in the object structure delivered by this call.  The returned object
  * has its wornmask cleared and is positioned just following the original
  * in the nobj chain (and nexthere chain when on the floor).
@@ -2459,7 +2459,8 @@ discard_minvent(struct monst *mtmp, boolean uncreate_artifacts)
 
 /*
  * Free obj from whatever list it is on in preparation for deleting it
- * or moving it elsewhere; obj->where will end up set to OBJ_FREE.
+ * or moving it elsewhere; obj->where will end up set to OBJ_FREE unless
+ * it is already OBJ_LUAFREE or OBJ_DELETED.
  * Doesn't handle unwearing of objects in hero's or monsters' inventories.
  *
  * Object positions:
@@ -2472,6 +2473,7 @@ discard_minvent(struct monst *mtmp, boolean uncreate_artifacts)
  *      OBJ_BURIED      level.buriedobjs chain
  *      OBJ_ONBILL      on gb.billobjs chain
  *      OBJ_LUAFREE     obj is dealloc'd from core, but still used by lua
+ *      OBJ_DELETED     obj has been deleted from play but not yet deallocated
  */
 void
 obj_extract_self(struct obj *obj)
@@ -3185,7 +3187,7 @@ nomerge_exception(struct obj *obj)
 static const char *const obj_state_names[NOBJ_STATES] = {
     "free", "floor", "contained", "invent",
     "minvent", "migrating", "buried", "onbill",
-    "luafree"
+    "luafree", "deleted",
 };
 
 staticfn const char *

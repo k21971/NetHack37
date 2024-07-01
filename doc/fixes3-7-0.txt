@@ -1,4 +1,4 @@
-NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1435 $ $NHDT-Date: 1715984437 2024/05/17 22:20:37 $
+NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1445 $ $NHDT-Date: 1718303201 2024/06/13 18:26:41 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -1414,6 +1414,18 @@ shopkeepers magnified the cost of shop items used up as a group; normally
 the tile for Ixoth (knight's quest nemesis) depicted a demon rather than a
 	dragon; change it to be a red dragon
 untrapping containers or doors gives some experience
+only honor DEBUGFILES (for activating debugpline() calls) when in wizard mode
+if hero is on scroll of scare monster or Elbereth, werecreature switching from
+	human to beast form or general monster polymorphing into a susceptible
+	form will become scared right away instead on its next move
+'altmeta' option didn't work as intended when 'number_pad' was On; typing
+	"n <count> ESC c" wasn't treated as "n <count> M-c" because reading
+	the 'n' changed program_state.input_state from commandInp to otherInp,
+	preventing special ESC handling; not an issue when number_pad was Off
+a 3.6 fix to avoid a potential "object lost" panic when drinking potions had
+	unintended side-effect of making used up potions on shop's bill become
+	separate bill entries all with count 1 despite having come from same
+	unpaid stack; affected Ix inventory listing and itemized shop billing
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -1950,6 +1962,15 @@ on medusa-4, Medusa and the downstairs were located in different chambers
 on medusa-3 and medusa-4, Perseus's statue was located in a different chamber
 	from Medusa
 omit "a" from "drowned in a limitless water" when drowning on Plane of Water
+restoring a save file could trigger impossible "rnd(0) attempted" if it tried
+	to make an unhidden mimic hide as an object; if the code was marked as
+	a released version, it would crash due to divide by 0 error instead
+fix regression of a post-3.6 fix:  if 2 Wizards of Yendor were in play and 1
+	escaped the dungeon, bookkeeping for current number of Wizards stayed
+	at 2, interferring with future Wizard behavior
+sometimes a repeat count from the preceding command carried over to most
+	recent one when using do-again (^A); if the most recent one was an
+	extended command, the spurious repeat was for '#'
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
@@ -2026,6 +2047,7 @@ tty: if a group accelerator matched a menu command ('^' in menu for '/')
 	it wouldn't work to select, just to manipulate the menu
 tty: after resize changes which included screen erasure changes, ^C and yes|y
 	to "Really quit?" while a menu was open would lead to a panic
+tty: make cursor visible again when using ! or ^Z to temporarily leave nethack
 Unix: after lua changes to Makefiles, 'make spotless' for dat subdirectory
 	left some generated data files which should have been deleted
 Unix: reject "--sX" on command line except if "X" is "cores" (so "--scores");
@@ -2587,6 +2609,7 @@ if hero is punished or tethered to a buried iron ball and has no inventory (or
 	in the status display so that it will be visible for screenshots or
 	during streaming video
 'query_menu' option to use a menu when asked certain yes/no questions
+pyrolisk eggs explode when broken
 
 
 Platform- and/or Interface-Specific New Features

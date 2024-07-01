@@ -21,7 +21,7 @@ staticfn boolean hitum_cleave(struct monst *, struct attack *) NO_NNARGS;
 staticfn boolean double_punch(void);
 staticfn boolean hitum(struct monst *, struct attack *) NONNULLARG1;
 staticfn void hmon_hitmon_barehands(struct _hitmon_data *,
-		             struct monst *) NONNULLARG12;
+                             struct monst *) NONNULLARG12;
 staticfn void hmon_hitmon_weapon_ranged(struct _hitmon_data *, struct monst *,
                              struct obj *) NONNULLARG123;
 staticfn void hmon_hitmon_weapon_melee(struct _hitmon_data *, struct monst *,
@@ -1212,6 +1212,12 @@ hmon_hitmon_misc_obj(
                 obj->owt = weight(obj);
                 if (hmd->thrown)
                     place_object(obj, mon->mx, mon->my);
+            } else if (obj->corpsenm == PM_PYROLISK) {
+                useup_eggs(obj);
+                explode(mon->mx, mon->my, -11, d(3, 6), 0, EXPL_FIERY);
+                hmd->doreturn = TRUE;
+                hmd->retval = !DEADMONSTER(mon);
+                return;
             } else {
                 pline("Splat!");
                 useup_eggs(obj);

@@ -28,7 +28,7 @@ staticfn void start_tin(struct obj *);
 staticfn int eatcorpse(struct obj *);
 staticfn void start_eating(struct obj *, boolean);
 staticfn void garlic_breath(struct monst *);
-staticfn void fprefx(struct obj *);
+staticfn boolean fprefx(struct obj *);
 staticfn void fpostfx(struct obj *);
 staticfn int bite(void);
 staticfn int edibility_prompts(struct obj *);
@@ -2020,11 +2020,26 @@ garlic_breath(struct monst *mtmp)
  * marked it 'partly eaten'.  Used for non-rotten non-tin non-corpse food.
  * Messages should use present tense since multi-turn food won't be
  * finishing at the time they're issued.
+ * Returns FALSE if eating should not succeed for whatever reason.
  */
-staticfn void
+staticfn boolean
 fprefx(struct obj *otmp)
 {
     switch (otmp->otyp) {
+    case EGG:
+        if (otmp->corpsenm == PM_PYROLISK) {
+            useup(otmp);
+            explode(u.ux, u.uy, -11, d(3, 6), 0, EXPL_FIERY);
+            return FALSE;
+        } else if (stale_egg(otmp)) {
+            pline("Ugh.  Rotten egg."); /* perhaps others like it */
+            /* increasing existing nausea means that it will take longer
+               before eventual vomit, but also means that constitution
+               will be abused more times before illness completes */
+            make_vomiting((Vomiting & TIMEOUT) + (long) d(10, 4), TRUE);
+        } else
+            goto give_feedback;
+        break;
     case FOOD_RATION: /* nutrition 800 */
         /* 200+800 remains below 1000+1, the satiation threshold */
         if (u.uhunger <= 200)
@@ -2108,12 +2123,6 @@ fprefx(struct obj *otmp)
                             : "Yo' mama");
             }
 #endif
-        } else if (otmp->otyp == EGG && stale_egg(otmp)) {
-            pline("Ugh.  Rotten egg."); /* perhaps others like it */
-            /* increasing existing nausea means that it will take longer
-               before eventual vomit, but also means that constitution
-               will be abused more times before illness completes */
-            make_vomiting((Vomiting & TIMEOUT) + (long) d(10, 4), TRUE);
         } else {
  give_feedback:
             pline("This %s is %s", singular(otmp, xname),
@@ -2127,6 +2136,7 @@ fprefx(struct obj *otmp)
         }
         break; /* default */
     } /* switch */
+    return TRUE;
 }
 
 /* increment a combat intrinsic with limits on its growth */
@@ -2945,7 +2955,10 @@ doeat(void)
             }
             consume_oeaten(otmp, 1); /* oeaten >>= 1 */
         } else if (!already_partly_eaten) {
-            fprefx(otmp);
+            if (!fprefx(otmp)) {
+                do_reset_eat();
+                return ECMD_TIME;
+            }
         } else {
             You("%s %s.",
                 (gc.context.victual.reqtime == 1) ? "eat" : "begin eating",

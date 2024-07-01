@@ -1,4 +1,4 @@
-/* NetHack 3.7	cmd.c	$NHDT-Date: 1716592962 2024/05/24 23:22:42 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.728 $ */
+/* NetHack 3.7	cmd.c	$NHDT-Date: 1717967336 2024/06/09 21:08:56 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.729 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -878,7 +878,7 @@ domonability(void)
     char c = '\0';
 
     if (might_hide && webmaker(uptr)) {
-        c = yn_function("Hide [h] or spin a web [s]?", "hsq", 'q', TRUE);
+        c = yn_function("Hide [h] or spin a web [s]?", hidespinchars, 'q', TRUE);
         if (c == 'q' || c == '\033')
             return ECMD_OK;
     }
@@ -4669,7 +4669,10 @@ get_count(
         }
 
         if (digit(key)) {
-            cnt = 10L * cnt + (long) (key - '0');
+            long dgt = (long) (key - '0');
+
+            /* cnt = (10 * cnt) + (key - '0'); */
+            cnt = AppendLongDigit(cnt, dgt);
             if (cnt < 0L)
                 cnt = 0L;
             else if (maxcount > 0L && cnt > maxcount)
@@ -4713,7 +4716,9 @@ get_count(
     return key;
 }
 
-
+/* main command input routine when not repeating and not executing canned
+   commands; input comes via get_count() which collects repeat count if one
+   is present and returns next non-digit to us */
 staticfn int
 parse(void)
 {
@@ -4725,13 +4730,21 @@ parse(void)
     flush_screen(1); /* Flush screen buffer. Put the cursor on the hero. */
 
     /* affects readchar() behavior for ESC iff 'altmeta' option is On;
-       reset to 0 by readchar() */
+       is always reset to otherInp by readchar() */
     gp.program_state.input_state = commandInp;
+
     if (!gc.Cmd.num_pad || (foo = readchar()) == gc.Cmd.spkeys[NHKF_COUNT]) {
+        /* if 'num_pad' is On then readchar() has just reset input_state;
+           set it back to commandInp, so that get_count() supports 'altmeta';
+           otherwise "n<count>ESC<character>" becomes "n<count>ESC" (with
+           <character> not read from keyboard yet) rather than intended count
+           and meta keystroke "n<count>M-<character>" */
+        gp.program_state.input_state = commandInp;
+
         foo = get_count((char *) 0, '\0', LARGEST_INT,
                         &gc.command_count, GC_NOFLAGS);
-        gl.last_command_count = gc.command_count;
     }
+    gl.last_command_count = gc.command_count;
 
     if (foo == gc.Cmd.spkeys[NHKF_ESC]) { /* esc cancels count (TH) */
         clear_nhwindow(WIN_MESSAGE);
@@ -5004,7 +5017,7 @@ yn_menuable_resp(const char *resp)
 {
     return iflags.query_menu && iflags.window_inited
         && (resp == ynchars || resp == ynqchars || resp == ynaqchars
-            || resp == rightleftchars);
+            || resp == rightleftchars || resp == hidespinchars);
 }
 
 staticfn void
@@ -5041,13 +5054,16 @@ yn_function_menu(
         if (resp == rightleftchars) {
             yn_func_menu_opt(win, 'r', "Right", def);
             yn_func_menu_opt(win, 'l', "Left", def);
+        } else if (resp == hidespinchars) {
+            yn_func_menu_opt(win, 'h', "Hide", def);
+            yn_func_menu_opt(win, 's', "Spin a web", def);
         } else {
             yn_func_menu_opt(win, 'y', "Yes", def);
             yn_func_menu_opt(win, 'n', "No", def);
         }
         if (resp == ynaqchars)
             yn_func_menu_opt(win, 'a', "All", def);
-        if (resp == ynqchars || resp == ynaqchars)
+        if (resp == ynqchars || resp == ynaqchars || resp == hidespinchars)
             yn_func_menu_opt(win, 'q', "Quit", def);
         end_menu(win, query);
         n = select_menu(win, PICK_ONE, &sel);

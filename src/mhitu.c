@@ -35,7 +35,7 @@ hitmsg(struct monst *mtmp, struct attack *mattk)
        if same gender, "engagingly" for nymph, normal msg for others. */
     if ((compat = could_seduce(mtmp, &gy.youmonst, mattk)) != 0
         && !mtmp->mcan && !mtmp->mspec_used) {
-        pline_xy(mtmp->mx, mtmp->my, "%s %s you %s.", Monst_name,
+        pline_mon(mtmp, "%s %s you %s.", Monst_name,
               !Blind ? "smiles at" : !Deaf ? "talks to" : "touches",
               (compat == 2) ? "engagingly" : "seductively");
     } else {
@@ -73,7 +73,7 @@ hitmsg(struct monst *mtmp, struct attack *mattk)
                  && gh.hitmsg_prev != NULL
                  && mattk == gh.hitmsg_prev + 1
                  && mattk->aatyp == gh.hitmsg_prev->aatyp) ? " again" : "";
-        pline_xy(mtmp->mx, mtmp->my, "%s %s%s%s", Monst_name, verb, again, punct);
+        pline_mon(mtmp, "%s %s%s%s", Monst_name, verb, again, punct);
     }
     gh.hitmsg_mid = mtmp->m_id;
     gh.hitmsg_prev = mattk;
@@ -90,9 +90,9 @@ missmu(struct monst *mtmp, boolean nearmiss, struct attack *mattk)
         map_invisible(mtmp->mx, mtmp->my);
 
     if (could_seduce(mtmp, &gy.youmonst, mattk) && !mtmp->mcan)
-        pline_xy(mtmp->mx, mtmp->my, "%s pretends to be friendly.", Monnam(mtmp));
+        pline_mon(mtmp, "%s pretends to be friendly.", Monnam(mtmp));
     else
-        pline_xy(mtmp->mx, mtmp->my, "%s %smisses!", Monnam(mtmp),
+        pline_mon(mtmp, "%s %smisses!", Monnam(mtmp),
               (nearmiss && flags.verbose) ? "just " : "");
 
     stop_occupation();
@@ -132,7 +132,7 @@ mswings(
     boolean bash)       /* True: polearm used at too close range */
 {
     if (flags.verbose && !Blind && mon_visible(mtmp)) {
-        pline_xy(mtmp->mx, mtmp->my, "%s %s %s%s %s.", Monnam(mtmp), mswings_verb(otemp, bash),
+        pline_mon(mtmp, "%s %s %s%s %s.", Monnam(mtmp), mswings_verb(otemp, bash),
               (otemp->quan > 1L) ? "one of " : "", mhis(mtmp), xname(otemp));
     }
 }
@@ -671,7 +671,15 @@ mattacku(struct monst *mtmp)
        also, were creature might change from human to animal or vice versa */
     if (mtmp->cham == NON_PM && !mtmp->mcan && !range2
         && (is_demon(mdat) || is_were(mdat))) {
+        boolean already_fleeing = mtmp->mflee != 0;
+
         summonmu(mtmp, youseeit);
+        /* were-creature might have changed to beast form; if that has
+           caused it to become afraid (due to non-human reacting to scroll
+           of scare monster or engraved "Elbereth" which was being ignored
+           while in human form), don't continue this attack */
+        if (mtmp->mflee && !already_fleeing)
+            return 0;
         mdat = mtmp->data; /* update cached value in case of were change */
     }
 

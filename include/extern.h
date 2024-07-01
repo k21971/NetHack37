@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1713334799 2024/04/17 06:19:59 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1420 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1718303205 2024/06/13 18:26:45 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1426 $ */
 /* Copyright (c) Steve Creps, 1988.                               */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -2162,6 +2162,7 @@ extern char *Tobjnam(struct obj *, const char *) NONNULL NONNULLARG1;
 extern char *otense(struct obj *, const char *) NONNULL NONNULLARG12;
 extern char *vtense(const char *, const char *) NONNULL NONNULLARG2;
 extern char *Doname2(struct obj *) NONNULL NONNULLARG1;
+extern char *paydoname(struct obj *) NONNULL NONNULLARG1;
 extern char *yname(struct obj *) NONNULL NONNULLARG1;
 extern char *Yname2(struct obj *) NONNULL NONNULLARG1;
 extern char *ysimple_name(struct obj *) NONNULL NONNULLARG1;
@@ -2368,6 +2369,7 @@ extern void dumplogfreemessages(void);
 extern void pline(const char *, ...) PRINTF_F(1, 2);
 extern void pline_dir(int, const char *, ...) PRINTF_F(2, 3);
 extern void pline_xy(coordxy, coordxy, const char *, ...) PRINTF_F(3, 4);
+extern void pline_mon(struct monst *, const char *, ...) PRINTF_F(2, 3) NONNULLARG1;
 extern void set_msg_dir(int);
 extern void set_msg_xy(coordxy, coordxy);
 extern void custompline(unsigned, const char *, ...) PRINTF_F(2, 3);
@@ -3155,6 +3157,7 @@ extern int tt_doppel(struct monst *) NONNULLARG1;
 extern void initrack(void);
 extern void settrack(void);
 extern coord *gettrack(coordxy, coordxy);
+extern boolean hastrack(coordxy, coordxy);
 extern void save_track(NHFILE *) NONNULLARG1;
 extern void rest_track(NHFILE *) NONNULLARG1;
 
@@ -3720,7 +3723,7 @@ extern int pick_nasty(int);
 extern int nasty(struct monst *) NO_NNARGS;
 extern void resurrect(void);
 extern void intervene(void);
-extern void wizdead(void);
+extern void wizdeadorgone(void);
 extern void cuss(struct monst *) NONNULLARG1;
 
 /* ### wizcmds.c ### */

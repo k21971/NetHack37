@@ -32,7 +32,7 @@ staticfn void init_mextra(struct mextra *);
 boolean
 is_home_elemental(struct permonst *ptr)
 {
-    if (ptr->mlet == S_ELEMENTAL)
+    if (ptr->mlet == S_ELEMENTAL) {
         switch (monsndx(ptr)) {
         case PM_AIR_ELEMENTAL:
             return Is_airlevel(&u.uz);
@@ -43,8 +43,9 @@ is_home_elemental(struct permonst *ptr)
         case PM_WATER_ELEMENTAL:
             return Is_waterlevel(&u.uz);
         default:
-	    break;
-	}
+            break;
+        }
+    }
     return FALSE;
 }
 
