@@ -98,6 +98,11 @@ CFLAGS+=-fsanitize=address
 LFLAGS+=-fsanitize=address
 endif
 
+ifeq "$(USE_UBSAN)" "1"
+CFLAGS+=-fsanitize=undefined
+LFLAGS+=-fsanitize=undefined
+endif
+
 ifdef WANT_WIN_TTY
 USE_CURSESLIB=1
 endif
