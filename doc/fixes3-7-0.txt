@@ -1,4 +1,4 @@
-NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1445 $ $NHDT-Date: 1718303201 2024/06/13 18:26:41 $
+NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1450 $ $NHDT-Date: 1720074479 2024/07/04 06:27:59 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -1401,6 +1401,7 @@ gold thrown or kicked at a sleeping monster with the 'greedy' attribute gets
 	neglected to report that target monster was awakened in the process
 hero movement affects the water bubble movement direction
 pets and peacefuls avoid a location hero just kicked
+pets avoid a possible boulder pushing location in sokoban
 shopkeepers bill you for using their bear trap or land mine
 when engraving with a stack of eligible weapons, split one off the stack and
 	dull it rather than dull the whole stack
@@ -1426,6 +1427,17 @@ a 3.6 fix to avoid a potential "object lost" panic when drinking potions had
 	unintended side-effect of making used up potions on shop's bill become
 	separate bill entries all with count 1 despite having come from same
 	unpaid stack; affected Ix inventory listing and itemized shop billing
+buying shop items which include any unpaid ones inside containers would reveal
+	them even when the containers hadn't been opened (obj->cknown==0);
+	recent change to pay via menu made the problem become more visible;
+	shopping has been changed such that buying anything that is inside a
+	container requires that the whole container be bought as a unit
+using #loot -> 'i'n to put multiple items into a shop-owned container would
+	ask whether to sell each item to the shop, and was prepared to accept
+	'a' to sell the current one plus all the rest beyond it, or to accept
+	'q' to not sell the current one or any beyond it, but the sell vs
+	don't-sell state was being reset for each item so 'a' and 'q' didn't
+	stick beyond the current one
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository

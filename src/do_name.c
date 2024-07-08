@@ -1,4 +1,4 @@
-/* NetHack 3.7	do_name.c	$NHDT-Date: 1708126536 2024/02/16 23:35:36 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.307 $ */
+/* NetHack 3.7	do_name.c	$NHDT-Date: 1720128164 2024/07/04 21:22:44 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.319 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Pasi Kallinen, 2018. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1066,7 +1066,7 @@ Monnam(struct monst *mtmp)
     char *bp = mon_nam(mtmp);
 
     *bp = highc(*bp);
-    return  bp;
+    return bp;
 }
 
 char *
@@ -1075,7 +1075,7 @@ noit_Monnam(struct monst *mtmp)
     char *bp = noit_mon_nam(mtmp);
 
     *bp = highc(*bp);
-    return  bp;
+    return bp;
 }
 
 char *
@@ -1084,7 +1084,7 @@ Some_Monnam(struct monst *mtmp)
     char *bp = some_mon_nam(mtmp);
 
     *bp = highc(*bp);
-    return  bp;
+    return bp;
 }
 
 /* return "a dog" rather than "Fido", honoring hallucination and visibility */
@@ -1118,6 +1118,16 @@ y_monnam(struct monst *mtmp)
     return x_monnam(mtmp, prefix, (char *) 0, suppression_flag, FALSE);
 }
 
+/* y_monnam() for start of sentence */
+char *
+YMonnam(struct monst *mtmp)
+{
+    char *bp = y_monnam(mtmp);
+
+    *bp = highc(*bp);
+    return bp;
+}
+
 char *
 Adjmonnam(struct monst *mtmp, const char *adj)
 {
@@ -1125,7 +1135,7 @@ Adjmonnam(struct monst *mtmp, const char *adj)
                         has_mgivenname(mtmp) ? SUPPRESS_SADDLE : 0, FALSE);
 
     *bp = highc(*bp);
-    return  bp;
+    return bp;
 }
 
 char *
@@ -1141,7 +1151,7 @@ Amonnam(struct monst *mtmp)
     char *bp = a_monnam(mtmp);
 
     *bp = highc(*bp);
-    return  bp;
+    return bp;
 }
 
 /* used for monster ID by the '/', ';', and 'C' commands to block remote
