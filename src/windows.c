@@ -1222,13 +1222,13 @@ dump_fmtstr(
                 break;
             case 'n': /* player name */
                 if (fullsubs)
-                    Sprintf(tmpbuf, "%s", *gp.plname ? gp.plname : "unknown");
+                    Sprintf(tmpbuf, "%s", *svp.plname ? svp.plname : "unknown");
                 else
                     Strcpy(tmpbuf, "{hero name}");
                 break;
             case 'N': /* first character of player name */
                 if (fullsubs)
-                    Sprintf(tmpbuf, "%c", *gp.plname ? *gp.plname : 'u');
+                    Sprintf(tmpbuf, "%c", *svp.plname ? *svp.plname : 'u');
                 else
                     Strcpy(tmpbuf, "{hero initial}");
                 break;
@@ -1935,9 +1935,9 @@ dump_headers(void)
 
     fprintf(dumphtml_file, "<!DOCTYPE html>\n");
     fprintf(dumphtml_file, "<head>\n");
-    fprintf(dumphtml_file, "<title>NetHack %s (%s)</title>\n",  version_string(vers, sizeof vers), gp.plname);
+    fprintf(dumphtml_file, "<title>NetHack %s (%s)</title>\n",  version_string(vers, sizeof vers), svp.plname);
     fprintf(dumphtml_file, "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />\n");
-    fprintf(dumphtml_file, "<meta name=\"generator\" content=\"NetHack %s (%s)\" />\n", vers, gp.plname);
+    fprintf(dumphtml_file, "<meta name=\"generator\" content=\"NetHack %s (%s)\" />\n", vers, svp.plname);
     fprintf(dumphtml_file, "<meta name=\"date\" content=\"%s\" />\n", iso8601);
     fprintf(dumphtml_file, "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n");
     fprintf(dumphtml_file, "<link href=\"https://cdn.jsdelivr.net/gh/maxwell-k/dejavu-sans-mono-web-font@2.37/index.css\" title=\"Default\" rel=\"stylesheet\" type=\"text/css\" media=\"all\" />\n");
@@ -2321,7 +2321,7 @@ encglyph(int glyph)
 {
     static char encbuf[20]; /* 10+1 would suffice */
 
-    Sprintf(encbuf, "\\G%04X%04X", gc.context.rndencode, glyph);
+    Sprintf(encbuf, "\\G%04X%04X", svc.context.rndencode, glyph);
     return encbuf;
 }
 
@@ -2340,7 +2340,7 @@ decode_glyph(const char *str, int *glyph_ptr)
         } else
             break;
     }
-    if (rndchk == gc.context.rndencode) {
+    if (rndchk == svc.context.rndencode) {
         *glyph_ptr = dcount = 0;
         for (; *str && ++dcount <= 4; ++str) {
             if ((dp = strchr(hexdd, *str)) != 0) {
@@ -2705,7 +2705,7 @@ add_menu_heading(winid tmpwin, const char *buf)
         color = iflags.menu_headings.color;
 
     /* suppress highlighting during end-of-game disclosure */
-    if (gp.program_state.gameover)
+    if (program_state.gameover)
         attr = ATR_NONE, color = NO_COLOR;
 
     add_menu(tmpwin, &nul_glyphinfo, &any, '\0', '\0', attr, color,
@@ -2753,10 +2753,10 @@ getlin(const char *query, char *bufp)
 {
     boolean old_bot_disabled = gb.bot_disabled;
 
-    gp.program_state.in_getlin = 1;
+    program_state.in_getlin = 1;
     gb.bot_disabled = TRUE;
     (*windowprocs.win_getlin)(query, bufp);
     gb.bot_disabled = old_bot_disabled;
-    gp.program_state.in_getlin = 0;
+    program_state.in_getlin = 0;
 }
 /*windows.c*/
