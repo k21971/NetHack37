@@ -1,4 +1,4 @@
-NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1464 $ $NHDT-Date: 1723945837 2024/08/18 01:50:37 $
+NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1472 $ $NHDT-Date: 1725143669 2024/08/31 22:34:29 $
 
 General Fixes and Modified Features
 -----------------------------------
@@ -2021,6 +2021,9 @@ having #terrain display gas cloud regions as if they were traps didn't work
 when a monster within a gas cloud was displayed on the map because the hero
 	was next to it, it remained displayed if hero moved away
 eating a pyrolisk egg on the floor triggered an "object lost" panic
+core object creation and the curses interface's window handling both became
+	confused by the 'pauper' option/conduct because they assumed that invent
+	being Null meant that the game hadn't started yet
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
@@ -2664,6 +2667,9 @@ if hero is punished or tethered to a buried iron ball and has no inventory (or
 	during streaming video
 'query_menu' option to use a menu when asked certain yes/no questions
 pyrolisk eggs explode when broken
+pauper-option to start the character with no possessions
+wand of secret door detection, spell of detect unseen, and wizard mode ^E now
+	flash the cursor at each location where detection finds something
 
 
 Platform- and/or Interface-Specific New Features

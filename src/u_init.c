@@ -1,4 +1,4 @@
-/* NetHack 3.7	u_init.c	$NHDT-Date: 1711165379 2024/03/23 03:42:59 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.106 $ */
+/* NetHack 3.7	u_init.c	$NHDT-Date: 1725138482 2024/08/31 21:08:02 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.110 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2017. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -559,6 +559,8 @@ static const struct def_skill Skill_W[] = {
 staticfn void
 knows_object(int obj)
 {
+    if (u.uroleplay.pauper)
+        return;
     discover_object(obj, TRUE, FALSE);
     objects[obj].oc_pre_discovered = 1; /* not a "discovery" */
 }
@@ -570,6 +572,9 @@ knows_class(char sym)
 {
     struct obj odummy, *o;
     int ct;
+
+    if (u.uroleplay.pauper)
+        return;
 
     odummy = cg.zeroobj;
     odummy.oclass = sym;
@@ -611,6 +616,12 @@ staticfn void
 u_init_role(void)
 {
     int i;
+
+    /* the program used to check moves<=1 && invent==NULL do decide whether
+       a new game has started, but due to the 'pauper' option/conduct, can't
+       rely on invent becoming non-Null anymore; instead, initialize moves
+       to 0 instead of 1 and then set it to 1 here, where invent init occurs */
+    svm.moves = 1L;
 
     switch (Role_switch) {
     /* rn2(100) > 50 necessary for some choices because some
@@ -1212,6 +1223,9 @@ ini_inv(struct trobj *trop)
     struct obj *obj;
     int otyp;
     boolean got_sp1 = FALSE; /* got a level 1 spellbook? */
+
+    if (u.uroleplay.pauper) /* pauper gets no items */
+        return;
 
     while (trop->trclass) {
         otyp = (int) trop->trotyp;
