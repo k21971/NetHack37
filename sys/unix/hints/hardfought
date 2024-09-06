@@ -354,7 +354,7 @@ SYSCONFENSURE = (if ! test -f $(INSTDIR)/sysconf ; then \
 PREFIX=/opt/nethack/chroot
 
 # this is the dir where NetHack is inside the chroot
-HACKDIR=/nh370.106-hdf
+HACKDIR=/nh370.107-hdf
 INSTDIR=$(PREFIX)$(HACKDIR)
 VARDIR =$(INSTDIR)/var
 
