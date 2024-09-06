@@ -200,7 +200,8 @@ kick_monster(struct monst *mon, coordxy x, coordxy y)
                 continue;
 
             kickdieroll = rnd(20);
-            specialdmg = special_dmgval(&gy.youmonst, mon, W_ARMF, (long *) 0);
+            specialdmg = special_dmgval(&gy.youmonst, mon, W_ARMF,
+                                        (long *) 0);
             if (mon->data == &mons[PM_SHADE] && !specialdmg) {
                 /* doesn't matter whether it would have hit or missed,
                    and shades have no passive counterattack */
@@ -493,8 +494,9 @@ kick_object(coordxy x, coordxy y, char *kickobjnam)
     /* if a pile, the "top" object gets kicked */
     gk.kickedobj = svl.level.objects[x][y];
     if (gk.kickedobj) {
-        /* kick object; if doing is fatal, done() will clean up gk.kickedobj */
-        Strcpy(kickobjnam, killer_xname(gk.kickedobj)); /* matters iff res==0 */
+        /* formatted object name matters iff res==0 */
+        Strcpy(kickobjnam, killer_xname(gk.kickedobj));
+        /* kick object; if fatal, done() will clean up kickedobj */
         res = really_kick_object(x, y);
         gk.kickedobj = (struct obj *) 0;
     }
@@ -907,6 +909,8 @@ kick_ouch(coordxy x, coordxy y, const char *kickobjnam)
 staticfn void
 kick_door(coordxy x, coordxy y, int avrg_attrib)
 {
+    boolean doorbuster;
+
     if (gm.maploc->doormask == D_ISOPEN || gm.maploc->doormask == D_BROKEN
         || gm.maploc->doormask == D_NODOOR) {
         kick_dumb(x, y);
@@ -920,9 +924,12 @@ kick_door(coordxy x, coordxy y, int avrg_attrib)
     }
 
     exercise(A_DEX, TRUE);
+    doorbuster = Upolyd && is_giant(gy.youmonst.data);
     /* door is known to be CLOSED or LOCKED */
-    if (rnl(35) < avrg_attrib + (!martial() ? 0 : ACURR(A_DEX))) {
+    if (doorbuster
+        || (rnl(35) < avrg_attrib + (!martial() ? 0 : ACURR(A_DEX)))) {
         boolean shopdoor = *in_rooms(x, y, SHOPBASE) ? TRUE : FALSE;
+
         /* break the door */
         if (gm.maploc->doormask & D_TRAPPED) {
             if (flags.verbose)
