@@ -4039,10 +4039,24 @@ maybe_wail(void)
 int
 saving_grace(int dmg)
 {
-    if (!u.usaving_grace && (u.uhp <= dmg)
-        && (u.uhp * 100 / u.uhpmax) > 90) {
+    if (dmg < 0) {
+        impossible("saving_grace check for negative damage? (%d)", dmg);
+        return 0;
+    }
+
+    if (!u.usaving_grace && dmg >= u.uhp && (u.uhp * 100 / u.uhpmax) > 90) {
+        /* saving_grace doesn't have it's own livelog classification;
+           we might invent one, or perhaps use LL_LIFESAVE, but surviving
+           certain death (or preserving worn amulet of life saving) via
+           saving-grace feels like breaking a conduct; not sure how best
+           to phrase this though... */
+        livelog_printf(LL_CONDUCT, "%s (%d damage, %d/%d HP)",
+                       "survived one-shot death via saving-grave",
+                       dmg, u.uhp, u.uhpmax);
+
+        /* note: this could reduce dmg to 0 if u.uhpmax==1 */
         dmg = u.uhp - 1;
-        u.usaving_grace = TRUE; /* used up */
+        u.usaving_grace = 1; /* used up */
         end_running(TRUE);
         if (u.usleep)
             unmul("Suddenly you wake up!");
