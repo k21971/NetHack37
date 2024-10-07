@@ -91,6 +91,7 @@ dosave0(void)
 #endif
 
     program_state.saving++; /* inhibit status and perm_invent updates */
+    notice_mon_off();
     /* we may get here via hangup signal, in which case we want to fix up
        a few of things before saving so that they won't be restored in
        an improper state; these will be no-ops for normal save sequence */
@@ -238,6 +239,7 @@ dosave0(void)
     res = 1;
 
  done:
+    notice_mon_on();
     program_state.saving--;
     return res;
 }
