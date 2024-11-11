@@ -1181,6 +1181,8 @@ free_dungeons(void)
     return;
 }
 
+extern int options_set_window_colors_flag; /* options.c */
+
 /* free a lot of allocated memory which is ordinarily freed during save */
 void
 freedynamicdata(void)
@@ -1278,6 +1280,9 @@ freedynamicdata(void)
 #if defined(DUMPLOG) || defined(DUMPHTML)
     dumplogfreemessages();
 #endif
+
+    if (options_set_window_colors_flag)
+        options_free_window_colors();
 
     /* last, because it frees data that might be used by panic() to provide
        feedback to the user; conceivably other freeing might trigger panic */

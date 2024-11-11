@@ -2626,15 +2626,17 @@ dozap(void)
 staticfn void
 boxlock_invent(struct obj *obj)
 {
-    struct obj *otmp;
+    struct obj *otmp, *nextobj;
     boolean boxing = FALSE;
 
     /* (un)lock carried boxes */
-    for (otmp = gi.invent; otmp; otmp = otmp->nobj)
+    for (otmp = gi.invent; otmp; otmp = nextobj) {
+        nextobj = otmp->nobj;
         if (Is_box(otmp)) {
             (void) boxlock(otmp, obj);
             boxing = TRUE;
         }
+    }
     if (boxing)
         update_inventory(); /* in case any box->lknown has changed */
 }
@@ -6187,14 +6189,22 @@ makewish(void)
     /* TODO? maybe generate a second event describing what was received since
        these just echo player's request rather than show actual result */
 
-    const char *verb = ((Is_airlevel(&u.uz) || u.uinwater) ? "slip" : "drop"),
+    if (otmp->otyp == CORPSE && !u_safe_from_fatal_corpse(otmp, st_all))
+        otmp->wishedfor = 1;
+
+    const char *verb = ((Is_airlevel(&u.uz) || u.uinwater)
+                        ? "slip"
+                        : (otmp->otyp == CORPSE && otmp->wishedfor)
+                          ? "materialize" : "drop"),
                *oops_msg = (u.uswallow
                             ? "Oops!  %s out of your reach!"
                             : (Is_airlevel(&u.uz) || Is_waterlevel(&u.uz)
                                || levl[u.ux][u.uy].typ < IRONBARS
                                || levl[u.ux][u.uy].typ >= ICE)
                                ? "Oops!  %s away from you!"
-                               : "Oops!  %s to the floor!");
+                               : !(otmp->otyp == CORPSE && otmp->wishedfor)
+                                 ? "Oops!  %s to the floor!"
+                                 : "Careful! %s on the floor!");
 
     /* The(aobjnam()) is safe since otmp is unidentified -dlc */
     (void) hold_another_object(otmp, oops_msg, The(aobjnam(otmp, verb)),

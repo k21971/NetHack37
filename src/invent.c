@@ -1230,6 +1230,12 @@ hold_another_object(
            dropped, avoid perminv update when temporarily adding it */
         obj = addinv_core0(obj, (struct obj *) 0, FALSE);
         goto drop_it;
+    } else if (obj->otyp == CORPSE
+               && !u_safe_from_fatal_corpse(obj, st_all)
+               && obj->wishedfor) {
+        obj->wishedfor = 0;
+        obj = addinv_core0(obj, (struct obj *) 0, FALSE);
+        goto drop_it;
     } else {
         long oquan = obj->quan;
         int prev_encumbr = near_capacity(); /* before addinv() */
@@ -1470,6 +1476,18 @@ carrying(int type)
     /* this could be replaced by 'return m_carrying(&gy.youmonst, type);' */
     for (otmp = gi.invent; otmp; otmp = otmp->nobj)
         if (otmp->otyp == type)
+            break;
+    return otmp;
+}
+
+/* return inventory object of type that will petrify on touch */
+struct obj *
+carrying_stoning_corpse(void)
+{
+    struct obj *otmp;
+
+    for (otmp = gi.invent; otmp; otmp = otmp->nobj)
+        if (otmp->otyp == CORPSE && touch_petrifies(&mons[otmp->corpsenm]))
             break;
     return otmp;
 }
@@ -2224,15 +2242,17 @@ ggetobj(const char *word, int (*fn)(OBJ_P), int mx,
             return 0;
         if (strchr(buf, 'i')) {
             char ailets[1+26+26+1+5+1]; /* $ + a-z + A-Z + # + slop + \0 */
-            struct obj *otmp;
+            struct obj *otmp, *nextobj;
 
             /* applicable inventory letters; if empty, show entire invent */
             ailets[0] = '\0';
             if (ofilter)
-                for (otmp = gi.invent; otmp; otmp = otmp->nobj)
+                for (otmp = gi.invent; otmp; otmp = nextobj) {
+                    nextobj = otmp->nobj;
                     /* strchr() check: limit overflow items to one '#' */
                     if ((*ofilter)(otmp) && !strchr(ailets, otmp->invlet))
                         (void) strkitten(ailets, otmp->invlet);
+                }
             if (display_inventory(ailets, TRUE) == '\033')
                 return 0;
         } else
@@ -3491,7 +3511,7 @@ dispinv_with_action(
     boolean use_inuse_ordering, /* affects sortloot() and header labels */
     const char *alt_label)      /* alternate value for in-use "Accessories" */
 {
-    struct obj *otmp;
+    struct obj *otmp, *nextobj;
     const char *save_accessories = 0;
     char c, save_sortloot = 0;
     unsigned len = lets ? (unsigned) strlen(lets) : 0U;
@@ -3517,9 +3537,11 @@ dispinv_with_action(
     iflags.force_invmenu = save_force_invmenu;
 
     if (c && c != '\033') {
-        for (otmp = gi.invent; otmp; otmp = otmp->nobj)
+        for (otmp = gi.invent; otmp; otmp = nextobj) {
+            nextobj = otmp->nobj;
             if (otmp->invlet == c)
                 return itemactions(otmp);
+        }
     }
     return ECMD_OK;
 }

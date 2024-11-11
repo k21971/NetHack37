@@ -52,6 +52,7 @@ staticfn int takeoff_ok(struct obj *);
 /* maybe_destroy_armor() may return NULL */
 staticfn struct obj *maybe_destroy_armor(struct obj *, struct obj *,
                                        boolean *) NONNULLARG3;
+staticfn boolean better_not_take_that_off(struct obj *) NONNULLARG1;
 
 /* plural "fingers" or optionally "gloves" */
 const char *
@@ -2641,6 +2642,8 @@ select_off(struct obj *otmp)
                   gloves_simple_name(uarmg));
             return 0;
         }
+        if (better_not_take_that_off(otmp))
+            return 0;
     }
     /* special boot checks */
     if (otmp == uarmf) {
@@ -2886,6 +2889,29 @@ take_off(void)
     return 1; /* get busy */
 }
 
+staticfn boolean
+better_not_take_that_off(struct obj *otmp)
+{
+    struct obj *corpse = carrying_stoning_corpse();
+    char buf[BUFSZ];
+
+    /* u_safe_from_fatal_corpse() with
+       (st_corpse | st_petrifies | st_resists) instead of
+       (st_corpse | st_petrifies)
+       would also check for no stoning resistance before
+       bothering to prompt, but losing stoning resistance
+       later, without the gloves on could prove dangerous,
+       so we won't factor that in */
+    if (corpse
+        && !u_safe_from_fatal_corpse(corpse, st_corpse | st_petrifies)) {
+        Snprintf(buf, sizeof buf,
+            "Take off your %s despite carrying a dead %s?",
+                 gloves_simple_name(otmp), obj_pmname(corpse));
+        return (paranoid_ynq(TRUE, buf, FALSE) != 'y');
+    }
+    return FALSE;
+}
+
 /* clear saved context to avoid inappropriate resumption of interrupted 'A' */
 void
 reset_remarm(void)
@@ -3020,7 +3046,7 @@ menu_remarm(int retry)
 staticfn void
 wornarm_destroyed(struct obj *wornarm)
 {
-    struct obj *invobj;
+    struct obj *invobj, *nextobj;
     unsigned wornoid = wornarm->o_id;
 
     /* cancel_don() resets 'afternmv' when appropriate but doesn't reset
@@ -3049,11 +3075,13 @@ wornarm_destroyed(struct obj *wornarm)
        scan invent instead; if already freed it shouldn't be possible to
        have re-used the stale memory for a new item yet but verify o_id
        just in case */
-    for (invobj = gi.invent; invobj; invobj = invobj->nobj)
+    for (invobj = gi.invent; invobj; invobj = nextobj) {
+        nextobj = invobj->nobj;
         if (invobj == wornarm && invobj->o_id == wornoid) {
             useup(wornarm);
             break;
         }
+    }
 }
 
 /*
