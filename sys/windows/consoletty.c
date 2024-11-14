@@ -300,7 +300,7 @@ static INPUT_RECORD bogus_key;
 /*
 Windows console palette:
 Color Name      Console Legacy RGB Values  New Default RGB Values
-BLACK           0,0,0	                   12,12,12
+BLACK           0,0,0                      12,12,12
 DARK_BLUE       0,0,128                    0,55,218
 DARK_GREEN      0,128,0                    19,161,14
 DARK_CYAN       0,128,128                  58,150,221
@@ -1128,11 +1128,11 @@ consoletty_open(int mode)
 void
 consoletty_exit(void)
 {
-    /* frees some status tracking data */
-    genl_status_finish();
     /* go back to using the safe routines */
     safe_routines();
     free_custom_colors();
+    free((genericptr_t) console.front_buffer);
+    free((genericptr_t) console.back_buffer);
     free((genericptr_t) console.localestr);
     free((genericptr_t) console.orig_localestr);
 }
