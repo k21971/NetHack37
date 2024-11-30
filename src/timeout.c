@@ -79,6 +79,7 @@ static const struct propname {
     { SICK_RES, "sickness resistance" },
     { ANTIMAGIC, "magic resistance" },
     { HALLUC_RES, "hallucination resistance" },
+    { BLND_RES, "light-induced blindness resistance" },
     { FUMBLING, "fumbling" },
     { HUNGER, "voracious hunger" },
     { TELEPAT, "telepathic" },
@@ -928,6 +929,12 @@ nh_timeout(void)
                 break;
             case GLIB:
                 make_glib(0); /* might update persistent inventory */
+                break;
+            case PROT_FROM_SHAPE_CHANGERS:
+                /* timed Protection_from_shape_changers is via
+                   #wizintrinsic only */
+                if (!Protection_from_shape_changers)
+                    restartcham();
                 break;
             }
         }
