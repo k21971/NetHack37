@@ -523,7 +523,9 @@ mon_arrive(struct monst *mtmp, int when)
         } else if (!(u.uevent.qexpelled
                      && (Is_qstart(&u.uz0) || Is_qstart(&u.uz)))) {
             impossible("mon_arrive: no corresponding portal?");
-        } /*FALLTHRU*/
+        }
+        FALLTHROUGH;
+        /*FALLTHRU*/
     default:
     case MIGR_RANDOM:
         xlocale = ylocale = 0;
@@ -1076,6 +1078,7 @@ dogfood(struct monst *mon, struct obj *obj)
             && obj->oclass != BALL_CLASS
             && obj->oclass != CHAIN_CLASS)
             return APPORT;
+        FALLTHROUGH;
         /*FALLTHRU*/
     case ROCK_CLASS:
         return UNDEF;
@@ -1200,6 +1203,8 @@ tamedog(struct monst *mtmp, struct obj *obj, boolean givemsg)
               Hallucination ? "approachable" : "friendly");
 
     newsym(mtmp->mx, mtmp->my);
+    if (mtmp->wormno)
+        redraw_worm(mtmp);
     if (attacktype(mtmp->data, AT_WEAP)) {
         mtmp->weapon_check = NEED_HTH_WEAPON;
         (void) mon_wield_item(mtmp);
@@ -1308,8 +1313,12 @@ abuse_dog(struct monst *mtmp)
         else
             growl(mtmp); /* give them a moment's worry */
 
-        if (!mtmp->mtame)
+        if (!mtmp->mtame) {
             newsym(mtmp->mx, mtmp->my);
+            if (mtmp->wormno) {
+                redraw_worm(mtmp);
+            }
+        }
     }
 }
 
