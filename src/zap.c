@@ -167,6 +167,15 @@ bhitm(struct monst *mtmp, struct obj *otmp)
     struct obj *obj;
     boolean disguised_mimic = (mtmp->data->mlet == S_MIMIC
                                && M_AP_TYPE(mtmp) != M_AP_NOTHING);
+    /* box_or_door(): mimic appearances that have locks */
+#define box_or_door(monst) \
+    ((M_AP_TYPE(monst) == M_AP_OBJECT                                   \
+      && ((monst)->mappearance == CHEST                                 \
+          || (monst)->mappearance == LARGE_BOX))                        \
+     || (M_AP_TYPE(monst) == M_AP_FURNITURE                             \
+         /* is_cmap_door() tests S_symbol values, and            */     \
+         /* mon->mappearance for furniture contains one of those */     \
+         && is_cmap_door((monst)->mappearance)))
 
     if (engulfing_u(mtmp))
         reveal_invis = FALSE;
@@ -355,10 +364,8 @@ bhitm(struct monst *mtmp, struct obj *otmp)
     }
     case WAN_LOCKING:
     case SPE_WIZARD_LOCK:
-        /* can't use Is_box() here */
-        if (disguised_mimic && (is_obj_mappear(mtmp, CHEST)
-                                || is_obj_mappear(mtmp, LARGE_BOX)))
-            seemimic(mtmp);
+        if (disguised_mimic && box_or_door(mtmp))
+            that_is_a_mimic(mtmp, TRUE); /*seemimic()*/
         wake = closeholdingtrap(mtmp, &learn_it);
         break;
     case WAN_PROBING:
@@ -369,9 +376,8 @@ bhitm(struct monst *mtmp, struct obj *otmp)
         break;
     case WAN_OPENING:
     case SPE_KNOCK:
-        if (disguised_mimic && (is_obj_mappear(mtmp, CHEST)
-                                || is_obj_mappear(mtmp, LARGE_BOX)))
-            seemimic(mtmp);
+        if (disguised_mimic && box_or_door(mtmp))
+            that_is_a_mimic(mtmp, TRUE); /*seemimic()*/
         wake = FALSE; /* don't want immediate counterattack */
         if (mtmp == u.ustuck) {
             /* zapping either holder/holdee or self [zapyourself()] will
@@ -420,11 +426,15 @@ bhitm(struct monst *mtmp, struct obj *otmp)
         }
         break;
     case SPE_HEALING:
-    case SPE_EXTRA_HEALING:
+    case SPE_EXTRA_HEALING: {
+        int healamt = d(6, otyp == SPE_EXTRA_HEALING ? 8 : 4);
+
         reveal_invis = TRUE;
         if (mtmp->data != &mons[PM_PESTILENCE]) {
+            int delta = mtmp->mhpmax - mtmp->mhp;
+
             wake = FALSE; /* wakeup() makes the target angry */
-            mtmp->mhp += d(6, otyp == SPE_EXTRA_HEALING ? 8 : 4);
+            mtmp->mhp += healamt;
             if (mtmp->mhp > mtmp->mhpmax)
                 mtmp->mhp = mtmp->mhpmax;
             /* plain healing must be blessed to cure blindness; extra
@@ -445,15 +455,19 @@ bhitm(struct monst *mtmp, struct obj *otmp)
                     pline("%s looks%s better.", Monnam(mtmp),
                           otyp == SPE_EXTRA_HEALING ? " much" : "");
             }
+            if (mtmp->mtame && Role_if(PM_HEALER) && (delta > 0)) {
+                more_experienced(min(delta, healamt), 0);
+                newexplevel();
+            }
             if (mtmp->mtame || mtmp->mpeaceful) {
                 adjalign(Role_if(PM_HEALER) ? 1 : sgn(u.ualign.type));
             }
         } else { /* Pestilence */
-            /* Pestilence will always resist; damage is half of 3d{4,8} */
-            (void) resist(mtmp, otmp->oclass,
-                          d(3, otyp == SPE_EXTRA_HEALING ? 8 : 4), TELL);
+            /* Pestilence will always resist; damage is half of (healamt/2) */
+            (void) resist(mtmp, otmp->oclass, healamt / 2, TELL);
         }
         break;
+    }
     case WAN_LIGHT: /* (broken wand) */
         if (flash_hits_mon(mtmp, otmp)) {
             learn_it = TRUE;
@@ -541,6 +555,7 @@ bhitm(struct monst *mtmp, struct obj *otmp)
     if (learn_it)
         learnwand(otmp);
     return ret;
+#undef box_or_door
 }
 
 /* hero is held by a monster or engulfed or holding a monster and has zapped
@@ -1768,10 +1783,9 @@ poly_obj(struct obj *obj, int id)
 
     /* Keep chest/box traps and poisoned ammo if we may */
     if (obj->otrapped && Is_box(otmp))
-        otmp->otrapped = TRUE;
-
+        otmp->otrapped = 1;
     if (obj->opoisoned && is_poisonable(otmp))
-        otmp->opoisoned = TRUE;
+        otmp->opoisoned = 1;
 
     if (id == STRANGE_OBJECT && obj->otyp == CORPSE) {
         /* turn crocodile corpses into shoes */

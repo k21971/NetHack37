@@ -126,6 +126,7 @@ extern void use_unicorn_horn(struct obj **);
 extern boolean tinnable(struct obj *) NONNULLPTRS;
 extern void reset_trapset(void);
 extern int use_whip(struct obj *) NONNULLPTRS;
+extern boolean could_pole_mon(void);
 extern int use_pole(struct obj *, boolean) NONNULLPTRS;
 extern void fig_transform(union any *, long) NONNULLARG1;
 extern int unfixable_trouble_count(boolean);
@@ -733,6 +734,8 @@ extern int remarm_swapwep(void);
 extern int destroy_arm(struct obj *);
 extern void adj_abon(struct obj *, schar) NONNULLARG1;
 extern boolean inaccessible_equipment(struct obj *, const char *, boolean);
+extern int any_worn_armor_ok(struct obj *);
+extern int count_worn_armor(void);
 
 /* ### dog.c ### */
 
@@ -1785,6 +1788,8 @@ extern void dealloc_mextra(struct monst *);
 extern boolean usmellmon(struct permonst *);
 extern void mimic_hit_msg(struct monst *, short);
 extern void adj_erinys(unsigned);
+extern void see_monster_closeup(struct monst *) NONNULLARG1;
+extern void see_nearby_monsters(void);
 
 /* ### mondata.c ### */
 
@@ -3362,6 +3367,7 @@ extern boolean mhitm_knockback(struct monst *, struct monst *,struct attack *,
 extern int passive(struct monst *, struct obj *, boolean, boolean, uchar,
                    boolean) NONNULLARG1;
 extern void passive_obj(struct monst *, struct obj *, struct attack *) NONNULLARG1;
+extern void that_is_a_mimic(struct monst *, boolean) NONNULLARG1;
 extern void stumble_onto_mimic(struct monst *) NONNULLARG1;
 extern int flash_hits_mon(struct monst *, struct obj *) NONNULLARG12;
 extern void light_hits_gremlin(struct monst *, int) NONNULLARG1;
