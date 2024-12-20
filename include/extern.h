@@ -970,6 +970,7 @@ extern void make_grave(coordxy, coordxy, const char *);
 extern void disturb_grave(coordxy, coordxy);
 extern void see_engraving(struct engr *) NONNULLARG1;
 extern void feel_engraving(struct engr *) NONNULLARG1;
+extern boolean engr_can_be_felt(struct engr *) NONNULLARG1;
 
 /* ### exper.c ### */
 
@@ -1791,6 +1792,7 @@ extern void mimic_hit_msg(struct monst *, short);
 extern void adj_erinys(unsigned);
 extern void see_monster_closeup(struct monst *) NONNULLARG1;
 extern void see_nearby_monsters(void);
+extern void shieldeff_mon(struct monst *) NONNULLARG1;
 
 /* ### mondata.c ### */
 

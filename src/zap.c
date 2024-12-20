@@ -265,7 +265,7 @@ bhitm(struct monst *mtmp, struct obj *otmp)
         } else if (resists_magm(mtmp)) {
             /* magic resistance protects from polymorph traps, so make
                it guard against involuntary polymorph attacks too... */
-            shieldeff(mtmp->mx, mtmp->my);
+            shieldeff_mon(mtmp);
         } else if (!resist(mtmp, otmp->oclass, 0, NOTELL)) {
             boolean polyspot = (otyp != POT_POLYMORPH),
                     give_msg = (!Hallucination
@@ -510,7 +510,7 @@ bhitm(struct monst *mtmp, struct obj *otmp)
         if (otyp == SPE_DRAIN_LIFE)
             dmg = spell_damage_bonus(dmg);
         if (resists_drli(mtmp)) {
-            shieldeff(mtmp->mx, mtmp->my);
+            shieldeff_mon(mtmp);
         } else if (!resist(mtmp, otmp->oclass, dmg, NOTELL)
                    && !DEADMONSTER(mtmp)) {
             mtmp->mhp -= dmg;
@@ -5285,13 +5285,14 @@ zap_over_floor(
             if ((lev->wall_info & W_NONDIGGABLE) != 0) {
                 if (see_it)
                     Norep("The %s %s somewhat but remain intact.",
-                          (damgtype == ZT_ACID) ? "corrode" : "melt",
-                          defsyms[S_bars].explanation);
+                          defsyms[S_bars].explanation,
+                          (damgtype == ZT_ACID) ? "corrode" : "melt");
                 /* but nothing actually happens... */
             } else {
                 rangemod -= 3;
                 if (see_it)
-                    Norep("The %s melt.", defsyms[S_bars].explanation);
+                    Norep("The %s %s.", defsyms[S_bars].explanation,
+                          (damgtype == ZT_ACID) ? "corrode away" : "melt");
                 dissolve_bars(x, y);
                 if (*in_rooms(x, y, SHOPBASE)) {
                     add_damage(x, y, (type >= 0) ? SHOP_BARS_COST : 0L);
@@ -6068,10 +6069,8 @@ resist(struct monst *mtmp, char oclass, int damage, int tell)
 
     resisted = rn2(100 + alev - dlev) < mtmp->data->mr;
     if (resisted) {
-        if (tell) {
-            shieldeff(mtmp->mx, mtmp->my);
-            pline("%s resists!", Monnam(mtmp));
-        }
+        if (tell)
+            shieldeff_mon(mtmp);
         damage = (damage + 1) / 2;
     }
 
