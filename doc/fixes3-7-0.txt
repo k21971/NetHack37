@@ -1493,6 +1493,9 @@ artifact gifts are rebalanced (easier to obtain; higher-value sacrifices are
 luck gains from sacrificing are limited by the value of the sacrifice
 failed #untrap could move hero diagonally into or out of an open doorway
 remember box is trapped after finding the trap
+when you hear a monster incant a scroll, ensure that the 'I' invisible
+	monster indicator doesn't trump telepathy briefly
+proceed with showpaths option even if the sysconf file is missing
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -2594,7 +2597,7 @@ menu for what-is command supports /^ and /" to view a list of nearby or whole
 	level visible and remembered traps
 spiders will occasionally spin webs when moving around
 drinking a burning potion of oil will cure being turned into slime
-new bigroom variant, a boulder maze
+new bigroom variants, a boulder maze and hexagons
 vomiting on an altar provokes the deities wrath
 branch stairs have a different glyph, show up in yellow color in tty
 duration of confusion when drinking booze depends upon hunger state
@@ -2749,6 +2752,7 @@ tourists gain experience by seeing new types of creatures up close, and
 healers gain experience by healing pets
 blessed scroll of destroy armor asks which armor to destroy
 archeologists' fedora is lucky
+telepathic hero can discern which particular monster just read a scroll
 
 
 Platform- and/or Interface-Specific New Features

@@ -1,4 +1,4 @@
-RECOVER(6)                                                          RECOVER(6)
+RECOVER(6)                       Games Manual                       RECOVER(6)
 
 
 
@@ -77,10 +77,10 @@ BUGS
        nism to avoid conflicts.
 
 COPYRIGHT
-       This   file   is   Copyright  (C)  Kenneth  Lorber,  2022  for  version
+       This   file   is   Copyright  (C)  Kenneth  Lorber,  2024  for  version
        NetHack-3.7:1.12.  NetHack may be freely  redistributed.   See  license
        for details.
 
 
 
-NETHACK                         8 February 2022                     RECOVER(6)
+NETHACK                        25 December 2024                     RECOVER(6)

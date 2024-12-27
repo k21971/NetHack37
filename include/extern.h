@@ -960,6 +960,7 @@ extern void del_engr_at(coordxy, coordxy);
 extern int freehand(void);
 extern int doengrave(void);
 extern void sanitize_engravings(void);
+extern void forget_engravings(void);
 extern void engraving_sanity_check(void);
 extern void save_engravings(NHFILE *) NONNULLARG1;
 extern void rest_engravings(NHFILE *) NONNULLARG1;
@@ -1077,7 +1078,7 @@ extern void signal_whereis(int);
 #ifdef DEBUG
 extern boolean debugcore(const char *, boolean);
 #endif
-extern void reveal_paths(void);
+extern void reveal_paths(int);
 extern boolean read_tribute(const char *, const char *, int, char *, int,
                             unsigned);
 #ifdef EXTRAINFO_FN
@@ -1085,6 +1086,7 @@ extern void mk_dgl_extrainfo(void);
 #endif
 extern boolean Death_quote(char *, int) NONNULLARG1;
 extern void livelog_add(long ll_type, const char *) NONNULLARG2;
+ATTRNORETURN extern void do_deferred_showpaths(int) NORETURN;
 
 /* ### fountain.c ### */
 
@@ -1793,6 +1795,7 @@ extern void adj_erinys(unsigned);
 extern void see_monster_closeup(struct monst *) NONNULLARG1;
 extern void see_nearby_monsters(void);
 extern void shieldeff_mon(struct monst *) NONNULLARG1;
+extern void flash_mon(struct monst *) NONNULLARG1;
 
 /* ### mondata.c ### */
 
@@ -3389,6 +3392,7 @@ extern void append_slash(char *) NONNULLARG1;
 extern boolean check_user_string(const char *) NONNULLARG1;
 extern char *get_login_name(void);
 extern unsigned long sys_random_seed(void);
+ATTRNORETURN extern void after_opt_showpaths(const char *) NORETURN;
 #endif /* UNIX */
 
 /* ### unixtty.c ### */
