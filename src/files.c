@@ -5221,6 +5221,9 @@ livelog_add(long ll_type, const char *str)
     if (!(ll_type & sysopt.livelog))
         return;
 
+    if (discover) /* don't livelog in explore mode */
+        return;
+
     if (lock_file(LIVELOGFILE, SCOREPREFIX, 10)) {
         if (!(livelogfile = fopen_datafile(LIVELOGFILE, "a", SCOREPREFIX))) {
             pline("Cannot open live log file!");
