@@ -763,7 +763,7 @@ extern struct obj *droppables(struct monst *) NONNULLARG1;
 extern int dog_nutrition(struct monst *, struct obj *) NONNULLPTRS;
 extern int dog_eat(struct monst *, struct obj *,
                    coordxy, coordxy, boolean) NONNULLPTRS;
-extern int pet_ranged_attk(struct monst *) NONNULLARG1;
+extern int pet_ranged_attk(struct monst *, boolean) NONNULLARG1;
 extern int dog_move(struct monst *, int) NONNULLARG1;
 extern boolean could_reach_item(struct monst *, coordxy, coordxy) NONNULLARG1;
 extern void finish_meating(struct monst *) NONNULLARG1;
@@ -2107,6 +2107,7 @@ extern void consoletty_open(int);
 extern void consoletty_rubout(void);
 extern int tgetch(void);
 extern int console_poskey(coordxy *, coordxy *, int *);
+void console_g_putch(int in_ch);
 extern void set_output_mode(int);
 extern void synch_cursor(void);
 extern void nethack_enter_consoletty(void);
@@ -2271,6 +2272,9 @@ extern int msgtype_type(const char *, boolean) NONNULLARG1;
 extern void hide_unhide_msgtypes(boolean, int);
 extern void msgtype_free(void);
 extern void options_free_window_colors(void);
+#ifdef TTY_PERM_INVENT
+extern void check_perm_invent_again(void);
+#endif
 
 /* ### pager.c ### */
 
@@ -2308,7 +2312,14 @@ extern int getlock(void);
 extern const char *get_portable_device(void);
 #endif
 
-/* ### pcsys.c ### */
+/* ### pcsys.c, windsys.c ### */
+#if defined(MICRO) || defined(WIN32)
+ATTRNORETURN extern void nethack_exit(int) NORETURN;
+#else
+#define nethack_exit exit
+#endif
+
+/* ### pcsys.c  ### */
 
 #if defined(MICRO) || defined(WIN32)
 extern void flushout(void);
@@ -2917,6 +2928,7 @@ extern void whimper(struct monst *) NONNULLARG1;
 extern void beg(struct monst *) NONNULLARG1;
 extern const char *maybe_gasp(struct monst *) NONNULLARG1;
 extern const char *cry_sound(struct monst *) NONNULLARG1;
+extern int domonnoise(struct monst *) NONNULLARG1;
 extern int dotalk(void);
 extern int tiphat(void);
 #ifdef USER_SOUNDS

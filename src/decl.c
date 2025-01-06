@@ -854,6 +854,8 @@ static const struct instance_globals_w g_init_w = {
     /* decl.c */
     0, /* warn_obj_cnt */
     0L, /* wailmsg */
+    /* do_wear.c */
+    0U, /* wasinwater */
     /* symbols.c */
     DUMMY, /* warnsyms */
     /* files.c */
