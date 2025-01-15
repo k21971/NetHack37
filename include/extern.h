@@ -415,7 +415,7 @@ extern int enter_explore_mode(void);
 extern boolean bind_mousebtn(int, const char *);
 extern boolean bind_key(uchar, const char *);
 extern void dokeylist(void);
-extern coordxy xytod(coordxy, coordxy);
+extern int xytod(coordxy, coordxy);
 extern void dtoxy(coord *, int);
 extern int movecmd(char, int);
 extern int dxdy_moveok(void);
@@ -1528,9 +1528,11 @@ extern void gain_guardian_angel(void);
 /* ### mklev.c ### */
 
 extern void sort_rooms(void);
-extern void add_room(int, int, int, int, boolean, schar, boolean);
-extern void add_subroom(struct mkroom *, int, int, int, int, boolean, schar,
-                        boolean) NONNULLARG1;
+extern void add_room(coordxy, coordxy, coordxy, coordxy,
+                     boolean, schar, boolean);
+extern void add_subroom(struct mkroom *,
+                        coordxy, coordxy, coordxy, coordxy,
+                        boolean, schar, boolean) NONNULLARG1;
 extern void free_luathemes(enum lua_theme_group);
 extern void makecorridors(void);
 extern void add_door(coordxy, coordxy, struct mkroom *) NONNULLARG3;
@@ -1556,8 +1558,8 @@ extern void mineralize(int, int, int, int, boolean);
 
 /* ### mkmap.c ### */
 
-extern void flood_fill_rm(int, int, int, boolean, boolean);
-extern void remove_rooms(int, int, int, int);
+extern void flood_fill_rm(coordxy, coordxy, int, boolean, boolean);
+extern void remove_rooms(coordxy, coordxy, coordxy, coordxy);
 extern boolean litstate_rnd(int);
 
 /* ### mkmaze.c ### */
@@ -1765,6 +1767,7 @@ extern struct monst *get_iter_mons(boolean (*)(struct monst *));
 extern struct monst *get_iter_mons_xy(boolean (*)(struct monst *,
                                                   coordxy, coordxy),
                                       coordxy, coordxy);
+extern int healmon(struct monst *, int, int) NONNULLARG1;
 extern void rescham(void);
 extern void restartcham(void);
 extern void restore_cham(struct monst *) NONNULLARG1;
@@ -3487,7 +3490,7 @@ extern int doextversion(void);
 extern boolean comp_times(long);
 #endif
 extern boolean check_version(struct version_info *, const char *, boolean,
-                             unsigned long) NONNULLARG12;
+                             unsigned long) NONNULLARG1;
 extern boolean uptodate(NHFILE *, const char *, unsigned long) NONNULLARG1;
 extern void store_formatindicator(NHFILE *) NONNULLARG1;
 extern void store_version(NHFILE *) NONNULLARG1;
@@ -3514,12 +3517,14 @@ extern int assign_videocolors(char *) NONNULLARG1;
 
 /* ### vision.c ### */
 
+extern boolean get_viz_clear(int, int);
 extern void vision_init(void);
 extern int does_block(int, int, struct rm *) NONNULLARG3;
 extern void vision_reset(void);
 extern void vision_recalc(int);
 extern void block_point(int, int);
 extern void unblock_point(int, int);
+extern void recalc_block_point(coordxy, coordxy);
 extern boolean clear_path(int, int, int, int);
 extern void do_clear_area(coordxy, coordxy, int,
                           void(*)(coordxy, coordxy, void *), genericptr_t);

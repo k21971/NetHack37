@@ -74,8 +74,8 @@ boulder_hits_pool(
                 levl[rx][ry].drawbridgemask &= ~DB_UNDER; /* clear lava */
                 levl[rx][ry].drawbridgemask |= DB_FLOOR;
             } else {
-                unblock_point(rx, ry);
                 levl[rx][ry].typ = ROOM, levl[rx][ry].flags = 0;
+                recalc_block_point(rx, ry);
             }
             /* 3.7: normally DEADMONSTER() is used when traversing the fmon
                list--dead monsters usually aren't still at specific map
@@ -876,7 +876,7 @@ engulfer_digests_food(struct obj *obj)
         } else if (could_grow) {
             (void) grow_up(u.ustuck, (struct monst *) 0);
         } else if (could_heal) {
-            u.ustuck->mhp = u.ustuck->mhpmax;
+            healmon(u.ustuck, u.ustuck->mhpmax, 0);
             /* False: don't realize that sight is cured from inside */
             mcureblindness(u.ustuck, FALSE);
         }

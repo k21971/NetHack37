@@ -434,9 +434,7 @@ bhitm(struct monst *mtmp, struct obj *otmp)
             int delta = mtmp->mhpmax - mtmp->mhp;
 
             wake = FALSE; /* wakeup() makes the target angry */
-            mtmp->mhp += healamt;
-            if (mtmp->mhp > mtmp->mhpmax)
-                mtmp->mhp = mtmp->mhpmax;
+            healmon(mtmp, healamt, 0);
             /* plain healing must be blessed to cure blindness; extra
                healing only needs to not be cursed, so spell always cures
                [potions quaffed by monsters behave slightly differently;
@@ -3707,6 +3705,7 @@ zap_map(
         /* secret door gets revealed, converted into regular door */
         if (ltyp == SDOOR) {
             cvt_sdoor_to_door(&levl[x][y]); /* .typ = DOOR */
+            recalc_block_point(x, y);
             newsym(x, y);
             if (cansee(x, y)) {
                 pline("Probing reveals a secret door.");
@@ -4125,7 +4124,7 @@ boomhit(struct obj *obj, coordxy dx, coordxy dy)
     gb.bhitpos.x = u.ux;
     gb.bhitpos.y = u.uy;
     boom = counterclockwise ? S_boomleft : S_boomright;
-    i = (int) xytod(dx, dy);
+    i = xytod(dx, dy);
     tmp_at(DISP_FLASH, cmap_to_glyph(boom));
     for (ct = 0; ct < 10; ct++) {
         i = DIR_CLAMP(i);
@@ -4249,10 +4248,9 @@ zhitm(
     case ZT_DEATH:                              /* death/disintegration */
         if (abs(type) != ZT_BREATH(ZT_DEATH)) { /* death */
             if (mon->data == &mons[PM_DEATH]) {
-                mon->mhpmax += mon->mhpmax / 2;
+                healmon(mon, mon->mhpmax * 3 / 2, mon->mhpmax / 2);
                 if (mon->mhpmax >= MAGIC_COOKIE)
                     mon->mhpmax = MAGIC_COOKIE - 1;
-                mon->mhp = mon->mhpmax;
                 tmp = 0;
                 break;
             }
@@ -5331,6 +5329,7 @@ zap_over_floor(
     /* secret door gets revealed, converted into regular door */
     if (levl[x][y].typ == SDOOR) {
         cvt_sdoor_to_door(&levl[x][y]); /* .typ = DOOR */
+        recalc_block_point(x, y);
         /* target spot will now pass closed_door() test below
            (except on rogue level) */
         newsym(x, y);
@@ -5404,7 +5403,7 @@ zap_over_floor(
                     add_damage(x, y, 0L);
             }
             lev->doormask = new_doormask;
-            unblock_point(x, y); /* vision */
+            recalc_block_point(x, y); /* vision */
             if (see_it) {
                 pline1(see_txt);
                 newsym(x, y);

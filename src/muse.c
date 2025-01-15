@@ -758,8 +758,7 @@ reveal_trap(struct trap *t, boolean seeit)
 
     if (lev->typ == SCORR) {
         lev->typ = CORR, lev->flags = 0; /* set_levltyp(,,CORR) */
-        if (seeit)
-            unblock_point(t->tx, t->ty);
+        unblock_point(t->tx, t->ty);
     }
     if (seeit)
         seetrap(t);
@@ -931,11 +930,13 @@ use_defensive(struct monst *mtmp)
                       surface(mtmp->mx, mtmp->my));
             }
             fill_pit(mtmp->mx, mtmp->my);
+            recalc_block_point(mtmp->mx, mtmp->my);
             return (mintrap(mtmp, FORCEBUNGLE) == Trap_Killed_Mon) ? 1 : 2;
         }
         t = maketrap(mtmp->mx, mtmp->my, HOLE);
         if (!t)
             return 2;
+        recalc_block_point(mtmp->mx, mtmp->my);
         seetrap(t);
         if (vis) {
             pline_mon(mtmp, "%s has made a hole in the %s.", Monnam(mtmp),
@@ -1138,9 +1139,7 @@ use_defensive(struct monst *mtmp)
     case MUSE_POT_HEALING:
         mquaffmsg(mtmp, otmp);
         i = d(6 + 2 * bcsign(otmp), 4);
-        mtmp->mhp += i;
-        if (mtmp->mhp > mtmp->mhpmax)
-            mtmp->mhp = ++mtmp->mhpmax;
+        healmon(mtmp, i, 1);
         if (!otmp->cursed && !mtmp->mcansee)
             mcureblindness(mtmp, vismon);
         if (vismon)
@@ -1152,9 +1151,7 @@ use_defensive(struct monst *mtmp)
     case MUSE_POT_EXTRA_HEALING:
         mquaffmsg(mtmp, otmp);
         i = d(6 + 2 * bcsign(otmp), 8);
-        mtmp->mhp += i;
-        if (mtmp->mhp > mtmp->mhpmax)
-            mtmp->mhp = (mtmp->mhpmax += (otmp->blessed ? 5 : 2));
+        healmon(mtmp, i, otmp->blessed ? 5 : 2);
         if (!mtmp->mcansee)
             mcureblindness(mtmp, vismon);
         if (vismon)
@@ -1167,7 +1164,7 @@ use_defensive(struct monst *mtmp)
         mquaffmsg(mtmp, otmp);
         if (otmp->otyp == POT_SICKNESS)
             unbless(otmp); /* Pestilence */
-        mtmp->mhp = (mtmp->mhpmax += (otmp->blessed ? 8 : 4));
+        healmon(mtmp, mtmp->mhpmax, otmp->blessed ? 8 : 4);
         if (!mtmp->mcansee && otmp->otyp != POT_SICKNESS)
             mcureblindness(mtmp, vismon);
         if (vismon)

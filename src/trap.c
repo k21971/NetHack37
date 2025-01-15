@@ -561,6 +561,7 @@ maketrap(coordxy x, coordxy y, int typ)
             lev->flags = 0; /* set_levltyp doesn't take care of this [yet?] */
 
         unearth_objs(x, y);
+        recalc_block_point(x, y);
         break;
     case TELEP_TRAP:
         if (isok(gl.launchplace.x, gl.launchplace.y)) {
@@ -6435,7 +6436,8 @@ conjoined_pits(
     struct trap *trap1,
     boolean u_entering_trap2)
 {
-    coordxy dx, dy, diridx, adjidx;
+    coordxy dx, dy;
+    int diridx, adjidx;
 
     if (!trap1 || !trap2)
         return FALSE;

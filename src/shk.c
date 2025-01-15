@@ -1,4 +1,4 @@
-/* NetHack 3.7	shk.c	$NHDT-Date: 1720717993 2024/07/11 17:13:13 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.298 $ */
+/* NetHack 3.7	shk.c	$NHDT-Date: 1736516428 2025/01/10 05:40:28 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.306 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -74,6 +74,7 @@ staticfn void clear_unpaid_obj(struct monst *, struct obj *);
 staticfn void clear_unpaid(struct monst *, struct obj *);
 staticfn void clear_no_charge_obj(struct monst *, struct obj *);
 staticfn void clear_no_charge(struct monst *, struct obj *);
+staticfn void clear_no_charge_pets(struct monst *);
 staticfn long check_credit(long, struct monst *);
 staticfn void pay(long, struct monst *);
 staticfn long get_cost(struct obj *, struct monst *);
@@ -381,6 +382,17 @@ clear_no_charge(struct monst *shkp, struct obj *list)
         /* move on to next element of list */
         list = list->nobj;
     }
+}
+
+/* clear no_charge from objects in pets' inventories belonging to shkp */
+staticfn void
+clear_no_charge_pets(struct monst *shkp)
+{
+    struct monst *mtmp;
+
+    for (mtmp = fmon; mtmp; mtmp = mtmp->nmon)
+        if (mtmp->mtame && mtmp->minvent)
+            clear_no_charge(shkp, mtmp->minvent);
 }
 
 /* either you paid or left the shop or the shopkeeper died */
@@ -1160,19 +1172,12 @@ obfree(struct obj *obj, struct obj *merge)
                        merge->unpaid ? 1 : 0);
             return;
         } else {
+            struct eshk *eshkp = ESHK(shkp);
+
             /* this was a merger */
             bpm->bquan += bp->bquan;
-            ESHK(shkp)->billct--;
-#ifdef DUMB
-            {
-                /* DRS/NS 2.2.6 messes up -- Peter Kendell */
-                int indx = ESHK(shkp)->billct;
-
-                *bp = ESHK(shkp)->bill_p[indx];
-            }
-#else
-            *bp = ESHK(shkp)->bill_p[ESHK(shkp)->billct];
-#endif
+            eshkp->billct--;
+            *bp = eshkp->bill_p[eshkp->billct];
         }
     } else {
         /* not on bill; if the item is being merged away rather than
@@ -1382,6 +1387,7 @@ hot_pursuit(struct monst *shkp)
        floor of this level (including inside containers on floor), even
        those that are in other shopkeepers' shops */
     clear_no_charge((struct monst *) NULL, fobj);
+    clear_no_charge_pets(shkp);
 }
 
 /* Used when the shkp is teleported or falls (ox == 0) out of his shop, or
@@ -2090,7 +2096,7 @@ pay_billed_items(
 /* update shk's bill and augmented bill after an item has been purchased */
 staticfn void
 update_bill(
-    int indx,
+    int indx, /* index into ibill[]; -1 for unpaid contained item */
     int ibillct,
     Bill *ibill,
     struct eshk *eshkp,
@@ -2116,18 +2122,16 @@ update_bill(
            from shop bill; if it was used up, remove it from the billobjs
            list and delete it; update shop's bill by moving last bill_p[]
            entry into vacated slot; also update ibill[] indices for that */
-        paiditem->unpaid = 0; /* set before maybe deallocating */
+        paiditem->unpaid = 0; /* clear before maybe deallocating */
         if (paiditem->where == OBJ_ONBILL) {
             obj_extract_self(paiditem);
             dealloc_obj(paiditem);
         }
         newebillct = eshkp->billct - 1;
         *bp = eshkp->bill_p[newebillct];
-        if (indx >= 0) {
-            for (j = 0; j < ibillct; ++j)
-                if (ibill[j].bidx == newebillct)
-                    ibill[j].bidx = ibill[indx].bidx;
-        }
+        for (j = 0; j < ibillct; ++j)
+            if (ibill[j].bidx == newebillct)
+                ibill[j].bidx = (int) (bp - eshkp->bill_p);
         eshkp->billct = newebillct; /* eshkp->billct - 1 */
     }
     return;
@@ -2144,7 +2148,7 @@ dopayobj(
     struct monst *shkp,
     struct bill_x *bp,
     struct obj *obj,
-    int which /* 0 => used-up item, 1 => other (unpaid or lost) */,
+    int which, /* 0 => used-up item, 1 => other (unpaid or lost) */
     boolean itemize,
     boolean unseen)
 {
@@ -2310,7 +2314,8 @@ buy_container(
         }
         /* [updating cost here is not necessary but useful when debugging] */
         ibill[indx].cost -= (bp->price * bp->bquan); /* update container */
-        update_bill(-1, ibillct, ibill, eshkp, bp, otmp);
+        update_bill((boid == container->o_id) ? indx : -1,
+                    ibillct, ibill, eshkp, bp, otmp);
         ++buycount;
     }
     if (buycount && sightunseen) {
@@ -3140,7 +3145,7 @@ gem_learned(int oindx)
     for (shkp = next_shkp(fmon, TRUE); shkp;
          shkp = next_shkp(shkp->nmon, TRUE)) {
         ct = ESHK(shkp)->billct;
-        bp = ESHK(shkp)->bill;
+        bp = ESHK(shkp)->bill_p;
         while (--ct >= 0) {
             obj = find_oid(bp->bo_id);
             if (!obj) /* shouldn't happen */
@@ -3580,6 +3585,7 @@ staticfn void
 sub_one_frombill(struct obj *obj, struct monst *shkp)
 {
     struct bill_x *bp;
+    struct eshk *eshkp;
 
     if ((bp = onbill(obj, shkp, FALSE)) != 0) {
         struct obj *otmp;
@@ -3597,17 +3603,9 @@ sub_one_frombill(struct obj *obj, struct monst *shkp)
             add_to_billobjs(otmp);
             return;
         }
-        ESHK(shkp)->billct--;
-#ifdef DUMB
-        {
-            /* DRS/NS 2.2.6 messes up -- Peter Kendell */
-            int indx = ESHK(shkp)->billct;
-
-            *bp = ESHK(shkp)->bill_p[indx];
-        }
-#else
-        *bp = ESHK(shkp)->bill_p[ESHK(shkp)->billct];
-#endif
+        eshkp = ESHK(shkp);
+        eshkp->billct--;
+        *bp = eshkp->bill_p[eshkp->billct];
         return;
     } else if (obj->unpaid) {
         impossible("sub_one_frombill: unpaid object not on bill");
@@ -3885,6 +3883,21 @@ sellobj(
 
     offer = ltmp + cltmp;
 
+    /* you dropped something of your own - probably want to sell it */
+    rouse_shk(shkp, TRUE); /* wake up sleeping or paralyzed shk */
+    eshkp = ESHK(shkp);
+
+    if (ANGRY(shkp)) { /* they become shop-objects, no pay */
+        if (!Deaf && !muteshk(shkp)) {
+            SetVoice(shkp, 0, 80, 0);
+            verbalize("Thank you, scum!");
+        } else {
+            pline("%s smirks with satisfaction.", Shknam(shkp));
+        }
+        subfrombill(obj, shkp);
+        return;
+    }
+
     /* get one case out of the way: nothing to sell, and no gold */
     if (!(isgold || cgold)
         && ((offer + gltmp) == 0L || gs.sell_how == SELL_DONTSELL)) {
@@ -3902,21 +3915,6 @@ sellobj(
         if (!unpaid && (gs.sell_how != SELL_DONTSELL)
             && !special_stock(obj, shkp, FALSE))
             pline("%s seems uninterested.", Shknam(shkp));
-        return;
-    }
-
-    /* you dropped something of your own - probably want to sell it */
-    rouse_shk(shkp, TRUE); /* wake up sleeping or paralyzed shk */
-    eshkp = ESHK(shkp);
-
-    if (ANGRY(shkp)) { /* they become shop-objects, no pay */
-        if (!Deaf && !muteshk(shkp)) {
-            SetVoice(shkp, 0, 80, 0);
-            verbalize("Thank you, scum!");
-        } else {
-            pline("%s smirks with satisfaction.", Shknam(shkp));
-        }
-        subfrombill(obj, shkp);
         return;
     }
 
@@ -5941,16 +5939,7 @@ globby_bill_fixup(struct obj *obj_absorber, struct obj *obj_absorbed)
         /* the glob being absorbed has a billing record */
         amount = bp->price;
         eshkp->billct--;
-#ifdef DUMB
-        {
-            /* DRS/NS 2.2.6 messes up -- Peter Kendell */
-            int indx = eshkp->billct;
-
-            *bp = eshkp->bill_p[indx];
-        }
-#else
         *bp = eshkp->bill_p[eshkp->billct];
-#endif
         clear_unpaid_obj(shkp, obj_absorbed);
 
         if (bp_absorber) {

@@ -295,9 +295,8 @@ onscary(coordxy x, coordxy y, struct monst *mtmp)
 void
 mon_regen(struct monst *mon, boolean digest_meal)
 {
-    if (mon->mhp < mon->mhpmax
-        && (svm.moves % 20 == 0 || regenerates(mon->data)))
-        mon->mhp++;
+    if (svm.moves % 20 == 0 || regenerates(mon->data))
+        healmon(mon, 1, 0);
     if (mon->mspec_used)
         mon->mspec_used--;
     if (digest_meal) {
@@ -1502,7 +1501,7 @@ postmov(
     do {                                                        \
         (where)->doormask = (what);                             \
         newsym((who)->mx, (who)->my);                           \
-        unblock_point((who)->mx, (who)->my);                    \
+        recalc_block_point((who)->mx, (who)->my);               \
         vision_recalc(0);                                       \
         /* update cached value since it might change */         \
         canseeit = didseeit || cansee((who)->mx, (who)->my);    \

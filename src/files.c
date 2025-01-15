@@ -1432,8 +1432,10 @@ get_saved_games(void)
     {
         char *foundfile;
         const char *fq_save;
+#if 0
         const char *fq_new_save;
         const char *fq_old_save;
+#endif
         char **files = 0;
         int i, count_failures = 0;
 
@@ -1471,6 +1473,12 @@ get_saved_games(void)
                 r = plname_from_file(files[i], SUPPRESS_WAITSYNCH_PERFILE);
 
                 if (r) {
+                    /* this renaming of the savefile is not compatible
+                     * with 1f36b98b,  'selectsaved' extension from
+                     * Oct 10, 2024. Disable the renaming for the time
+                     * being.
+                     */
+#if 0
                     /* rename file if it is not named as expected */
                     Strcpy(svp.plname, r);
                     set_savefile_name(TRUE);
@@ -1480,7 +1488,7 @@ get_saved_games(void)
                     if (strcmp(fq_old_save, fq_new_save) != 0
                         && !file_exists(fq_new_save))
                         (void) rename(fq_old_save, fq_new_save);
-
+#endif
                     result[j++] = r;
                 } else {
                     count_failures++;
