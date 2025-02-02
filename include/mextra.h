@@ -177,8 +177,16 @@ struct edog {
     Bitfield(killed_by_u, 1); /* you attempted to kill him */
 };
 
+/* for saving the hero's rank in bones monster */
+struct mon_former_rank {
+    int lev;
+    short mnum;
+    boolean female;
+};
+
 struct former_incarnation {
-    char rank[25];            /* for bones' ghost rank in their former life */
+    unsigned parentmid;           /* make clobber-detection possible */
+    struct mon_former_rank rank;  /* for bones' ghost rank in former life */
 };
 
 /***

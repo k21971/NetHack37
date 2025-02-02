@@ -249,7 +249,7 @@ done_in_by(struct monst *mtmp, int how)
                                : "%s imitating %s",
                 realnm, shape);
         mptr = mtmp->data; /* reset for mimicker case */
-    } else if (is_bones_monster(mptr)) {
+    } else if (has_former(mtmp) && FORMER(mtmp)->rank.mnum != NON_PM) {
         Strcat(buf, pmname(mptr, Mgender(mtmp)));
         if (has_mgivenname(mtmp))
             Sprintf(eos(buf), " of %s", MGIVENNAME(mtmp));
