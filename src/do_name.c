@@ -954,7 +954,7 @@ x_monnam(
     } else if (do_name && has_mgivenname(mtmp)) {
         char *name = MGIVENNAME(mtmp);
 
-        if (has_former(mtmp) && FORMER(mtmp)->rank.mnum != NON_PM) {
+        if (has_ebones(mtmp)) {
             if (mdat == &mons[PM_GHOST]) {
                 Sprintf(eos(buf), "%s ghost", s_suffix(name));
                 name_at_start = TRUE;

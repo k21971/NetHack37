@@ -249,7 +249,7 @@ done_in_by(struct monst *mtmp, int how)
                                : "%s imitating %s",
                 realnm, shape);
         mptr = mtmp->data; /* reset for mimicker case */
-    } else if (has_former(mtmp) && FORMER(mtmp)->rank.mnum != NON_PM) {
+    } else if (has_ebones(mtmp)) {
         Strcat(buf, pmname(mptr, Mgender(mtmp)));
         if (has_mgivenname(mtmp))
             Sprintf(eos(buf), " of %s", MGIVENNAME(mtmp));
@@ -266,8 +266,11 @@ done_in_by(struct monst *mtmp, int how)
         Strcat(buf, m_monnam(mtmp));
     } else {
         Strcat(buf, pmname(mptr, Mgender(mtmp)));
-        if (has_mgivenname(mtmp))
-            Sprintf(eos(buf), " called %s", MGIVENNAME(mtmp));
+        if (has_mgivenname(mtmp)) {
+            Sprintf(eos(buf), " %s %s",
+                    has_ebones(mtmp) ? "of" : "called",
+                    MGIVENNAME(mtmp));
+        }
     }
 
     Strcpy(svk.killer.name, buf);
