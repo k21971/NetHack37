@@ -248,6 +248,8 @@ extern void savebones(int, time_t, struct obj *);
 extern int getbones(void);
 extern boolean bones_include_name(const char *) NONNULLARG1;
 extern void fix_ghostly_obj(struct obj *) NONNULLARG1;
+extern void newebones(struct monst *) NONNULLARG1;
+extern void free_ebones(struct monst *) NONNULLARG1;
 
 /* ### botl.c ### */
 
