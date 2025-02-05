@@ -273,7 +273,7 @@ do_mgivenname(void)
             verbalize("I'm %s, not %s.", shkname(mtmp), buf);
         }
     } else if (mtmp->ispriest || mtmp->isminion || mtmp->isshk
-               || mtmp->data == &mons[PM_GHOST]) {
+               || mtmp->data == &mons[PM_GHOST] || has_ebones(mtmp)) {
         if (!alreadynamed(mtmp, monnambuf, buf))
             pline("%s will not accept the name %s.", upstart(monnambuf), buf);
     } else {

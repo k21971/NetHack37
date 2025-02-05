@@ -16,6 +16,7 @@ were_change(struct monst *mon)
             && !rn2(night() ? (flags.moonphase == FULL_MOON ? 3 : 30)
                             : (flags.moonphase == FULL_MOON ? 10 : 50))) {
             new_were(mon); /* change into animal form */
+            gw.were_changes++;
             if (!Deaf && !canseemon(mon)) {
                 const char *howler;
 
@@ -39,9 +40,8 @@ were_change(struct monst *mon)
         }
     } else if (!rn2(30) || Protection_from_shape_changers) {
         new_were(mon); /* change back into human form */
+        gw.were_changes++;
     }
-    /* update innate intrinsics (mainly Drain_resistance) */
-    set_uasmon(); /* new_were() doesn't do this */
 }
 
 int
@@ -202,6 +202,7 @@ you_were(void)
         if (!paranoid_query(ParanoidWerechange, qbuf))
             return;
     }
+    gw.were_changes++;
     (void) polymon(u.ulycn);
 }
 
