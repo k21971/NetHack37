@@ -254,14 +254,6 @@ done_in_by(struct monst *mtmp, int how)
                                : "%s imitating %s",
                 realnm, shape);
         mptr = mtmp->data; /* reset for mimicker case */
-#if 0  /* hardfought */
-    } else if (has_ebones(mtmp)) {
-        Strcpy(buf, m_monnam(mtmp));
-#endif
-    } else if (mptr == &mons[PM_GHOST]) {
-        Strcat(buf, "ghost");
-        if (has_mgivenname(mtmp))
-            Sprintf(eos(buf), " of %s", MGIVENNAME(mtmp));
     } else if (mtmp->isshk) {
         const char *shknm = shkname(mtmp),
                    *honorific = shkname_is_pname(mtmp) ? ""

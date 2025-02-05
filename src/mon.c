@@ -3641,8 +3641,6 @@ xkilled(
     /* malign was already adjusted for u.ualign.type and randomization */
     adjalign(mtmp->malign);
 
-#if 0  /* HARDFOUGHT-only at present */
-#ifdef LIVELOG
     if (has_ebones(mtmp)) {
         livelog_printf(LL_UMONST, "destroyed %s, %s former %s",
                        livelog_mon_nam(mtmp),
@@ -3651,8 +3649,6 @@ xkilled(
                                EBONES(mtmp)->mnum,
                                EBONES(mtmp)->female));
     }
-#endif  /* LIVELOG */
-#endif
     return;
 }
 
