@@ -206,12 +206,7 @@ done_in_by(struct monst *mtmp, int how)
         svk.killer.format = KILLED_BY;
     }
     /* _the_ <invisible> <distorted> ghost of Dudley */
-#if 0
-    /* hardfought */
     if (has_ebones(mtmp)) {
-#else
-    if (mptr == &mons[PM_GHOST] && has_mgivenname(mtmp)) {
-#endif
         Strcat(buf, "the ");
         svk.killer.format = KILLED_BY;
     }
