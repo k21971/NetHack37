@@ -1,4 +1,4 @@
-/* NetHack 3.7	extern.h	$NHDT-Date: 1723580890 2024/08/13 20:28:10 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1435 $ */
+/* NetHack 3.7	extern.h	$NHDT-Date: 1738638877 2025/02/03 19:14:37 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.1476 $ */
 /* Copyright (c) Steve Creps, 1988.                               */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -248,6 +248,8 @@ extern void savebones(int, time_t, struct obj *);
 extern int getbones(void);
 extern boolean bones_include_name(const char *) NONNULLARG1;
 extern void fix_ghostly_obj(struct obj *) NONNULLARG1;
+extern void newebones(struct monst *) NONNULLARG1;
+extern void free_ebones(struct monst *) NONNULLARG1;
 
 /* ### botl.c ### */
 
@@ -1809,6 +1811,7 @@ extern boolean attacktype(struct permonst *, int) NONNULLARG1;
 extern boolean noattacks(struct permonst *) NONNULLARG1;
 extern boolean poly_when_stoned(struct permonst *) NONNULLARG1;
 extern boolean defended(struct monst *, int) NONNULLARG1;
+extern boolean Resists_Elem(struct monst *, int) NONNULLARG1;
 extern boolean resists_drli(struct monst *) NONNULLARG1;
 extern boolean resists_magm(struct monst *) NONNULLARG1;
 extern boolean resists_blnd(struct monst *) NONNULLARG1;
