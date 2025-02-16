@@ -1752,16 +1752,21 @@ static boolean mongen_order_init = FALSE;
 staticfn int QSORTCALLBACK
 cmp_init_mongen_order(const void *p1, const void *p2)
 {
-    const int *pi1 = p1;
-    const int *pi2 = p2;
-    int i1 = *pi1, i2 = *pi2;
+    int i1 = *((int *) p1), i2 = *((int *) p2);
+ #if 0
+    /* This will cause these to be moved last in the mlet sort order */
+    int offset1 = ((mons[i1].geno & (G_NOGEN | G_UNIQ)) != 0) ? 99 : 0,
+        offset2 = ((mons[i2].geno & (G_NOGEN | G_UNIQ)) != 0) ? 99 : 0;
+#else
+    int offset1 = 0, offset2 = 0;
+#endif
 
-    if (((mons[i1].geno & (G_NOGEN|G_UNIQ)) != 0)
-        || ((mons[i2].geno & (G_NOGEN|G_UNIQ)) != 0))
-        return 0;
-    if (mons[i1].mlet != mons[i2].mlet)
-        return 0;
-    return (int)(mons[i1].difficulty - mons[i2].difficulty);
+    /* incorporate the mlet into the sort values for comparison */
+    int difficulty1 =
+        ((mons[i1].difficulty + offset1) | ((int) mons[i1].mlet << 8)),
+        difficulty2 =
+        ((mons[i2].difficulty + offset2) | ((int) mons[i2].mlet << 8));
+    return difficulty1 - difficulty2;
 }
 
 /* check that monsters are in correct difficulty order for mkclass() */
@@ -1797,18 +1802,53 @@ init_mongen_order(void)
         return;
 
     mongen_order_init = TRUE;
-    for (i = LOW_PM; i <= SPECIAL_PM; i++)
+    for (i = LOW_PM; i <= NUMMONS; i++)
         mongen_order[i] = i;
 
 #if (NH_DEVEL_STATUS != NH_STATUS_RELEASED)
     check_mongen_order();
 #endif
-    qsort((genericptr_t) mongen_order, NUMMONS, sizeof(int), cmp_init_mongen_order);
+    qsort((genericptr_t) mongen_order, SPECIAL_PM, sizeof(int), cmp_init_mongen_order);
 #if (NH_DEVEL_STATUS != NH_STATUS_RELEASED)
     check_mongen_order();
 #endif
 }
 
+#define MONSi(i) (mongen_order[i])
+
+extern struct enum_dump monsdump[];  /* allmain.c */
+
+void
+dump_mongen(void)
+{
+    char mlet, prev_mlet = 0;
+    int i, nmwidth = 27, special;
+    char nmbuf[80];
+
+    monst_globals_init();
+    init_mongen_order();
+    raw_printf("int mongen_order[] = {");
+    for (i = LOW_PM; i < SPECIAL_PM; ++i) {
+        special = (mons[MONSi(i)].geno & (G_NOGEN | G_UNIQ));
+        mlet = def_monsyms[(int) mons[MONSi(i)].mlet].sym;
+        if (prev_mlet && prev_mlet != mlet)
+            raw_print("");
+        Snprintf(nmbuf, sizeof nmbuf, "PM_%s%s",
+                 monsdump[MONSi(i)].nm,
+                 (i == SPECIAL_PM - 1) ? "" : ",");
+        raw_printf("    %*s /* %c seq=%3d, idx=%3d, sym='%c', diff=%2d %s */",
+                   -nmwidth, nmbuf, (i == MONSi(i)) ? ' ' : '.', i, MONSi(i),
+                   mlet, (int) mons[MONSi(i)].difficulty,
+                   (special == (G_NOGEN | G_UNIQ)) ? "(G_NOGEN | G_UNIQ)"
+                   : (special == G_NOGEN)          ? "(G_NOGEN)"
+                   : (special == G_UNIQ)           ? "(G_UNIQ)"
+                                                   : "");
+        prev_mlet = mlet;
+    }
+    raw_print("};");
+    raw_print("");
+    freedynamicdata();
+}
 
 /* Make one of the multiple types of a given monster class.
    The second parameter specifies a special casing bit mask
@@ -1819,8 +1859,6 @@ mkclass(char class, int spc)
 {
     return mkclass_aligned(class, spc, A_NONE);
 }
-
-#define MONSi(i) (mongen_order[i])
 
 /* mkclass() with alignment restrictions; used by ndemon() */
 struct permonst *
