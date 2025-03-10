@@ -181,7 +181,6 @@ struct instance_globals_a {
     struct h2o_ctx acid_ctx;
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_b {
@@ -219,7 +218,6 @@ struct instance_globals_b {
     boolean bot_disabled;
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_c {
@@ -299,7 +297,6 @@ struct instance_globals_c {
 
     /* zap.c */
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_d {
@@ -348,7 +345,6 @@ struct instance_globals_d {
     char *deferred_showpaths_dir;
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_e {
@@ -369,7 +365,6 @@ struct instance_globals_e {
                                  to gb.beyond_savefile_load */
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_f {
@@ -394,7 +389,6 @@ struct instance_globals_f {
     long int followmsg; /* last time of follow message */
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_g {
@@ -442,7 +436,6 @@ struct instance_globals_g {
     long glyphmap_perlevel_flags;
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_h {
@@ -463,7 +456,6 @@ struct instance_globals_h {
     struct attack *hitmsg_prev;
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_i {
@@ -497,7 +489,6 @@ struct instance_globals_i {
     /* new */
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_j {
@@ -506,7 +497,6 @@ struct instance_globals_j {
     int jumping_is_magic; /* current jump result of magic */
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_k {
@@ -520,7 +510,6 @@ struct instance_globals_k {
     boolean known;
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_l {
@@ -586,7 +575,6 @@ struct instance_globals_l {
     char lua_copyright[LUA_COPYRIGHT_BUFSIZ];
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_m {
@@ -653,7 +641,6 @@ struct instance_globals_m {
                               * POT_WATER should become discovered */
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_n {
@@ -703,7 +690,6 @@ struct instance_globals_n {
     short nocreate4;
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_o {
@@ -762,7 +748,6 @@ struct instance_globals_o {
     boolean obj_zapped;
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_p {
@@ -813,13 +798,11 @@ struct instance_globals_p {
 
     /* new stuff */
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_q {
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_r {
@@ -848,7 +831,6 @@ struct instance_globals_r {
     struct repo repo;
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_s {
@@ -930,7 +912,6 @@ struct instance_globals_s {
     int seethru; /* 'bubble' debugging: clouds and water don't block light */
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_t {
@@ -981,7 +962,6 @@ struct instance_globals_t {
     int twohits; /* 0: single hit; 1: first of 2; 2: second of 2 */
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_u {
@@ -1001,7 +981,6 @@ struct instance_globals_u {
 
     /* new stuff */
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_v {
@@ -1038,7 +1017,6 @@ struct instance_globals_v {
     struct sound_voice voice;
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_w {
@@ -1067,7 +1045,6 @@ struct instance_globals_w {
     long were_changes;                  /* were.c, allmain.c */
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_x {
@@ -1088,7 +1065,6 @@ struct instance_globals_x {
     coordxy xstart, xsize;
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_y {
@@ -1106,7 +1082,6 @@ struct instance_globals_y {
     coordxy ystart, ysize;
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_z {
@@ -1123,7 +1098,6 @@ struct instance_globals_z {
                         * remember who zapped the wand. */
 
     boolean havestate;
-    unsigned long magic; /* validate that structure layout is preserved */
 };
 
 struct instance_globals_saved_b {

@@ -2565,7 +2565,7 @@ parse_status_hl2(char (*s)[QBUFSZ], boolean from_configfile)
         "Satiated", "", "Hungry", "Weak", "Fainting", "Fainted", "Starved"
     };
     char *tmp, *how;
-    int sidx = 0, i = -1, dt = -1;
+    int sidx = 0, i = -1, dt = ANY_INVALID;
     int coloridx = -1, successes = 0;
     int disp_attrib = 0;
     boolean percent, changed, numeric, down, up,
