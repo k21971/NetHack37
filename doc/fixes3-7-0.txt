@@ -2098,6 +2098,11 @@ when walking into/against a locked closed door, 'autounlock'==kick didn't
 having a 1% chance of creating rideable monsters with worn saddle gave knights
 	a 1% chance of creating an extra saddle for starting pony; it wasn't
 	tracked with other objects so produced a trivial memory leak
+when attacking a displacer beast, using the 'F' forcefight prefix prevented it
+	from swapping places with the hero
+successfully disarming a chest trap was clearing the chest's 'tknown' bit
+	instead of setting it; likewise when failing to disarm triggered and
+	used up the trap
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
@@ -2438,6 +2443,8 @@ Unix: re-do command line parsing
 Unix: add ../include/nhlua.h to the alloc.o dependencies in Makefile.utl to
 	match Makefile.src
 Unix: implement SELF_RECOVER compile-time option, on by default on linux
+Unix: allow build to succeed with musl (instead of glibc), by specifying
+	musl=1 on the make command line
 user_sounds: move the message hook from inside individual window display ports
 	to the core where it allows MSGTYP_NOSHOW msgtyp's to still trigger
 	sounds to correct a reported github issue; also fixes a past reported

@@ -3533,7 +3533,7 @@ staticfn struct obj *
 wizterrainwish(struct _readobjnam_data *d)
 {
     struct rm *lev;
-    boolean madeterrain = FALSE, badterrain = FALSE, didblock, is_dbridge;
+    boolean madeterrain = FALSE, badterrain = FALSE, is_dbridge;
     int trap;
     unsigned oldtyp, ltyp;
     coordxy x = u.ux, y = u.uy;
@@ -3565,7 +3565,6 @@ wizterrainwish(struct _readobjnam_data *d)
     lev = &levl[x][y];
     oldtyp = lev->typ;
     is_dbridge = (oldtyp == DRAWBRIDGE_DOWN || oldtyp == DRAWBRIDGE_UP);
-    didblock = does_block(x, y, lev);
     p = eos(bp);
     if (!BSTRCMPI(bp, p - 8, "fountain")) {
         lev->typ = FOUNTAIN;
@@ -3862,14 +3861,7 @@ wizterrainwish(struct _readobjnam_data *d)
         } else {
             if (u.utrap && u.utraptype == TT_LAVA && !is_lava(u.ux, u.uy))
                 reset_utrap(FALSE);
-
-            if (does_block(x, y, lev)) {
-                if (!didblock)
-                    block_point(x, y);
-            } else {
-                if (didblock)
-                    unblock_point(x, y);
-            }
+            recalc_block_point(x, y);
         }
 
         /* fixups for replaced terrain that aren't handled above */
