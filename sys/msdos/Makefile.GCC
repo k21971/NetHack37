@@ -419,7 +419,7 @@ HACK_H	   = $(CONFIG_H)	$(INCL)/context.h  $(DUNGEON_H)	       \
 	     $(INCL)/trap.h     $(INCL)/flag.h     $(RM_H)             \
 	     $(INCL)/vision.h   $(INCL)/wintype.h  $(INCL)/engrave.h   \
 	     $(INCL)/rect.h     $(INCL)/hack.h     $(REGION_H)         \
-	     $(INCL)/sys.h
+	     $(INCL)/sys.h      $(INCL)/weight.h
 DLB_H      = $(INCL)/dlb.h
 
 ifeq ($(SUPPRESS_GRAPHICS),Y)

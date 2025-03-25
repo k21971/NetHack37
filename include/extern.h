@@ -1202,6 +1202,7 @@ extern int near_capacity(void);
 extern int calc_capacity(int);
 extern int max_capacity(void);
 extern boolean check_capacity(const char *);
+extern void dump_weights(void);
 extern int inv_cnt(boolean);
 /* sometimes money_cnt(gi.invent) which can be null */
 extern long money_cnt(struct obj *) NO_NNARGS;
@@ -2979,7 +2980,7 @@ extern void flip_level_rnd(int, boolean);
 extern boolean check_room(coordxy *, coordxy *, coordxy *, coordxy *, boolean) NONNULLPTRS;
 extern boolean create_room(coordxy, coordxy, coordxy, coordxy,
                            coordxy, coordxy, xint16, xint16);
-extern boolean dig_corridor(coord *, coord *, boolean, schar, schar) NONNULLARG12;
+extern boolean dig_corridor(coord *, coord *, int *, boolean, schar, schar) NONNULLARG12;
 extern void fill_special_room(struct mkroom *) NO_NNARGS;
 extern void wallify_map(coordxy, coordxy, coordxy, coordxy);
 extern boolean load_special(const char *) NONNULLARG1;
@@ -3658,6 +3659,8 @@ extern int weapon_hit_bonus(struct obj *) NO_NNARGS;
 extern int weapon_dam_bonus(struct obj *) NO_NNARGS;
 extern void skill_init(const struct def_skill *) NONNULLARG1;
 extern void setmnotwielded(struct monst *, struct obj *) NONNULLARG1;
+extern const struct throw_and_return_weapon *autoreturn_weapon(struct obj *)
+    NONNULLARG1;
 
 /* ### were.c ### */
 

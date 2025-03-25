@@ -1,4 +1,4 @@
-/* NetHack 3.7	allmain.c	$NHDT-Date: 1726894914 2024/09/21 05:01:54 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.261 $ */
+/* NetHack 3.7	allmain.c	$NHDT-Date: 1742207239 2025/03/17 02:27:19 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.275 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -702,7 +702,7 @@ init_sound_disp_gamewindows(void)
 
     WIN_MESSAGE = create_nhwindow(NHW_MESSAGE);
     if (VIA_WINDOWPORT()) {
-        status_initialize(0);
+        status_initialize(FALSE);
     } else {
         WIN_STATUS = create_nhwindow(NHW_STATUS);
     }
@@ -953,6 +953,7 @@ static const struct early_opt earlyopts[] = {
 #endif
     { ARG_DUMPGLYPHIDS, "dumpglyphids", 12, FALSE },
     { ARG_DUMPMONGEN, "dumpmongen", 10, FALSE },
+    { ARG_DUMPWEIGHTS, "dumpweights", 11, FALSE },
 #ifdef WIN32
     { ARG_WINDOWS, "windows", 4, TRUE },
 #endif
@@ -1056,6 +1057,9 @@ argcheck(int argc, char *argv[], enum earlyarg e_arg)
             return 2;
         case ARG_DUMPMONGEN:
             dump_mongen();
+            return 2;
+        case ARG_DUMPWEIGHTS:
+            dump_weights();
             return 2;
 #ifdef CRASHREPORT
         case ARG_BIDSHOW:

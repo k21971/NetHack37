@@ -101,8 +101,8 @@ region.h      rm.h          seffects.h    selvar.h      skills.h
 sndprocs.h    sp_lev.h      spell.h       stairs.h      sym.h
 sys.h         tcap.h        tileset.h     timeout.h     tradstdc.h
 trap.h        unixconf.h    vision.h      vmsconf.h     warnings.h
-winami.h      wincurs.h     windconf.h    winprocs.h    wintype.h
-you.h         youprop.h
+weight.h      winami.h      wincurs.h     windconf.h    winprocs.h
+wintype.h     you.h         youprop.h
 
 (file for tty versions)
 wintty.h

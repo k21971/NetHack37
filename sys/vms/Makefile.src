@@ -401,7 +401,7 @@ $(HACK_H) : $(INC)hack.h $(CONFIG_H) $(INC)align.h \
 		$(INC)monsters.h $(INC)timeout.h $(INC)trap.h \
 		$(INC)flag.h $(INC)rm.h $(INC)vision.h \
 		$(INC)display.h $(INC)engrave.h $(INC)rect.h $(INC)region.h \
-		$(INC)winprocs.h $(INC)wintty.h $(INC)sys.h
+		$(INC)weight.h $(INC)winprocs.h $(INC)wintty.h $(INC)sys.h
 	$(TOUCH) $(HACK_H)
 #	VMS-specific code
 vmsmain.obj :	$(VMS)vmsmain.c $(HACK_H) $(INC)dlb.h
