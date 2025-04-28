@@ -523,7 +523,7 @@ CLEAN_FILE += $(MTARGETS) $(MOBJS)
 # Recover
 #==========================================
 OR = $(OBJ)
-ROBJS = $(OR)/recover.o
+ROBJS = $(OR)/recover.o $(OR)/rversion.o
 RTARGETS = $(GAMEDIR)/recover.txt $(GAMEDIR)/recover.exe
 
 recover: $(RTARGETS)
@@ -536,6 +536,8 @@ $(GAMEDIR)/recover.exe: $(ROBJS) $(HLHACKLIB) | $(GAMEDIR)
 
 $(OR)/recover.o: $(U)recover.c | $(OR)
 	$(cc) $(CFLAGSU) $< -o$@
+$(OR)/rversion.o: $(SRC)/version.c | $(OR)
+	$(cc) $(CFLAGSU) -DMINIMAL_FOR_RECOVER $< -o$@
 
 # $(OR):
 #	@mkdir -p $@

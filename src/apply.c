@@ -498,6 +498,8 @@ use_magic_whistle(struct obj *obj)
         You("produce a %shigh-%s.", Underwater ? "very " : "",
             Deaf ? "frequency vibration" : "pitched humming noise");
         wake_nearby(TRUE);
+        if (!rn2(2))
+            tele_to_rnd_pet();
     } else {
         /* it's magic!  it works underwater too (at a higher pitch) */
         You(Deaf ? alt_whistle_str : whistle_str,
@@ -4013,6 +4015,8 @@ do_break_wand(struct obj *obj)
                     if (*in_rooms(x, y, SHOPBASE))
                         shop_damage = TRUE;
                 }
+                if (levl[x][y].typ == ICE)
+                    spot_stop_timers(x, y, MELT_ICE_AWAY);
                 /*
                  * Let liquid flow into the newly created pits.
                  * Adjust corresponding code in music.c for

@@ -1,4 +1,4 @@
-/* NetHack 3.7	nhlua.c	$NHDT-Date: 1711034373 2024/03/21 15:19:33 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.141 $ */
+/* NetHack 3.7	nhlua.c	$NHDT-Date: 1744963460 2025/04/18 00:04:20 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.153 $ */
 /*      Copyright (c) 2018 by Pasi Kallinen */
 /* NetHack may be freely redistributed.  See license for details. */
 
@@ -65,6 +65,7 @@ staticfn int nhl_rn2(lua_State *);
 staticfn int nhl_random(lua_State *);
 staticfn int nhl_level_difficulty(lua_State *);
 staticfn int nhl_is_genocided(lua_State *);
+staticfn int nhl_get_debug_themerm_name(lua_State *);
 staticfn void init_nhc_data(lua_State *);
 staticfn int nhl_push_anything(lua_State *, int, void *);
 staticfn int nhl_meta_u_index(lua_State *);
@@ -431,6 +432,7 @@ nhl_gettrap(lua_State *L)
                                     get_trapname_bytype(ttmp->ttyp));
             nhl_add_table_entry_bool(L, "tseen", ttmp->tseen);
             nhl_add_table_entry_bool(L, "madeby_u", ttmp->madeby_u);
+            nhl_add_table_entry_bool(L, "once", ttmp->once);
             switch (ttmp->ttyp) {
             case SQKY_BOARD:
                 nhl_add_table_entry_int(L, "tnote", ttmp->tnote);
@@ -975,6 +977,30 @@ nhl_is_genocided(lua_State *L)
     return 1;
 }
 
+/* local debug_themerm = nh.debug_themerm(isfill)
+ * if isfill is false, returns value of env variable THEMERM
+ * if isfill is true,  returns value of env variable THEMERMFILL
+ * return nil if not in wizard mode or the variable isn't set */
+staticfn int
+nhl_get_debug_themerm_name(lua_State *L)
+{
+    int argc = lua_gettop(L);
+    if (argc == 1) {
+        char *dbg_themerm = (char *) 0;
+        boolean is_fill = lua_toboolean(L, 1);
+        lua_pop(L, 1);
+        if (wizard)
+            dbg_themerm = getenv(is_fill ? "THEMERMFILL" : "THEMERM");
+        if (!dbg_themerm || !*dbg_themerm) {
+            lua_pushnil(L);
+        } else {
+            lua_pushstring(L, dbg_themerm);
+        }
+    } else {
+        nhl_error(L, "debug_themerm should have 1 boolean arg");
+    }
+    return 1;
+}
 
 RESTORE_WARNING_UNREACHABLE_CODE
 
@@ -1248,9 +1274,11 @@ save_luadata(NHFILE *nhfp)
     if (!lua_data)
         lua_data = dupstr(emptystr);
     lua_data_len = Strlen(lua_data) + 1; /* +1: include the terminator */
-    bwrite(nhfp->fd, (genericptr_t) &lua_data_len,
-           (unsigned) sizeof lua_data_len);
-    bwrite(nhfp->fd, (genericptr_t) lua_data, lua_data_len);
+    if (nhfp->structlevel) {
+        bwrite(nhfp->fd, (genericptr_t) &lua_data_len,
+               (unsigned) sizeof lua_data_len);
+        bwrite(nhfp->fd, (genericptr_t) lua_data, lua_data_len);
+    }
     free(lua_data);
 }
 
@@ -1258,13 +1286,16 @@ save_luadata(NHFILE *nhfp)
 void
 restore_luadata(NHFILE *nhfp)
 {
-    unsigned lua_data_len;
+    unsigned lua_data_len = 0;
     char *lua_data;
-
-    mread(nhfp->fd, (genericptr_t) &lua_data_len,
-          (unsigned) sizeof lua_data_len);
+    if (nhfp->structlevel) {
+        mread(nhfp->fd, (genericptr_t) &lua_data_len,
+              (unsigned) sizeof lua_data_len);
+    }
     lua_data = (char *) alloc(lua_data_len);
-    mread(nhfp->fd, (genericptr_t) lua_data, lua_data_len);
+    if (nhfp->structlevel) {
+        mread(nhfp->fd, (genericptr_t) lua_data, lua_data_len);
+    }
     if (!gl.luacore)
         l_nhcore_init();
     luaL_loadstring(gl.luacore, lua_data);
@@ -1754,6 +1785,7 @@ static const struct luaL_Reg nhl_functions[] = {
     { "random", nhl_random },
     { "level_difficulty", nhl_level_difficulty },
     { "is_genocided", nhl_is_genocided },
+    { "debug_themerm", nhl_get_debug_themerm_name },
     { "parse_config", nhl_parse_config },
     { "get_config", nhl_get_config },
     { "get_config_errors", l_get_config_errors },
@@ -2843,7 +2875,7 @@ nhl_alloc(void *ud, void *ptr, size_t osize UNUSED, size_t nsize)
             return NULL;
     }
 
-    return re_alloc(ptr, nsize);
+    return re_alloc(ptr, (unsigned) nsize);
 }
 
 DISABLE_WARNING_UNREACHABLE_CODE

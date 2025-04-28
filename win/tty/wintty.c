@@ -1461,8 +1461,19 @@ process_menu_window(winid window, struct WinDesc *cw)
                                 (void) putchar('+'); /* all selected */
                             else
                                 (void) putchar('#'); /* count selected */
-                        } else
+                        } else if (iflags.use_menu_glyphs && n == 2
+                                   && curr->identifier.a_void != 0
+                                   && curr->glyphinfo.glyph != NO_GLYPH) {
+                            int gcolor = curr->glyphinfo.gm.sym.color;
+
+                            /* tty_print_glyph could be used, but is overkill
+                               and requires referencing the cursor location */
+                            toggle_menu_attr(TRUE, gcolor, ATR_NONE);
+                            (void) putchar(curr->glyphinfo.ttychar);
+                            toggle_menu_attr(FALSE, gcolor, ATR_NONE);
+                        } else {
                             (void) putchar(*cp);
+                        }
                     } /* for *cp */
                     if (n > attr_n && (color != NO_COLOR || attr != ATR_NONE))
                         toggle_menu_attr(FALSE, color, attr);
@@ -2537,8 +2548,8 @@ tty_start_menu(winid window, unsigned long mbehavior)
 void
 tty_add_menu(
     winid window,  /* window to use, must be of type NHW_MENU */
-    const glyph_info *glyphinfo UNUSED, /* glyph info with glyph to
-                                         * display with item */
+    const glyph_info *glyphinfo, /* glyph info with glyph to
+                                  * display with item */
     const anything *identifier, /* what to return if selected */
     char ch,                /* selector letter (0 = pick our own) */
     char gch,               /* group accelerator (0 = no group) */
@@ -2595,6 +2606,7 @@ tty_add_menu(
     item->attr = attr;
     item->color = clr;
     item->str = dupstr(newstr);
+    item->glyphinfo = *glyphinfo;
 
     item->next = cw->mlist;
     cw->mlist = item;
@@ -3602,7 +3614,7 @@ tty_wait_synch(void)
 {
     HUPSKIP();
     /* we just need to make sure all windows are synch'd */
-    if (!ttyDisplay || ttyDisplay->rawprint) {
+    if (WIN_MAP == WIN_ERR || !ttyDisplay || ttyDisplay->rawprint) {
         getret();
         if (ttyDisplay)
             ttyDisplay->rawprint = 0;

@@ -1,4 +1,4 @@
-/* NetHack 3.7	detect.c	$NHDT-Date: 1721684299 2024/07/22 21:38:19 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.180 $ */
+/* NetHack 3.7	detect.c	$NHDT-Date: 1745114235 2025/04/19 17:57:15 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.190 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2018. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -38,6 +38,7 @@ staticfn void foundone(coordxy, coordxy, int);
 staticfn void findone(coordxy, coordxy, genericptr_t);
 staticfn void openone(coordxy, coordxy, genericptr_t);
 staticfn int mfind0(struct monst *, boolean);
+staticfn boolean skip_premap_detect(coordxy, coordxy);
 staticfn int reveal_terrain_getglyph(coordxy, coordxy, unsigned, int,
                                      unsigned);
 
@@ -1583,7 +1584,7 @@ do_vicinity_map(
         docrt();
 }
 
-/* convert a secret door into a normal door */
+/* convert a secret door into a normal door; it might be trapped */
 void
 cvt_sdoor_to_door(struct rm *lev)
 {
@@ -1599,6 +1600,7 @@ cvt_sdoor_to_door(struct rm *lev)
     }
     lev->typ = DOOR;
     lev->doormask = newmask;
+    lev->arboreal_sdoor = 0; /* clears 'candig' */
 }
 
 /* update the map for something which has just been found by wand of secret
@@ -2117,6 +2119,16 @@ warnreveal(void)
         }
 }
 
+/* skip premap detection of areas outside Sokoban map */
+staticfn boolean
+skip_premap_detect(coordxy x, coordxy y)
+{
+    if ((levl[x][y].typ == STONE)
+        && (levl[x][y].wall_info & (W_NONDIGGABLE | W_NONPASSWALL)) != 0)
+        return TRUE;
+    return FALSE;
+}
+
 /* Pre-map (the sokoban) levels */
 void
 premap_detect(void)
@@ -2128,6 +2140,8 @@ premap_detect(void)
     /* Map the background and boulders */
     for (x = 1; x < COLNO; x++)
         for (y = 0; y < ROWNO; y++) {
+            if (skip_premap_detect(x, y))
+                continue;
             levl[x][y].seenv = SVALL;
             levl[x][y].waslit = TRUE;
             if (levl[x][y].typ == SDOOR)

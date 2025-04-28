@@ -121,7 +121,8 @@ tribute (Discworld snippets) typos, in book order rather than fix order:
 	 quote, passage #6 first footnote, insert omitted "be", passage #7
 	 last paragraph, "to" -> "be"
 	Men at Arms passage #1, italicize /for/, passage #2, insert omitted
-	 word "had": 'it was /fate/ that _had_ let Edward'
+	 word "had": 'it was /fate/ that _had_ let Edward', #9, fix name typo
+	 "Noddy" -> "Nobby"
 	Interesting Times passage #1, italicize several words
 	Feet of Clay passage #1, second "does not need" -> "doesn't even need"
 	Hogfather passage #7 missing initial double quote for "Oh, just ...",
@@ -131,7 +132,8 @@ tribute (Discworld snippets) typos, in book order rather than fix order:
 	 missing opening single quote on second sentence of Lord Downey's
 	 line, passage #11 both in footnote:  "genious" -> "genius",
 	 "was, oddly enough, was one [...]" -> "was, oddly enough, one [...]"
-	The Fifth Elephant #1, italicize /always/, #9, "dublet" -> "doublet"
+	The Fifth Elephant #1, italicize /always/, #9, "dublet" -> "doublet",
+	  #12, fix name typo, "Vines" -> "Vimes"
 	The Truth #1, italicize several words
 	Thief of Time #2, "gold starts" -> "gold stars"
 	A Hat Full of Sky passage #9 "though" -> "thought"
@@ -963,7 +965,7 @@ putting on water walking boots while underwater (maybe via magical breathing)
 	and rising to surface wasn't causing the boots to become discovered
 flying pets wouldn't target underwater food but if they happened to fly over
 	such food they could and would eat it
-praying on an altar with pet corpse on it can revive the pet
+praying on an altar with pet corpse or statue on it can revive the pet
 applying a cursed oil lamp can make your hands slippery
 valkyries start with a spear instead of a long sword
 grid bugs don't have hands
@@ -989,7 +991,7 @@ bigroom variant 3 may have some walls replaced with other terrain
 bigroom variant 4 may have two large squares of terrain in the middle
 bigroom variant 5 may have patches of ice or clouds
 some large monsters can knock back smaller monsters with a hit
-change Demonbane to a mace, make it the first sac gift for priests,
+change Demonbane to a silver mace, make it the first sac gift for priests,
 	and give it an invoke ability to banish demons
 wielding Giantslayer prevents knockback from larger monsters; likewise for
 	carried loadstone(s)
@@ -1506,6 +1508,11 @@ since introduction in 3.1.0, the definition for Mitre of Holiness has specified
 	no 'defends' capability for it since carrying should encompass that
 if a tree and a boulder or statue were at the same location, applying an axe
 	would break the boulder or statue rather than chop the tree
+avoid premapping outside Sokoban map to prevent showing stone glyphs
+Grimtooth is permanently poisoned, protects from poison, and can fling poison
+cursed magic whistle can teleport you to your pet
+Fire and Frost Brand can be invoked for expert level fireball or cone of cold
+wielding Trollsbane grants hungerless regeneration
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
@@ -2103,6 +2110,8 @@ when attacking a displacer beast, using the 'F' forcefight prefix prevented it
 successfully disarming a chest trap was clearing the chest's 'tknown' bit
 	instead of setting it; likewise when failing to disarm triggered and
 	used up the trap
+when game ended with 'force_invmenu' On, final disclosure of inventory would
+	contain spurious menu entry "? - (list likely candidates)"
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository
@@ -2548,6 +2557,8 @@ item-using monsters will zap wand of undead turning at corpse-wielding hero
 	when the corpse is harmful
 boiling a pool or fountain now creates a temporary cloud of steam
 random themed rooms in the dungeons of doom
+environment variables THEMERM and THEMERMFILL can be used in wizard mode to
+	provide some control over theme room generation
 extended achievement and conduct fields for xlogfile
 record amount of gold in hero's possession in xlogfile
 new objects:  amulets of flying and guarding, helm of caution,
@@ -2979,6 +2990,7 @@ split making pits on do_earthquake() into a separate function and
 	eliminate some gotos on do_earthquake() (pr #1287 by argrath)
 update the WASM cross-compile to work with the current
 	code (pr #1331 by guillaumebrunerie)
+add silver maces (pr #1405 by disperse)
 
 
 Code Cleanup and Reorganization

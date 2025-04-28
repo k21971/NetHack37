@@ -1,4 +1,4 @@
-/* NetHack 3.7	mkmaze.c	$NHDT-Date: 1737387068 2025/01/20 07:31:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.176 $ */
+/* NetHack 3.7	mkmaze.c	$NHDT-Date: 1745114235 2025/04/19 17:57:15 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.179 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Pasi Kallinen, 2018. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -76,8 +76,16 @@ boolean
 set_levltyp(coordxy x, coordxy y, schar newtyp)
 {
     if (isok(x, y) && newtyp >= STONE && newtyp < MAX_TYPE) {
-        if (CAN_OVERWRITE_TERRAIN(levl[x][y].typ)) {
-            schar oldtyp = levl[x][y].typ;
+        schar oldtyp = levl[x][y].typ;
+
+        /* hack for secret doors in garden theme rooms */
+        if (oldtyp == SDOOR && newtyp == AIR) {
+            /* levl[][].typ stays SDOOR rather than change to AIR */
+            levl[x][y].arboreal_sdoor = 1;
+            return TRUE;
+        }
+
+        if (CAN_OVERWRITE_TERRAIN(oldtyp)) {
             /* typ==ICE || (typ==DRAWBRIDGE_UP && drawbridgemask==DB_ICE) */
             boolean was_ice = is_ice(x, y);
 
@@ -1636,7 +1644,7 @@ movebubbles(void)
         for (x = 1; x <= (COLNO - 1); x++)
             for (y = 0; y <= (ROWNO - 1); y++) {
                 levl[x][y] = air_pos;
-                unblock_point(x, y);
+                recalc_block_point(x, y);
                 /* all air or all cloud around the perimeter of the Air
                    level tends to look strange; break up the pattern */
                 xedge = (boolean) (x < gbxmin || x > gbxmax);
@@ -1724,8 +1732,9 @@ save_waterlevel(NHFILE *nhfp)
             bwrite(nhfp->fd, (genericptr_t) &svy.ymax, sizeof(int));
         }
         for (b = svb.bbubbles; b; b = b->next) {
-            if (nhfp->structlevel)
+            if (nhfp->structlevel) {
                 bwrite(nhfp->fd, (genericptr_t) b, sizeof(struct bubble));
+            }
         }
     }
     if (release_data(nhfp))
@@ -1751,8 +1760,9 @@ restore_waterlevel(NHFILE *nhfp)
     for (i = 0; i < n; i++) {
         btmp = b;
         b = (struct bubble *) alloc((unsigned) sizeof *b);
-        if (nhfp->structlevel)
+        if (nhfp->structlevel) {
             mread(nhfp->fd, (genericptr_t) b, (unsigned) sizeof *b);
+        }
         if (btmp) {
             btmp->next = b;
             b->prev = btmp;

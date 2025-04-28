@@ -43,6 +43,7 @@ static const char *const artifact_names[] = {
 #define     FIRE(a,b)   {0,AD_FIRE,a,b}
 #define     ELEC(a,b)   {0,AD_ELEC,a,b}         /* electrical shock */
 #define     STUN(a,b)   {0,AD_STUN,a,b}         /* magical attack */
+#define     POIS(a,b)   {0,AD_DRST,a,b}         /* poison */
 /* clang-format on */
 
 static NEARDATA struct artifact artilist[] = {
@@ -120,9 +121,9 @@ static NEARDATA struct artifact artilist[] = {
      *      (handled as special case in spec_dbon()).
      */
     A("Grimtooth", ORCISH_DAGGER, (SPFX_RESTR | SPFX_WARN | SPFX_DFLAG2),
-      0, M2_ELF, PHYS(2, 6), NO_DFNS,
-      NO_CARY, 0, A_CHAOTIC, NON_PM, PM_ORC,
-      0, 5, 300L, CLR_RED, GRIMTOOTH),
+      0, M2_ELF, PHYS(2, 6), POIS(0,0),
+      NO_CARY, FLING_POISON, A_CHAOTIC, NON_PM, PM_ORC,
+      0, 5, 1200L, CLR_RED, GRIMTOOTH),
     /*
      *      Orcrist and Sting have same alignment as elves.
      *
@@ -146,11 +147,11 @@ static NEARDATA struct artifact artilist[] = {
       0, 7, 3500L, NO_COLOR, MAGICBANE),
 
     A("Frost Brand", LONG_SWORD, (SPFX_RESTR | SPFX_ATTK | SPFX_DEFN), 0, 0,
-      COLD(5, 0), COLD(0, 0), NO_CARY, 0, A_NONE, NON_PM, NON_PM,
+      COLD(5, 0), COLD(0, 0), NO_CARY, SNOWSTORM, A_NONE, NON_PM, NON_PM,
       0, 9, 3000L, NO_COLOR, FROST_BRAND),
 
     A("Fire Brand", LONG_SWORD, (SPFX_RESTR | SPFX_ATTK | SPFX_DEFN), 0, 0,
-      FIRE(5, 0), FIRE(0, 0), NO_CARY, 0, A_NONE, NON_PM, NON_PM,
+      FIRE(5, 0), FIRE(0, 0), NO_CARY, FIRESTORM, A_NONE, NON_PM, NON_PM,
       0, 5, 3000L, NO_COLOR, FIRE_BRAND),
 
     A("Dragonbane", BROADSWORD,
@@ -158,7 +159,7 @@ static NEARDATA struct artifact artilist[] = {
       PHYS(5, 0), NO_DFNS, NO_CARY, 0, A_NONE, NON_PM, NON_PM,
       2, 5, 500L, NO_COLOR, DRAGONBANE),
 
-    A("Demonbane", MACE, (SPFX_RESTR | SPFX_DFLAG2), 0, M2_DEMON,
+    A("Demonbane", SILVER_MACE, (SPFX_RESTR | SPFX_DFLAG2), 0, M2_DEMON,
       PHYS(5, 0), NO_DFNS, NO_CARY, BANISH, A_LAWFUL, PM_CLERIC, NON_PM,
       1, 3, 2500L, NO_COLOR, DEMONBANE),
 
@@ -178,8 +179,8 @@ static NEARDATA struct artifact artilist[] = {
       PHYS(5, 0), NO_DFNS, NO_CARY, 0, A_NONE, NON_PM, NON_PM,
       2, 1, 200L, NO_COLOR, OGRESMASHER),
 
-    A("Trollsbane", MORNING_STAR, (SPFX_RESTR | SPFX_DCLAS), 0, S_TROLL,
-      PHYS(5, 0), NO_DFNS, NO_CARY, 0, A_NONE, NON_PM, NON_PM,
+    A("Trollsbane", MORNING_STAR, (SPFX_RESTR | SPFX_DCLAS | SPFX_REGEN), 0,
+      S_TROLL, PHYS(5, 0), NO_DFNS, NO_CARY, 0, A_NONE, NON_PM, NON_PM,
       2, 1, 200L, NO_COLOR, TROLLSBANE),
 
     /*

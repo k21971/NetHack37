@@ -2328,6 +2328,8 @@ handler_change_autocompletions(void)
                 parseautocomplete(buf, FALSE);
             }
         }
+        if (n > 0)
+            free((genericptr_t) picks);
     }
 
     destroy_nhwindow(win);
@@ -3282,11 +3284,19 @@ accept_menu_prefix(const struct ext_func_tab *ec)
     return (ec && ((ec->flags & CMD_M_PREFIX) != 0));
 }
 
+/* choose a random character, biased towards movement commands, primarily
+   for debug-fuzzer testing */
 char
 randomkey(void)
 {
     static unsigned i = 0;
+    static char last_c = '\0';
     char c;
+
+    /* give ^A and ^P a high probability of being repeated */
+    if ((last_c == C('a') || last_c == C('p'))
+        && program_state.input_state == commandInp && rn2(5))
+        return last_c;
 
     switch (rn2(16)) {
     default:
@@ -3335,6 +3345,8 @@ randomkey(void)
         break;
     }
 
+    if (program_state.input_state == commandInp)
+        last_c = c;
     return c;
 }
 
@@ -5307,15 +5319,28 @@ yn_function(
     }
 #endif
     /* should not happen but cq.key has been observed to not obey 'resp';
-       do this after dumplog has recorded the potentially bad value */
+       it is most likely caused by saving a keystroke that was just used
+       to answer a context-sensitive prompt, then using the do-again
+       command with context that has changed */
     if (resp && res && !strchr(resp, res)) {
         /* this probably needs refinement since caller is expecting something
            within 'resp' and ESC won't be (it could be present, but as a flag
            for unshown possibilities rather than as acceptable input) */
         int altres = def ? def : '\033';
 
-        impossible("yn_function() returned '%s'; using '%s' instead",
-                   visctrl(res), visctrl(altres));
+        if (!gi.in_doagain || wizard) {
+/*TEMP*/    xint8 fuzzing = iflags.debug_fuzzer;
+            char dbg_buf[BUFSZ];
+
+            Snprintf(dbg_buf, sizeof dbg_buf, "%s [%s] (%s)",
+                     query, resp ? resp : "", def ? visctrl(def) : "");
+            paniclog("yn debug", dbg_buf);
+/*TEMP*/    /* don't let this known problem kill the fuzzer */
+/*TEMP*/    iflags.debug_fuzzer = fuzzer_impossible_continue;
+            impossible("yn_function() returned '%s'; using '%s' instead",
+                       visctrl(res), visctrl(altres));
+/*TEMP*/    iflags.debug_fuzzer = fuzzing;
+        }
         res = altres;
     }
     /* in case we're called via getdir() which sets input_state */

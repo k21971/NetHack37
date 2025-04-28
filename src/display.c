@@ -1,4 +1,4 @@
-/* NetHack 3.7	display.c	$NHDT-Date: 1723834773 2024/08/16 18:59:33 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.244 $ */
+/* NetHack 3.7	display.c	$NHDT-Date: 1745114235 2025/04/19 17:57:15 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.260 $ */
 /* Copyright (c) Dean Luick, with acknowledgements to Kevin Darcy */
 /* and Dave Cohrs, 1990.                                          */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1998,8 +1998,9 @@ show_glyph(coordxy x, coordxy y, int glyph)
     oldglyph = gg.gbuf[y][x].glyphinfo.glyph;
 
     if (a11y.glyph_updates && !a11y.mon_notices_blocked
-        && !program_state.in_docrt
-        && !program_state.in_getlev
+        && !program_state.in_docrt && !program_state.gameover
+        && !program_state.in_getlev && !program_state.stopprint
+        && !_suppress_map_output()
         && (oldglyph != glyph || gg.gbuf[y][x].gnew)) {
         int c = glyph_to_cmap(glyph);
 
@@ -2289,6 +2290,13 @@ back_to_glyph(coordxy x, coordxy y)
     case CORR:
         idx = (ptr->waslit || flags.lit_corridor) ? S_litcorr : S_corr;
         break;
+    case SDOOR:
+        if (ptr->arboreal_sdoor) {
+            idx = S_tree;
+            break;
+        }
+        FALLTHROUGH;
+        /*FALLTHRU*/
     case HWALL:
     case VWALL:
     case TLCORNER:
@@ -2300,7 +2308,6 @@ back_to_glyph(coordxy x, coordxy y)
     case TDWALL:
     case TLWALL:
     case TRWALL:
-    case SDOOR:
         idx = ptr->seenv ? wall_angle(ptr) : S_stone;
         break;
     case DOOR:
@@ -3579,6 +3586,10 @@ wall_angle(struct rm *lev)
         break;
 
     case SDOOR:
+        if (lev->arboreal_sdoor) {
+            idx = S_tree;
+            break;
+        }
         if (lev->horizontal)
             goto horiz;
         FALLTHROUGH;

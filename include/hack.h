@@ -795,6 +795,7 @@ struct sinfo {
     int exiting;                /* an exit handler is executing */
     int saving;                 /* creating a save file */
     int restoring;              /* reloading a save file */
+    int freeingdata;            /* in saveobjchn(), mode FREEING */
     int in_getlev;              /* in getlev() */
     int in_moveloop;            /* normal gameplay in progress */
     int in_impossible;          /* reporting a warning */
@@ -1155,6 +1156,10 @@ typedef uint32_t mmflags_nht;     /* makemon MM_ flags */
 #define MHID_ALTMON  4 /* if mimicking a monster, include that */
 #define MHID_REGION  8 /* include region when mon is in one */
 
+/* flags for that_is_a_mimic() */
+#define MIM_REVEAL    1 /* seemimic() */
+#define MIM_OMIT_WAIT 2 /* strip beginning from "Wait!  That is a <foo>" */
+
 /* flags for make_corpse() and mkcorpstat(); 0..7 are recorded in obj->spe */
 #define CORPSTAT_NONE     0x00
 #define CORPSTAT_GENDER   0x03 /* 0x01 | 0x02 */
@@ -1512,17 +1517,16 @@ typedef uint32_t mmflags_nht;     /* makemon MM_ flags */
 #define getlogin() ((char *) 0)
 #endif /* MICRO */
 
-/* The function argument to qsort() requires a particular
- * calling convention under WINCE which is not the default
- * in that environment.
- */
-#if defined(WIN_CE)
-#define QSORTCALLBACK __cdecl
-#else
+/* These may have been defined to platform-specific values in *conf.h
+ * or on the compiler command line from a hints file or Makefile */
+
+#ifndef QSORTCALLBACK
 #define QSORTCALLBACK
 #endif
 
+#ifndef SIG_RET_TYPE
 #define SIG_RET_TYPE void (*)(int)
+#endif
 
 #define DEVTEAM_EMAIL "devteam@nethack.org"
 #define DEVTEAM_URL "https://www.nethack.org/"
