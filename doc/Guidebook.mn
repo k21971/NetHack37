@@ -47,7 +47,7 @@
 .ds f0 \*(vr
 .ds f1 \" empty
 .\"DO NOT REMOVE NH_DATESUB .ds f2 Date(%B %-d, %Y)
-.ds f2 April 20, 2025
+.ds f2 May 1, 2025
 .
 .\" A note on some special characters:
 .\" \(lq = left double quote
@@ -3788,7 +3788,8 @@ See
 .op role
 for a description of how to use negation to exclude choices.
 .lp ""
-Default is random.
+If \f(CRalign\fP is not specified, there is no default value;
+player will be prompted unless role and/or race forces a choice for alignment.
 Cannot be set with the \(oq\f(CRO\fP\(cq command.
 Persistent.
 .lp autodescribe
@@ -4014,7 +4015,8 @@ See
 .op role
 for a description of how to use negation to exclude choices.
 .lp ""
-Default is random.
+If \f(CRgender\fP is not specified, there is no default value;
+player will be prompted unless role and/or race forces a choice for gender.
 Cannot be set with the \(oq\f(CRO\fP\(cq command.
 Persistent.
 .lp "goldX   "
@@ -4169,8 +4171,38 @@ Default \(oq|\(cq.
 Key to go to the next menu page.
 Default \(oq>\(cq.
 .lp menu_objsyms
-Show object symbols in menu headings in menus where
-the object symbols act as menu accelerators (default off).
+." [originally menu_objsyms was a boolean]
+." Show object symbols in menu headings in menus where
+." the object symbols act as menu accelerators (default off).
+Inventory and other object menus are normally separated by object class
+(weapons, armor, and so forth), with a menu header line at the beginning
+of each group.
+You can have menus add the display symbol for the class of objects for
+each header line.
+You can also add the display symbol for the individual item in each menu
+entry.
+For a tiles map, that would be a small rendition of an object's tile.
+For a text map, it is the same character as is used for the object's
+class, which would be most useful when there are no headers separating
+objects among classes.
+Possible values are
+.PS "5\ -\ One-or-other"
+.PL "0\ -\ None"
+no symbols for either header lines or menu entries;
+.PL "1\ -\ Headers"
+show symbols on header lines but not entries;
+.PL "2\ -\ Entries"
+show symbols on menu entry lines but not headers;
+.PL "3\ -\ Both"
+show symbols on headers and entries;
+.PL "4\ -\ Conditional"
+only show symbols for entries if there are no headers;
+.PL "5\ -\ One-or-other"
+show symbols on headers, or on entries if no headers.
+.PE
+Supported by tty and curses.
+When setting the value, it can be specified by digit or keyword.
+The default value is \f(CRConditional\fP (4).
 .lp menu_overlay
 Do not clear the screen before drawing menus, and align
 menus to the right edge of the screen. Only for the tty port.
@@ -4254,6 +4286,11 @@ the role (that is, by suffixing one of
 If
 .op "\-@"
 is used for the role, then a random one will be automatically chosen.
+.lp ""
+On some systems, the default is the player's user name;
+on others, there is no default and the player will be prompted.
+The former can made to behave like the latter by specifying a generic name
+such as ``player''.
 Cannot be set with the \(oq\f(CRO\fP\(cq command.
 .lp "news    "
 Read the NetHack news file, if present (default on).
@@ -4514,7 +4551,8 @@ See
 .op role
 for a description of how to use negation to exclude choices.
 .lp ""
-Default is random.
+If \f(CRrace\fP is not specified, there is no default value;
+player will be prompted unless role forces a choice for race.
 Cannot be set with the \(oq\f(CRO\fP\(cq command.
 Persistent.
 .lp rest_on_space
@@ -4550,7 +4588,8 @@ option if they're all negations.
 .\" Only one positive value is allowed, and if present, it overrides any
 .\" negations.
 .lp ""
-Default is \f(CRrandom\fP.
+If \f(CRrole\fP is not specified, there is no default value;
+player will be prompted.
 Cannot be set with the \(oq\f(CRO\fP\(cq command.
 Persistent.
 .lp roguesymset
@@ -4988,9 +5027,6 @@ to be \fIFalse\fP.
 Use bold black instead of blue for black glyphs (TTY only).
 .lp use_inverse
 If NetHack can, it should display inverse when the game specifies it.
-.lp use_menu_glyphs
-If NetHack can, it should display glyphs next to objects in the
-inventory.
 .lp vary_msgcount
 If NetHack can, it should display this number of messages at a time in
 the message window.

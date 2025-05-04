@@ -48,7 +48,7 @@
 \author{Original version - Eric S. Raymond\\
 (Edited and expanded for 3.7.0 by Mike Stephenson and others)}
 %DO NOT REMOVE NH_DATESUB \date{Date(%B %-d, %Y)}
-\date{April 20, 2025}
+\date{May 1, 2025}
 
 \maketitle
 
@@ -4145,7 +4145,8 @@ See {\it role\/}
 for a description of how to use negation to exclude choices.
 %.lp ""
 \\
-Default is random.
+If {\tt align} is not specified, there is no default value;
+player will be prompted unless role and/or race forces a choice for alignment.
 Cannot be set with the `{\tt O}' command.  Persistent.
 %.lp
 \item[\ib{autodescribe}]
@@ -4400,7 +4401,8 @@ See {\it role\/}
 for a description of how to use negation to exclude choices.
 %.lp ""
 \\
-Default is random.
+If {\tt gender} is not specified, there is no default value;
+player will be prompted unless role and/or race forces a choice for gender.
 Cannot be set with the `{\tt O}' command.  Persistent.
 %.lp
 \item[\ib{goldX}]
@@ -4576,8 +4578,40 @@ Key to go to the next menu page.
 Implemented by the Amiga, Gem and tty ports.
 Default `\verb+>+'.
 \item[\ib{menu\verb+_+objsyms}]
-Show object symbols in menu headings in menus where
-the object symbols act as menu accelerators (default off).
+% [originally menu_objsyms was a boolean]
+% Show object symbols in menu headings in menus where
+% the object symbols act as menu accelerators (default off).
+Inventory and other object menus are normally separated by object class
+(weapons, armor, and so forth), with a menu header line at the beginning
+of each group.
+You can have menus add the display symbol for the class of objects for
+each header line.
+You can also add the display symbol for the individual item in each menu
+entry.
+For a tiles map, that would be a small rendition of an object's tile.
+For a text map, it is the same character as is used for the object's
+class, which would be most useful when there are no headers separating
+objects among classes.
+% FIXME! -- three column table may be simpler than mashing first two together
+% Possible values are
+% .PS "5\ -\ One-or-other"
+% .PL "0\ -\ None"
+% no symbols for either header lines or menu entries;
+% .PL "1\ -\ Headers"
+% show symbols on header lines but not entries;
+% .PL "2\ -\ Entries"
+% show symbols on menu entry lines but not headers;
+% .PL "3\ -\ Both"
+% show symbols on headers and entries;
+% .PL "4\ -\ Conditional"
+% only show symbols for entries if there are no headers;
+% .PL "5\ -\ One-or-other"
+% show symbols on headers, or on entries if no headers.
+% .PE
+
+Supported by tty and curses.
+When setting the value, it can be specified by digit or keyword.
+The default value is {\tt Conditional} (4).
 \item[\ib{menu\verb+_+overlay}]
 Do not clear the screen before drawing menus, and align
 menus to the right edge of the screen. Only for the tty port.
@@ -4676,6 +4710,12 @@ the role (that is, by suffixing one of
 ``{\tt -A -B -C -H -K -M -P -Ra -Ro -S -T -V -W}'').
 If ``{\tt -@}'' is used for the role, then a random one will be
 automatically chosen.
+%.lp
+\\
+On some systems, the default is the player's user name;
+on others, there is no default and the player will be prompted.
+The former can made to behave like the latter by specifying a generic name
+such as ``player''.
 Cannot be set with the `{\tt O}' command.
 %.lp
 \item[\ib{news}]
@@ -4958,7 +4998,9 @@ See {\it role\/}
 for a description of how to use negation to exclude choices.
 %.lp ""
 \\
-Default is random.
+If {\tt race} is not specified, there is no default value;
+player will be prompted unless role forces a choice for race.
+unless role forces a choice for race.
 Cannot be set with the `{\tt O}' command.  Persistent.
 %.lp
 \item[\ib{rest\verb+_+on\verb+_+space}]
@@ -4993,7 +5035,8 @@ option if they're all negations.
 %.\" negations.
 %.lp ""
 \\
-Default is random.
+If {\tt role} is not specified, there is no default value;
+player will be prompted.
 Cannot be set with the `{\tt O}' command.  Persistent.
 %.lp
 \item[\ib{roguesymset}]
