@@ -767,13 +767,6 @@ struct role_filter {
 };
 #define NUM_RACES (5)
 
-enum saveformats {
-    invalid = 0,
-    historical = 1,     /* entire struct, binary, as-is */
-    lendian = 2,        /* each field, binary, little-endian */
-    ascii = 3           /* each field, ascii text (just proof of concept) */
-};
-
 struct selectionvar {
     int wid, hei;
     boolean bounds_dirty;
@@ -900,6 +893,19 @@ typedef struct {
 #define UTD_SKIP_SANITY1               0x04
 #define UTD_SKIP_SAVEFILEINFO          0x08
 #define UTD_WITHOUT_WAITSYNCH_PERFILE  0x10
+#define UTD_QUIETLY                    0x20
+
+/* Values for savefile status */
+#define SF_UPTODATE                     0
+#define SF_OUTDATED                     1
+#define SF_CRITICAL_BYTE_COUNT_MISMATCH 2
+#define SF_DM_IL32LLP64_ON_ILP32LL64    3  /* Wind x64 savefile on x86     */
+#define SF_DM_I32LP64_ON_ILP32LL64      4  /* Unix 64 savefile on x86      */
+#define SF_DM_ILP32LL64_ON_I32LP64      5  /* x86 savefile on Unix 64      */
+#define SF_DM_ILP32LL64_ON_IL32LLP64    6  /* x86 savefile on Wind x64     */
+#define SF_DM_I32LP64_ON_IL32LLP64      7  /* Unix 64 savefile on Wind x64 */
+#define SF_DM_IL32LLP64_ON_I32LP64      8  /* Wind x64 savefile on Unix 64 */
+#define SF_DM_MISMATCH                  9  /* generic savefile byte mismatch */
 
 #define ENTITIES 2
 struct valuable_data {
@@ -941,34 +947,49 @@ struct xlock_s {
     boolean magic_key;
 };
 
+#define MAX_BMASK 4
+
 /* NetHack ftypes */
 #define NHF_LEVELFILE       1
 #define NHF_SAVEFILE        2
 #define NHF_BONESFILE       3
 /* modes */
-#define READING  0x0
-#define COUNTING 0x1
-#define WRITING  0x2
-#define FREEING  0x4
-#define MAX_BMASK 4
+#define READING      0x0
+#define COUNTING     0x01
+#define WRITING      0x02
+#define FREEING      0x04
+#define CONVERTING   0x08
+#define UNCONVERTING 0x10
+#if 0
 /* operations of the various saveXXXchn & co. routines */
 #define perform_bwrite(nhfp) ((nhfp)->mode & (COUNTING | WRITING))
 #define release_data(nhfp) ((nhfp)->mode & FREEING)
+#endif
+
+/* operations of the various saveXXXchn & co. routines */
+#define update_file(nhfp) ((nhfp)->mode & (COUNTING | WRITING))
+#define release_data(nhfp) ((nhfp)->mode & FREEING)
+
+enum saveformats {
+    invalid = 0,
+    historical = 1,     /* entire struct, binary, as-is */
+    exportascii = 2,    /* each field written out as ascii text */
+    NUM_SAVEFORMATS
+};
 
 /* Content types for fieldlevel files */
 struct fieldlevel_content {
     boolean deflt;        /* individual fields */
     boolean binary;       /* binary rather than text */
-    boolean json;         /* JSON */
 };
 
-typedef struct {
+struct nh_file {
     int fd;               /* for traditional structlevel binary writes */
-    int mode;             /* holds READING, WRITING, or FREEING modes  */
+    int mode;             /* holds READING, WRITING, FREEING, CONVERTING modes  */
     int ftype;            /* NHF_LEVELFILE, NHF_SAVEFILE, or NHF_BONESFILE */
     int fnidx;            /* index of procs for fieldlevel saves */
-    long count;           /* holds current line count for default style file,
-                             field count for binary style */
+    long rcount,          /* read count since opening */
+         wcount;          /* write count since opening */
     boolean structlevel;  /* traditional structure binary saves */
     boolean fieldlevel;   /* fieldlevel saves each field individually */
     boolean addinfo;      /* if set, some additional context info from core */
@@ -979,7 +1000,10 @@ typedef struct {
     FILE *fplog;          /* file pointer logfile */
     FILE *fpdebug;        /* file pointer debug info */
     struct fieldlevel_content style;
-} NHFILE;
+    struct nh_file *nhfpconvert;
+};
+
+typedef struct nh_file NHFILE;
 
 /* Monster name articles */
 #define ARTICLE_NONE 0
@@ -1535,8 +1559,13 @@ typedef uint32_t mmflags_nht;     /* makemon MM_ flags */
 #include "nhlua.h"
 #endif
 
+#if !defined(RECOVER_C)
+
 #include "extern.h"
+#include "savefile.h"
 #include "decl.h"
+
+#endif  /* RECOVER_C */
 
 #endif /* HACK_H */
 

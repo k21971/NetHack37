@@ -74,7 +74,7 @@
     </ResourceCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>hacklib.lib;lualib.lib;dbghelp.lib;comctl32.lib;winmm.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>hacklib.lib;lualib.lib;dbghelp.lib;comctl32.lib;winmm.lib;UserEnv.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>$(WinWin32Dir)NethackW.exe.manifest;%(AdditionalManifestFiles)</AdditionalManifestFiles>
@@ -90,6 +90,7 @@
     <ClCompile Include="$(SrcDir)bones.c" />
     <ClCompile Include="$(SrcDir)botl.c" />
     <ClCompile Include="$(SrcDir)calendar.c" />
+    <ClCompile Include="$(SrcDir)cfgfiles.c" />
     <ClCompile Include="$(SrcDir)cmd.c" />
     <ClCompile Include="$(SrcDir)coloratt.c" />
     <ClCompile Include="$(SrcDir)date.c" />
@@ -251,6 +252,7 @@
     <ClCompile Include="$(WinWin32Dir)mhtext.c" />
     <ClCompile Include="$(WinWin32Dir)mswproc.c" />
     <ClCompile Include="$(WinWin32Dir)NetHackW.c" />
+    <ClCompile Include="$(SrcDir)sfbase.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="$(WinWin32Dir)NetHackW.rc" />
@@ -352,6 +354,8 @@
     <ClInclude Include="$(IncDir)xwindowp.h" />
     <ClInclude Include="$(IncDir)you.h" />
     <ClInclude Include="$(IncDir)youprop.h" />
+    <ClInclude Include="$(IncDir)sfprocs.h" />
+    <ClInclude Include="$(IncDir)savefile.h" />
     <ClInclude Include="..\resource.h" />
   </ItemGroup>
   <ItemGroup>

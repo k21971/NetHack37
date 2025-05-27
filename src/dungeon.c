@@ -32,6 +32,9 @@ struct lchoice {
     char menuletter;
 };
 
+static mapseen *load_mapseen(NHFILE *);
+
+#ifndef SFCTOOL
 #if 0
 staticfn void Fread(genericptr_t, int, int, dlb *);
 #endif
@@ -152,49 +155,31 @@ save_dungeon(
     mapseen *curr_ms, *next_ms;
 
     if (perform_write) {
-        if (nhfp->structlevel) {
-            bwrite(nhfp->fd, (genericptr_t) &svn.n_dgns, sizeof svn.n_dgns);
-        }
+        Sfo_int(nhfp, &svn.n_dgns, "dungeon_count");
         for (i = 0; i < svn.n_dgns; ++i) {
-            if (nhfp->structlevel) {
-                bwrite(nhfp->fd, (genericptr_t) &svd.dungeons[i],
-                       sizeof (dungeon));
-            }
+            Sfo_dungeon(nhfp, &svd.dungeons[i], "dungeon");
         }
-        if (nhfp->structlevel) {
-            bwrite(nhfp->fd, (genericptr_t) &svd.dungeon_topology,
-                   sizeof svd.dungeon_topology);
-            bwrite(nhfp->fd, (genericptr_t) svt.tune, sizeof tune);
-        }
+        Sfo_dgn_topology(nhfp, &svd.dungeon_topology, "svd.dungeon_topology");
+        Sfo_char(nhfp, svt.tune, "tune", (int) sizeof tune);
         for (count = 0, curr = svb.branches; curr; curr = curr->next)
             count++;
-        if (nhfp->structlevel)
-            bwrite(nhfp->fd, (genericptr_t) &count, sizeof count);
+        Sfo_int(nhfp, &count, "branch_count");
 
         for (curr = svb.branches; curr; curr = curr->next) {
-          if (nhfp->structlevel)
-              bwrite(nhfp->fd, (genericptr_t) curr, sizeof *curr);
+            Sfo_branch(nhfp, curr, "branch");
         }
         count = maxledgerno();
-        if (nhfp->structlevel) {
-            bwrite(nhfp->fd, (genericptr_t) &count, sizeof count);
-        }
+        Sfo_int(nhfp, &count, "level_info_count");
         for (i = 0; i < count; ++i) {
-            if (nhfp->structlevel) {
-                bwrite(nhfp->fd, (genericptr_t) &svl.level_info[i],
-                       sizeof (struct linfo));
-            }
+            Sfo_linfo(nhfp, &svl.level_info[i], "svl.level_info");
         }
-        if (nhfp->structlevel) {
-            bwrite(nhfp->fd, (genericptr_t) &svi.inv_pos, sizeof svi.inv_pos);
-        }
+        Sfo_nhcoord(nhfp, &svi.inv_pos, "svi.inv_pos");
+
         for (count = 0, curr_ms = svm.mapseenchn; curr_ms;
              curr_ms = curr_ms->next)
             count++;
 
-        if (nhfp->structlevel) {
-            bwrite(nhfp->fd, (genericptr_t) &count, sizeof count);
-        }
+        Sfo_int(nhfp, &count, "mapseen_count");
 
         for (curr_ms = svm.mapseenchn; curr_ms; curr_ms = curr_ms->next) {
             save_mapseen(nhfp, curr_ms);
@@ -218,41 +203,31 @@ save_dungeon(
         svm.mapseenchn = 0;
     }
 }
+#endif /* !SFCTOOL */
 
 /* Restore the dungeon structures. */
 void
 restore_dungeon(NHFILE *nhfp)
 {
     branch *curr, *last;
-    int count = 0, i;
+    int count = 0;
+    int i;
     mapseen *curr_ms, *last_ms;
 
-    if (nhfp->structlevel) {
-        mread(nhfp->fd, (genericptr_t) &svn.n_dgns, sizeof svn.n_dgns);
-    }
+    Sfi_int(nhfp, &svn.n_dgns, "dungeon_count");
     for (i = 0; i < svn.n_dgns; ++i) {
-        if (nhfp->structlevel) {
-            mread(nhfp->fd, (genericptr_t) &svd.dungeons[i], sizeof(dungeon));
-        }
+        Sfi_dungeon(nhfp, &svd.dungeons[i], "dungeon");
     }
-    if (nhfp->structlevel) {
-        mread(nhfp->fd, (genericptr_t) &svd.dungeon_topology,
-              sizeof svd.dungeon_topology);
-    }
-    if (nhfp->structlevel) {
-        mread(nhfp->fd, (genericptr_t) svt.tune, sizeof tune);
-    }
+    Sfi_dgn_topology(nhfp, &svd.dungeon_topology, "svd.dungeon_topology");
+    Sfi_char(nhfp, svt.tune, "tune", (int) sizeof tune);
+
     last = svb.branches = (branch *) 0;
 
-    if (nhfp->structlevel) {
-        mread(nhfp->fd, (genericptr_t) &count, sizeof count);
-    }
+    Sfi_int(nhfp, &count, "branch_count");
 
     for (i = 0; i < count; i++) {
         curr = (branch *) alloc(sizeof *curr);
-        if (nhfp->structlevel) {
-            mread(nhfp->fd, (genericptr_t) curr, sizeof *curr);
-        }
+        Sfi_branch(nhfp, curr, "branch");
         curr->next = (branch *) 0;
         if (last)
             last->next = curr;
@@ -261,22 +236,18 @@ restore_dungeon(NHFILE *nhfp)
         last = curr;
     }
 
-    if (nhfp->structlevel)
-        mread(nhfp->fd, (genericptr_t) &count, sizeof count);
+    Sfi_int(nhfp, &count, "level_info_count");
 
     if (count >= MAXLINFO)
         panic("level information count larger (%d) than allocated size",
               count);
     for (i = 0; i < count; ++i) {
-        if (nhfp->structlevel) {
-            mread(nhfp->fd, (genericptr_t) &svl.level_info[i],
-                  sizeof (struct linfo));
-        }
+        Sfi_linfo(nhfp, &svl.level_info[i], "svl.level_info");
     }
-    if (nhfp->structlevel) {
-        mread(nhfp->fd, (genericptr_t) &svi.inv_pos, sizeof svi.inv_pos);
-        mread(nhfp->fd, (genericptr_t) &count, sizeof count);
-    }
+
+    Sfi_nhcoord(nhfp, &svi.inv_pos, "svi.inv_pos");
+
+    Sfi_int(nhfp, &count, "mapseen_count");
 
     last_ms = (mapseen *) 0;
     for (i = 0; i < count; i++) {
@@ -290,6 +261,7 @@ restore_dungeon(NHFILE *nhfp)
     }
 }
 
+#ifndef SFCTOOL
 #if 0
 staticfn void
 Fread(genericptr_t ptr, int size, int nitems, dlb *stream)
@@ -1459,6 +1431,7 @@ depth(d_level *lev)
 {
     return (schar) (svd.dungeons[lev->dnum].depth_start + lev->dlevel - 1);
 }
+#endif /* !SFCTOOL */
 
 /* are "lev1" and "lev2" actually the same? */
 boolean
@@ -1468,6 +1441,7 @@ on_level(d_level *lev1, d_level *lev2)
                       && lev1->dlevel == lev2->dlevel);
 }
 
+#ifndef SFCTOOL
 /* is this level referenced in the special level chain? */
 s_level *
 Is_special(d_level *lev)
@@ -1633,6 +1607,8 @@ u_on_rndspot(int upflag)
     switch_terrain();
 }
 
+#endif /* !SFCTOOL */
+#ifndef SFCTOOL
 boolean
 Is_botlevel(d_level *lev)
 {
@@ -2567,6 +2543,7 @@ donamelevel(void)
     query_annotation((d_level *) 0);
     return ECMD_OK;
 }
+#endif /* !SFCTOOL */
 
 /* exclusion zones */
 void
@@ -2592,19 +2569,14 @@ save_exclusions(NHFILE *nhfp)
     for (nez = 0, ez = sve.exclusion_zones; ez; ez = ez->next, ++nez)
         ;
 
-    if (perform_bwrite(nhfp)) {
-        if (nhfp->structlevel)
-            bwrite(nhfp->fd, (genericptr_t) &nez, sizeof nez);
-
+    if (update_file(nhfp)) {
+        Sfo_int(nhfp, &nez, "exclusion_count");
         for (ez = sve.exclusion_zones; ez; ez = ez->next) {
-            if (nhfp->structlevel) {
-                bwrite(nhfp->fd, (genericptr_t) &ez->zonetype,
-                       sizeof ez->zonetype);
-                bwrite(nhfp->fd, (genericptr_t) &ez->lx, sizeof ez->lx);
-                bwrite(nhfp->fd, (genericptr_t) &ez->ly, sizeof ez->ly);
-                bwrite(nhfp->fd, (genericptr_t) &ez->hx, sizeof ez->hx);
-                bwrite(nhfp->fd, (genericptr_t) &ez->hy, sizeof ez->hy);
-            }
+            Sfo_xint16(nhfp, &ez->zonetype, "exclusion-zonetype");
+            Sfo_coordxy(nhfp, &ez->lx, "exclusion-lx");
+            Sfo_coordxy(nhfp, &ez->ly, "exclusion-ly");
+            Sfo_coordxy(nhfp, &ez->hx, "exclusion-hx");
+            Sfo_coordxy(nhfp, &ez->hy, "exclusion-hy");
         }
     }
 }
@@ -2615,24 +2587,21 @@ load_exclusions(NHFILE *nhfp)
     struct exclusion_zone *ez;
     int nez = 0;
 
-    if (nhfp->structlevel) {
-        mread(nhfp->fd, (genericptr_t) &nez, sizeof nez);
-    }
+    Sfi_int(nhfp, &nez, "exclusion_count");
 
     while (nez-- > 0) {
         ez = (struct exclusion_zone *) alloc(sizeof *ez);
-        if (nhfp->structlevel) {
-            mread(nhfp->fd, (genericptr_t) &ez->zonetype,
-                  sizeof ez->zonetype);
-            mread(nhfp->fd, (genericptr_t) &ez->lx, sizeof ez->lx);
-            mread(nhfp->fd, (genericptr_t) &ez->ly, sizeof ez->ly);
-            mread(nhfp->fd, (genericptr_t) &ez->hx, sizeof ez->hx);
-            mread(nhfp->fd, (genericptr_t) &ez->hy, sizeof ez->hy);
-        }
+        Sfi_xint16(nhfp, &ez->zonetype, "exclusion-zonetype");
+        Sfi_coordxy(nhfp, &ez->lx, "exclusion-lx");
+        Sfi_coordxy(nhfp, &ez->ly, "exclusion-ly");
+        Sfi_coordxy(nhfp, &ez->hx, "exclusion-hx");
+        Sfi_coordxy(nhfp, &ez->hy, "exclusion-hy");
         ez->next = sve.exclusion_zones;
         sve.exclusion_zones = ez;
     }
 }
+
+#ifndef SFCTOOL
 
 /* find the particular mapseen object in the chain; may return null */
 staticfn mapseen *
@@ -2699,30 +2668,22 @@ save_mapseen(NHFILE *nhfp, mapseen *mptr)
     for (brindx = 0, curr = svb.branches; curr; curr = curr->next, ++brindx)
         if (curr == mptr->br)
             break;
-
-    if (nhfp->structlevel) {
-        bwrite(nhfp->fd, (genericptr_t) &brindx, sizeof brindx);
-        bwrite(nhfp->fd, (genericptr_t) &mptr->lev, sizeof mptr->lev);
-        bwrite(nhfp->fd, (genericptr_t) &mptr->feat, sizeof mptr->feat);
-        bwrite(nhfp->fd, (genericptr_t) &mptr->flags, sizeof mptr->flags);
-        bwrite(nhfp->fd, (genericptr_t) &mptr->custom_lth,
-               sizeof mptr->custom_lth);
-    }
+    Sfo_int(nhfp, &brindx, "mapseen-branch_index");
+    Sfo_d_level(nhfp, &mptr->lev, "mapseen-d_level");
+    Sfo_mapseen_feat(nhfp, &mptr->feat, "mapseen-feat");
+    Sfo_mapseen_flags(nhfp, &mptr->flags, "mapseen-flags");
+    Sfo_unsigned(nhfp, &mptr->custom_lth, "mapseen-custom_lth");
 
     if (mptr->custom_lth) {
-        if (nhfp->structlevel) {
-            bwrite(nhfp->fd, (genericptr_t) mptr->custom,
-                   mptr->custom_lth);
-        }
+        Sfo_char(nhfp, mptr->custom, "mapseen-custom",
+                 (int) mptr->custom_lth);
     }
     for (i = 0; i < ((MAXNROFROOMS + 1) * 2); ++i) {
-        if (nhfp->structlevel) {
-            bwrite(nhfp->fd, (genericptr_t) &mptr->msrooms[i],
-                   sizeof (struct mapseen_rooms));
-        }
+        Sfo_mapseen_rooms(nhfp, &mptr->msrooms[i], "mapseen-msrooms");
     }
     savecemetery(nhfp, &mptr->final_resting_place);
 }
+#endif /* !SFCTOOL */
 
 staticfn mapseen *
 load_mapseen(NHFILE *nhfp)
@@ -2733,42 +2694,33 @@ load_mapseen(NHFILE *nhfp)
 
     load = (mapseen *) alloc(sizeof *load);
 
-    if (nhfp->structlevel) {
-        mread(nhfp->fd, (genericptr_t) &branchnum, sizeof branchnum);
-    }
+    Sfi_int(nhfp, &branchnum, "mapseen-branch_index");
     for (brindx = 0, curr = svb.branches; curr; curr = curr->next, ++brindx)
         if (brindx == branchnum)
             break;
     load->br = curr;
 
-    if (nhfp->structlevel) {
-        mread(nhfp->fd, (genericptr_t) &load->lev, sizeof load->lev);
-        mread(nhfp->fd, (genericptr_t) &load->feat, sizeof load->feat);
-        mread(nhfp->fd, (genericptr_t) &load->flags, sizeof load->flags);
-        mread(nhfp->fd, (genericptr_t) &load->custom_lth,
-              sizeof load->custom_lth);
-    }
+    Sfi_d_level(nhfp, &load->lev, "mapseen-d_level");
+    Sfi_mapseen_feat(nhfp, &load->feat, "mapseen-feat");
+    Sfi_mapseen_flags(nhfp, &load->flags, "mapseen-flags");
+    Sfi_unsigned(nhfp, &load->custom_lth, "mapseen-custom_lth");
 
     if (load->custom_lth) {
         /* length doesn't include terminator (which isn't saved & restored) */
         load->custom = (char *) alloc(load->custom_lth + 1);
-        if (nhfp->structlevel) {
-            mread(nhfp->fd, (genericptr_t) load->custom,
-                  load->custom_lth);
-        }
+        Sfi_char(nhfp, load->custom, "mapseen-custom",
+                 (int) load->custom_lth);
         load->custom[load->custom_lth] = '\0';
     } else {
         load->custom = 0;
     }
     for (i = 0; i < ((MAXNROFROOMS + 1) * 2); ++i) {
-        if (nhfp->structlevel) {
-            mread(nhfp->fd, (genericptr_t) &load->msrooms[i],
-                  sizeof (struct mapseen_rooms));
-        }
+        Sfi_mapseen_rooms(nhfp, &load->msrooms[i], "mapseen-msrooms");
     }
     restcemetery(nhfp, &load->final_resting_place);
     return load;
 }
+#ifndef SFCTOOL
 
 DISABLE_WARNING_FORMAT_NONLITERAL
 
@@ -3742,7 +3694,7 @@ print_mapseen(
         }
     }
 }
-
+#endif /* !SFCTOOL */
 #undef OF_INTEREST
 #undef ADDNTOBUF
 #undef ADDTOBUF

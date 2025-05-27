@@ -37,7 +37,7 @@ struct _doengrave_ctx {
 
     size_t len;          /* # of nonspace chars of new engraving text */
 };
-
+#ifndef SFCTOOL
 staticfn int stylus_ok(struct obj *);
 staticfn boolean u_can_engrave(void);
 staticfn void doengrave_ctx_init(struct _doengrave_ctx *);
@@ -48,15 +48,16 @@ staticfn int engrave(void);
 staticfn const char *blengr(void);
 
 char *
-random_engraving(char *outbuf)
+random_engraving(char *outbuf, char *pristine_copy)
 {
     const char *rumor;
 
     /* a random engraving may come from the "rumors" file,
        or from the "engrave" file (formerly in an array here) */
-    if (!rn2(4) || !(rumor = getrumor(0, outbuf, TRUE)) || !*rumor)
-        (void) get_rnd_text(ENGRAVEFILE, outbuf, rn2, MD_PAD_RUMORS);
+    if (!rn2(4) || !(rumor = getrumor(0, pristine_copy, TRUE)) || !*rumor)
+        (void) get_rnd_text(ENGRAVEFILE, pristine_copy, rn2, MD_PAD_RUMORS);
 
+    Strcpy(outbuf, pristine_copy);
     wipeout_text(outbuf, (int) (strlen(outbuf) / 4), 0);
     return outbuf;
 }
@@ -391,13 +392,21 @@ void
 make_engr_at(
     coordxy x, coordxy y,
     const char *s,
+    const char *pristine_s,
     long e_time,
     int e_type)
 {
     int i;
     struct engr *ep;
     unsigned smem = Strlen(s) + 1;
+    boolean havepristine = FALSE;
 
+    if (pristine_s != NULL) {
+        unsigned prmem = Strlen(pristine_s) + 1;
+        if (prmem > smem)
+            smem = prmem;
+        havepristine = TRUE;
+    }
     if ((ep = engr_at(x, y)) != 0)
         del_engr(ep);
 
@@ -412,6 +421,8 @@ make_engr_at(
     ep->engr_txt[pristine_text] = ep->engr_txt[remembered_text] + smem;
     for(i = 0; i < text_states; ++i)
         Strcpy(ep->engr_txt[i], s);
+    if (havepristine)
+        Strcpy(ep->engr_txt[pristine_text], pristine_s);
     if (!strcmp(s, "Elbereth")) {
         /* engraving "Elbereth":  if done when making a level, it creates
            an old-style Elbereth that deters monsters when any objects are
@@ -593,7 +604,7 @@ doengrave_sfx_item_WAN(struct _doengrave_ctx *de)
         if (de->oep) {
             if (!Blind) {
                 de->type = (xint16) 0; /* random */
-                (void) random_engraving(de->buf);
+                (void) random_engraving(de->buf, de->ebuf);
             } else {
                 /* keep the same type so that feels don't
                    change and only the text is altered,
@@ -1038,7 +1049,7 @@ doengrave(void)
     if (*de->buf) {
         struct engr *tmp_ep;
 
-        make_engr_at(u.ux, u.uy, de->buf, svm.moves, de->type);
+        make_engr_at(u.ux, u.uy, de->buf, de->ebuf, svm.moves, de->type);
         tmp_ep = engr_at(u.ux, u.uy);
         if (!Blind) {
             if (tmp_ep != 0) {
@@ -1424,7 +1435,7 @@ engrave(void)
 
     (void) strncat(buf, svc.context.engraving.nextc,
                    min(space_left, endc - svc.context.engraving.nextc));
-    make_engr_at(u.ux, u.uy, buf, svm.moves - gm.multi,
+    make_engr_at(u.ux, u.uy, buf, NULL, svm.moves - gm.multi,
                  svc.context.engraving.type);
     oep = engr_at(u.ux, u.uy);
     if (oep) {
@@ -1517,56 +1528,62 @@ void
 save_engravings(NHFILE *nhfp)
 {
     struct engr *ep, *ep2;
-    unsigned no_more_engr = 0;
+    unsigned no_more_engr = 0, engr_alloc;
+    unsigned szeach;
 
     for (ep = head_engr; ep; ep = ep2) {
         ep2 = ep->nxt_engr;
         if (ep->engr_alloc
-            && ep->engr_txt[actual_text][0] && perform_bwrite(nhfp)) {
-            if (nhfp->structlevel) {
-                bwrite(nhfp->fd, (genericptr_t) &(ep->engr_alloc),
-                       sizeof ep->engr_alloc);
-                bwrite(nhfp->fd, (genericptr_t) ep,
-                       sizeof (struct engr) + ep->engr_alloc);
-            }
+            && ep->engr_txt[actual_text][0] && update_file(nhfp)) {
+            engr_alloc = (unsigned) ep->engr_alloc;
+            szeach = ep->engr_szeach;
+            Sfo_unsigned(nhfp, &engr_alloc, "engraving-engr_alloc");
+            Sfo_engr(nhfp, ep, "engraving");
+            ep->engr_txt[actual_text] = (char *)(ep + 1);
+            ep->engr_txt[remembered_text] = ep->engr_txt[actual_text] + szeach;
+            ep->engr_txt[pristine_text] = ep->engr_txt[remembered_text] + szeach;
+            Sfo_char(nhfp, ep->engr_txt[actual_text], "engraving-actual_text", szeach);
+            Sfo_char(nhfp, ep->engr_txt[remembered_text], "engraving-remembered_text", szeach);
+            Sfo_char(nhfp, ep->engr_txt[pristine_text], "engraving-pristine_text", szeach);
         }
         if (release_data(nhfp))
             dealloc_engr(ep);
     }
-    if (perform_bwrite(nhfp)) {
-        if (nhfp->structlevel) {
-            bwrite(nhfp->fd, (genericptr_t) &no_more_engr,
-                   sizeof no_more_engr);
-        }
+    if (update_file(nhfp)) {
+        Sfo_unsigned(nhfp, &no_more_engr, "engraving-engr_alloc");
     }
     if (release_data(nhfp))
         head_engr = 0;
 }
+#endif /* !SFCTOOL */
 
 void
 rest_engravings(NHFILE *nhfp)
 {
     struct engr *ep;
     unsigned lth = 0;
+    unsigned szeach;
 
     head_engr = 0;
     while (1) {
-        if (nhfp->structlevel) {
-            mread(nhfp->fd, (genericptr_t) &lth, sizeof(unsigned));
-        }
+        Sfi_unsigned(nhfp, &lth, "engraving-engr_alloc");
         if (lth == 0)
             return;
         ep = newengr(lth);
-        if (nhfp->structlevel) {
-            mread(nhfp->fd, (genericptr_t) ep, sizeof (struct engr) + lth);
-        }
+        Sfi_engr(nhfp, ep, "engraving");
+        szeach = ep->engr_szeach;
         ep->nxt_engr = head_engr;
         head_engr = ep;
         ep->engr_txt[actual_text] = (char *) (ep + 1); /* Andreas Bormann */
-        ep->engr_txt[remembered_text] = ep->engr_txt[actual_text]
-                                      + ep->engr_szeach;
-        ep->engr_txt[pristine_text] = ep->engr_txt[remembered_text]
-                                    + ep->engr_szeach;
+        ep->engr_txt[remembered_text] = ep->engr_txt[actual_text] + szeach;
+        ep->engr_txt[pristine_text] = ep->engr_txt[remembered_text] + szeach;
+        Sfi_char(nhfp, ep->engr_txt[actual_text],
+                 "engraving-actual_text", (int) szeach);
+        Sfi_char(nhfp, ep->engr_txt[remembered_text],
+                 "engraving-remembered_text", (int) szeach);
+        Sfi_char(nhfp, ep->engr_txt[pristine_text],
+                 "engraving-pristine_text", (int) szeach);
+
         while (ep->engr_txt[actual_text][0] == ' ')
             ep->engr_txt[actual_text]++;
         while (ep->engr_txt[remembered_text][0] == ' ')
@@ -1578,6 +1595,7 @@ rest_engravings(NHFILE *nhfp)
     }
 }
 
+#ifndef SFCTOOL
 DISABLE_WARNING_FORMAT_NONLITERAL
 
 /* to support '#stats' wizard-mode command */
@@ -1657,7 +1675,7 @@ make_grave(coordxy x, coordxy y, const char *str)
     del_engr_at(x, y);
     if (!str)
         str = get_rnd_text(EPITAPHFILE, buf, rn2, MD_PAD_RUMORS);
-    make_engr_at(x, y, str, 0L, HEADSTONE);
+    make_engr_at(x, y, str, NULL, 0L, HEADSTONE);
     return;
 }
 
@@ -1725,5 +1743,5 @@ blengr(void)
 {
     return ROLL_FROM(blind_writing);
 }
-
+#endif /* !SFCTOOL */
 /*engrave.c*/

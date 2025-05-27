@@ -282,6 +282,7 @@ static const struct instance_globals_c g_init_c = {
     UNDEFINED_PTR, /* coder */
     /* uhitm.c */
     NON_PM, /* corpsenm_digested */
+    FALSE,  /* converted_savefile_loaded */
     TRUE, /* havestate*/
 };
 
@@ -605,7 +606,6 @@ static const struct instance_globals_o g_init_o = {
     UNDEFINED_PTR, /* oldfruit */
     /* rumors.c */
     0, /* oracle_flag */
-    UNDEFINED_PTR, /* oracle_loc */
     /* uhitm.c */
     FALSE, /* override_confirmation */
     /* zap.c */
@@ -933,6 +933,8 @@ static const struct instance_globals_saved_n init_svn = {
 static const struct instance_globals_saved_o init_svo = {
     /* rumors.c */
     0U,                                  /* oracle_cnt */
+    UNDEFINED_PTR,                       /* oracle_loc */
+
     /* other */
     0L                                   /* omoves */
 };

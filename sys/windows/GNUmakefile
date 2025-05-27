@@ -362,7 +362,7 @@ CONSOLEDEF = $(COMMONDEF) -D_CONSOLE
 # To build util targets
 CFLAGSU = $(CFLAGS) $(CONSOLEDEF) $(DLBFLG)
 
-LIBS = -lcomctl32 -lgdi32 -lole32 -lshell32 -luuid -lwinmm -lbcrypt
+LIBS = -lcomctl32 -lgdi32 -lole32 -lshell32 -luserenv -luuid -lwinmm -lbcrypt
 
 $(GAMEDIR):
 	@mkdir -p $@
@@ -1000,7 +1000,7 @@ endif   # HAVE_SOUNDLIB
 # nethackw
 #==========================================
 COREOBJS = $(addsuffix .o, allmain alloc apply artifact attrib ball bones botl \
-	   calendar cmd coloratt cppregex \
+	   calendar cfgfiles cmd coloratt cppregex \
 	   dbridge decl detect dig display dlb do do_name do_wear \
 	   dog dogmove dokick dothrow drawing dungeon \
 	   eat end engrave exper explode extralev files fountain \
@@ -1010,7 +1010,7 @@ COREOBJS = $(addsuffix .o, allmain alloc apply artifact attrib ball bones botl \
 	   nhlobj nhlsel nhlua windsound o_init objects objnam options \
 	   pager pickup pline polyself potion pray priest quest questpgr \
 	   random read rect region report restore rip rnd role rumors \
-	   safeproc save sfstruct shk shknam sit selvar sounds sp_lev \
+	   safeproc save sfbase sfstruct shk shknam sit selvar sounds sp_lev \
 	   spell stairs steal steed strutil \
 	   symbols sys teleport timeout topten track trap u_init uhitm utf8map \
 	   vault version vision weapon were wield windmain windows windsys wizard \

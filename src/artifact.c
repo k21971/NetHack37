@@ -7,6 +7,8 @@
 #include "artifact.h"
 #include "artilist.h"
 
+#ifndef SFCTOOL
+
 /*
  * Note:  both artilist[] and artiexist[] have a dummy element #0,
  *        so loops over them should normally start at #1.  The primary
@@ -57,6 +59,7 @@ staticfn void dispose_of_orig_obj(struct obj *);
    Note: this will still break if they have more than about half the number
    of hit points that will fit in a 15 bit integer. */
 #define FATAL_DAMAGE_MODIFIER 200
+#endif /* SFCTOOL */
 
 /* arti_info struct definition moved to artifact.h */
 
@@ -71,6 +74,8 @@ static xint16 artidisco[NROFARTIFACTS];
  * bulk re-init if game restart ever gets implemented.  They are saved
  * and restored but that is done through this file so they can be local.
  */
+
+#ifndef SFCTOOL
 static const struct arti_info zero_artiexist = {0}; /* all bits zero */
 
 staticfn void hack_artifacts(void);
@@ -113,35 +118,32 @@ save_artifacts(NHFILE *nhfp)
 {
     int i;
 
-    for (i = 0; i < (NROFARTIFACTS + 1); ++i) {
-        if (nhfp->structlevel)
-            bwrite(nhfp->fd, (genericptr_t) &artiexist[i],
-                   sizeof (struct arti_info));
-    }
-    for (i = 0; i < (NROFARTIFACTS); ++i) {
-        if (nhfp->structlevel)
-            bwrite(nhfp->fd, (genericptr_t) &artidisco[i],
-                   sizeof (xint16));
-    }
+    for (i = 0; i < (NROFARTIFACTS + 1); ++i)
+        Sfo_arti_info(nhfp, &artiexist[i], "artiexist");
+
+    for (i = 0; i < NROFARTIFACTS; ++i)
+        Sfo_xint16(nhfp, &artidisco[i], "artidisco");
 }
+
+#endif /* SFCTOOL */
 
 void
 restore_artifacts(NHFILE *nhfp)
 {
     int i;
 
-    for (i = 0; i < (NROFARTIFACTS + 1); ++i) {
-        if (nhfp->structlevel)
-            mread(nhfp->fd, (genericptr_t) &artiexist[i],
-                  sizeof (struct arti_info));
-    }
-    for (i = 0; i < (NROFARTIFACTS); ++i) {
-        if (nhfp->structlevel)
-            mread(nhfp->fd, (genericptr_t) &artidisco[i],
-                  sizeof (xint16));
-    }
+    for (i = 0; i < (NROFARTIFACTS + 1); ++i)
+        Sfi_arti_info(nhfp, &artiexist[i], "artiexist");
+    for (i = 0; i < NROFARTIFACTS; ++i)
+        Sfi_short(nhfp, &artidisco[i], "artidisco");
+#ifndef SFCTOOL
     hack_artifacts();   /* redo non-saved special cases */
+#else
+    nhUse(artilist);
+#endif
 }
+
+#ifndef SFCTOOL
 
 const char *
 artiname(int artinum)
@@ -2799,4 +2801,6 @@ permapoisoned(struct obj *obj)
 {
     return (obj && is_art(obj, ART_GRIMTOOTH));
 }
+#endif /* SFCTOOL */
+
 /*artifact.c*/
