@@ -543,7 +543,6 @@ close_nhfile(NHFILE *nhfp)
         (void) fclose(nhfp->fplog);
     if (nhfp->fpdebug)
         (void) fclose(nhfp->fpdebug);
-    init_nhfile(nhfp);
     free_nhfile(nhfp);
 }
 
@@ -588,7 +587,6 @@ viable_nhfile(NHFILE *nhfp)
                 if (nhfp->fpdebug)
                     (void) fclose(nhfp->fpdebug);
             }
-            init_nhfile(nhfp);
             free_nhfile(nhfp);
             nhfp = (NHFILE *) 0;
         }
@@ -1396,6 +1394,15 @@ restore_saved_game(void)
     }
     return nhfp;
 }
+
+/*
+ * This doesn't open any files. It provides a valid (NHFILE *)
+ * to provide to functions that take one as a parameter, with
+ * only the FREEING bit set.
+ *
+ * close_nhfile() can, and should, be called on the returned
+ * (NHFILE *), and it will handle it correctly.
+ */
 
 NHFILE *
 get_freeing_nhfile(void)
