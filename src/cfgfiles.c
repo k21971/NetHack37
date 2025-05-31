@@ -62,6 +62,8 @@ staticfn boolean cnf_line_MSGHANDLER(char *);
 staticfn boolean cnf_line_EXPLORERS(char *);
 staticfn boolean cnf_line_DEBUGFILES(char *);
 staticfn boolean cnf_line_DUMPLOGFILE(char *);
+staticfn boolean cnf_line_DUMPLOGURL(char *);
+staticfn boolean cnf_line_DUMPHTMLFILE(char *);
 staticfn boolean cnf_line_GENERICUSERS(char *);
 staticfn boolean cnf_line_BONES_POOLS(char *);
 staticfn boolean cnf_line_SUPPORT(char *);
@@ -852,6 +854,28 @@ cnf_line_DUMPLOGFILE(char *bufp)
 }
 
 staticfn boolean
+cnf_line_DUMPLOGURL(char *bufp)
+{
+#ifdef DUMPLOG
+    if (sysopt.dumplogurl)
+        free((genericptr_t) sysopt.dumplogurl);
+    sysopt.dumplogurl = dupstr(bufp);
+#endif /*DUMPLOG*/
+    return TRUE;
+}
+
+staticfn boolean
+cnf_line_DUMPHTMLFILE(char *bufp)
+{
+#ifdef DUMPHTML
+    if (sysopt.dumphtmlfile)
+        free((genericptr_t) sysopt.dumphtmlfile);
+    sysopt.dumphtmlfile = dupstr(bufp);
+#endif /*DUMPHTML*/
+    return TRUE;
+}
+
+staticfn boolean
 cnf_line_GENERICUSERS(char *bufp)
 {
     if (sysopt.genericusers)
@@ -1326,6 +1350,8 @@ static const struct match_config_line_stmt {
     CNFL_S(EXPLORERS, 7),
     CNFL_S(DEBUGFILES, 5),
     CNFL_S(DUMPLOGFILE, 7),
+    CNFL_S(DUMPLOGURL, 10),
+    CNFL_S(DUMPHTMLFILE, 12),
     CNFL_S(GENERICUSERS, 12),
     CNFL_S(BONES_POOLS, 10),
     CNFL_S(SUPPORT, 7),
