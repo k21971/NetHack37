@@ -47,8 +47,10 @@
  *      Rule #1:        monsters of a given class are contiguous in the
  *                      mons[] array.
  *
- *      Rule #2:        monsters of a given class are presented in ascending
- *                      order of strength.
+ *      Rule #2:        monsters of a given class are generally kept in
+ *                      the same order as in previous versions of NetHack
+ *                      (they used to be presented in ascending order of
+ *                      strength, but this rule no longer applies).
  *
  *      Rule #3:        monster frequency is included in the geno mask;
  *                      the frequency can be from 0 to 7.  0's will also
@@ -97,7 +99,7 @@
           NO_ATTK, NO_ATTK, NO_ATTK, NO_ATTK, NO_ATTK),
         SIZ(1, 5, MS_BUZZ, MZ_TINY), MR_POISON, MR_POISON,
         M1_ANIMAL | M1_FLY | M1_NOHANDS | M1_POIS, M2_HOSTILE | M2_FEMALE, 0,
-        5, CLR_YELLOW, KILLER_BEE),
+        6, CLR_YELLOW, KILLER_BEE),
     MON(NAM("soldier ant"), S_ANT,
         LVL(3, 18, 3, 0, 0), (G_GENO | G_SGROUP | 2),
         A(ATTK(AT_BITE, AD_PHYS, 2, 4), ATTK(AT_STNG, AD_DRST, 3, 4),
@@ -105,7 +107,7 @@
         SIZ(20, 5, MS_SILENT, MZ_TINY), MR_POISON, MR_POISON,
         M1_ANIMAL | M1_NOHANDS | M1_OVIPAROUS | M1_POIS | M1_CARNIVORE,
         M2_HOSTILE, 0,
-        6, CLR_BLUE, SOLDIER_ANT),
+        7, CLR_BLUE, SOLDIER_ANT),
     MON(NAM("fire ant"), S_ANT,
         LVL(3, 18, 3, 10, 0), (G_GENO | G_SGROUP | 1),
         A(ATTK(AT_BITE, AD_PHYS, 2, 4), ATTK(AT_BITE, AD_FIRE, 2, 4),
