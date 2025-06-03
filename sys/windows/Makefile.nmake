@@ -378,9 +378,9 @@ ADD_CURSES=Y
 INCLCURSES_H=-I$(R_PDCURSES_TOP)
 !  ELSE
 #  Cannot do it, sorry
-   PDCINCL=
-   INCLCURSES_H=
-   ADD_CURSES = N
+PDCINCL=
+INCLCURSES_H=
+ADD_CURSES = N
 !  ENDIF  # If we found a copy of curses.h
 ! ENDIF  # ADD_CURSES == Y
 !ENDIF  # WANT_CURSES
@@ -1340,7 +1340,7 @@ guilflags = $(lflags) -subsystem:windows
 
 # basic subsystem specific libraries, less the C Run-Time
 baselibs    = kernel32.lib $(optlibs) $(winsocklibs) advapi32.lib gdi32.lib \
-		ole32.lib Shell32.lib UserEnv.lib dbghelp.lib
+		ole32.lib Shell32.lib UserEnv.lib dbghelp.lib Rpcrt4.lib
 winlibs     = $(baselibs) user32.lib comdlg32.lib winspool.lib
 
 # for Windows applications that use the C Run-Time libraries
@@ -2043,7 +2043,7 @@ fetch-pdcurses:
 	@if not exist $(LIBDIR)*.* mkdir $(R_LIBDIR)
 	cd $(LIBDIR)
 #	curl -L -R https://codeload.github.com/wmcbrine/PDCurses/zip/master -o pdcurses.zip
-	curl -L -R https://github.com/Bill-Gray/PDCursesMod/archive/refs/tags/v4.3.5.zip -o $(PDCDIST).zip
+	curl -L -R https://github.com/Bill-Gray/PDCursesMod/archive/refs/tags/v4.5.1.zip -o $(PDCDIST).zip
 	powershell -command "Expand-Archive -Path .\$(PDCDIST).zip -DestinationPath ./$(PDCDIST)-temp"
 	if exist .\$(PDCDIST)\* rd .\$(PDCDIST) /s /Q
 	move .\$(PDCDIST)-temp\PDCurses-master .
@@ -2479,21 +2479,18 @@ $(DAT)bogusmon: $(U)makedefs.exe $(DAT)bogusmon.txt
 #===============================================================================
 # sfutil
 #===============================================================================
-SFCTOOLOBJS = $(OUTL)sfctool.o $(OUTL)sf-alloc.o \
-	    $(OUTL)sf-monst.o $(OUTL)sf-objects.o \
-	    $(OUTL)sfbase.o $(OUTL)sf-struct.o \
-	    $(OUTL)sfexpasc.o \
-	    $(OUTL)sfdata.o $(OUTL)sf-nhlua.o \
-	    $(OUTL)panic.o $(OUTL)sf-date.o $(OUTL)sf-decl.o \
-	    $(OUTL)sf-artifact.o $(OUTL)sf-cfgfiles.o \
-	    $(OUTL)sf-dungeon.o $(OUTL)sf-end.o \
+SFCTOOLOBJS = $(OUTL)sfctool.o \
+	    $(OUTL)sf-alloc.o $(OUTL)sf-artifact.o $(OUTL)sfdata.o \
+	    $(OUTL)sf-date.o $(OUTL)sf-decl.o $(OUTL)sf-calendar.o \
+	    $(OUTL)sf-cfgfiles.o $(OUTL)sf-dungeon.o $(OUTL)sf-end.o \
 	    $(OUTL)sf-engrave.o $(OUTL)sf-files.o $(OUTL)sf-light.o \
 	    $(OUTL)sf-mdlib.o $(OUTL)sf-mkmaze.o $(OUTL)sf-mkroom.o \
-	    $(OUTL)sf-o_init.o $(OUTL)sf-region.o \
-	    $(OUTL)sf-restore.o $(OUTL)sf-rumors.o \
+	    $(OUTL)sf-monst.o $(OUTL)sf-nhlua.o $(OUTL)sf-objects.o \
+	    $(OUTL)sf-o_init.o $(OUTL)panic.o $(OUTL)sf-region.o \
+	    $(OUTL)sf-restore.o $(OUTL)sf-rumors.o $(OUTL)sfbase.o \
+	    $(OUTL)sfexpasc.o $(OUTL)sf-struct.o $(OUTL)strutil.o \
 	    $(OUTL)sf-sys.o $(OUTL)sf-timeout.o $(OUTL)sf-track.o \
-	    $(OUTL)sf-version.o $(OUTL)sf-worm.o \
-	    $(OUTL)strutil.o $(OUTL)sf-windsys.o
+	    $(OUTL)sf-version.o $(OUTL)sf-worm.o $(OUTL)sf-windsys.o
 
 SFCTOOLBIN = $(BinDir)sfctool.exe
 SFFLAGS = -DSFCTOOL -DNOPANICTRACE -DNOCRASHREPORT -DNO_CHRONICLE
@@ -2518,65 +2515,67 @@ $(OUTL)sfdata.o: $(UTIL)sfdata.c $(HACK_H) $(INCL)sfprocs.h $(INCL)sfproto.h
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(UTIL)sfdata.c
 $(OUTL)sfexpasc.o: $(UTIL)sfexpasc.c $(HACK_H) $(INCL)sfprocs.h $(INCL)sfproto.h
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(UTIL)sfexpasc.c
-$(OUTL)sf-alloc.o: $(SRC)alloc.c
+$(OUTL)sf-alloc.o: $(SRC)alloc.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)alloc.c
-$(OUTL)sf-date.o: $(SRC)date.c
+$(OUTL)sf-date.o: $(SRC)date.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)date.c
-$(OUTL)sf-decl.o: $(SRC)decl.c
+$(OUTL)sf-decl.o: $(SRC)decl.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)decl.c
-$(OUTL)sf-monst.o: $(SRC)monst.c
+$(OUTL)sf-monst.o: $(SRC)monst.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)monst.c
-$(OUTL)sf-objects.o: $(SRC)objects.c
+$(OUTL)sf-objects.o: $(SRC)objects.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)objects.c
-$(OUTL)sfbase.o: $(SRC)sfbase.c
+$(OUTL)sfbase.o: $(SRC)sfbase.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)sfbase.c
-$(OUTL)sf-struct.o: $(SRC)sfstruct.c
+$(OUTL)sf-struct.o: $(SRC)sfstruct.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)sfstruct.c
-$(OUTL)sf-artifact.o: $(SRC)artifact.c
+$(OUTL)sf-artifact.o: $(SRC)artifact.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)artifact.c
-$(OUTL)sf-cfgfiles.o: $(SRC)cfgfiles.c
+$(OUTL)sf-calendar.o: $(SRC)calendar.c $(HACK_H)
+	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)calendar.c
+$(OUTL)sf-cfgfiles.o: $(SRC)cfgfiles.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)cfgfiles.c
-$(OUTL)sf-dungeon.o: $(SRC)dungeon.c
+$(OUTL)sf-dungeon.o: $(SRC)dungeon.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)dungeon.c
-$(OUTL)sf-end.o: $(SRC)end.c
+$(OUTL)sf-end.o: $(SRC)end.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)end.c
-$(OUTL)sf-engrave.o: $(SRC)engrave.c
+$(OUTL)sf-engrave.o: $(SRC)engrave.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)engrave.c
-$(OUTL)sf-files.o: $(SRC)files.c
+$(OUTL)sf-files.o: $(SRC)files.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)files.c
-$(OUTL)sf-light.o: $(SRC)light.c
+$(OUTL)sf-light.o: $(SRC)light.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)light.c
-$(OUTL)sf-mdlib.o: $(SRC)mdlib.c
+$(OUTL)sf-mdlib.o: $(SRC)mdlib.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)mdlib.c
-$(OUTL)sf-mkmaze.o: $(SRC)mkmaze.c
+$(OUTL)sf-mkmaze.o: $(SRC)mkmaze.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)mkmaze.c
-$(OUTL)sf-mkroom.o: $(SRC)mkroom.c
+$(OUTL)sf-mkroom.o: $(SRC)mkroom.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)mkroom.c
-$(OUTL)sf-o_init.o: $(SRC)o_init.c
+$(OUTL)sf-o_init.o: $(SRC)o_init.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)o_init.c
-$(OUTL)sf-region.o: $(SRC)region.c
+$(OUTL)sf-region.o: $(SRC)region.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)region.c
-$(OUTL)sf-restore.o: $(SRC)restore.c
+$(OUTL)sf-restore.o: $(SRC)restore.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)restore.c
-$(OUTL)sf-rumors.o: $(SRC)\rumors.c
+$(OUTL)sf-rumors.o: $(SRC)\rumors.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)rumors.c
-$(OUTL)sf-timeout.o: $(SRC)timeout.c
+$(OUTL)sf-timeout.o: $(SRC)timeout.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)timeout.c
-$(OUTL)sf-version.o: $(SRC)version.c
+$(OUTL)sf-version.o: $(SRC)version.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)version.c
-$(OUTL)sf-worm.o: $(SRC)worm.c
+$(OUTL)sf-worm.o: $(SRC)worm.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)worm.c
-$(OUTL)sf-nhlua.o: $(SRC)nhlua.c
+$(OUTL)sf-nhlua.o: $(SRC)nhlua.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)nhlua.c
-$(OUTL)sf-track.o: $(SRC)track.c
+$(OUTL)sf-track.o: $(SRC)track.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)track.c
-$(OUTL)sf-sys.o: $(SRC)sys.c
+$(OUTL)sf-sys.o: $(SRC)sys.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(SRC)sys.c
-$(OUTL)sf-windsys.o: $(MSWSYS)windsys.c
+$(OUTL)sf-windsys.o: $(MSWSYS)windsys.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(MSWSYS)windsys.c
 
-$(UTIL)sftags.exe: $(OUTL)sftags.o
-	$(link) $(LFLAGS) /OUT:$@ $(OUTL)sftags.o
+$(UTIL)sftags.exe: $(OUTL)sftags.o $(OUTLHACKLIB)
+	$(link) $(LFLAGS) /OUT:$@ $(OUTL)sftags.o $(OUTLHACKLIB)
 $(OUTL)sftags.o: $(UTIL)sftags.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) -Fo$@ -c $(UTIL)sftags.c
 $(INCL)sfproto.h: $(UTIL)sftags.exe $(UTIL)sf.tags

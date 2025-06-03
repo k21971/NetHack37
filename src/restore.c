@@ -236,12 +236,9 @@ restobjchn(NHFILE *nhfp, boolean frozen)
 #ifndef SFCTOOL
     boolean ghostly = (nhfp->ftype == NHF_BONESFILE);
 #endif
-    boolean trouble = FALSE;
 
     while (1) {
         Sfi_int(nhfp, &buflen, "obj-obj_length");
-        if (!(buflen != -1 || buflen != sizeof (struct obj)))
-           trouble = TRUE;
         if (buflen == -1)
             break;
 
@@ -302,7 +299,6 @@ restobjchn(NHFILE *nhfp, boolean frozen)
 #ifdef SFCTOOL
     nhUse(frozen);
 #endif
-    nhUse(trouble);
     return first;
 }
 
@@ -1392,7 +1388,9 @@ void
 restore_msghistory(NHFILE *nhfp)
 {
     int msgsize = 0;
+#ifndef SFCTOOL
     int msgcount = 0;
+#endif
     char msg[BUFSZ];
 
     while (1) {
@@ -1405,8 +1403,8 @@ restore_msghistory(NHFILE *nhfp)
         msg[msgsize] = '\0';
 #ifndef SFCTOOL
         putmsghistory(msg, TRUE);
-#endif  /* !SFCTOOL */
         ++msgcount;
+#endif /* !SFCTOOL */
     }
 #ifndef SFCTOOL
     if (msgcount)
