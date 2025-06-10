@@ -472,6 +472,7 @@ choose_random_part(char *str, char sep)
 #ifndef SFCTOOL
     csep = rn2(nsep);
 #else
+    nhUse(nsep);
     csep = 1;
 #endif
     str = begin;
