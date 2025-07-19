@@ -1652,6 +1652,7 @@ nhl_gamestate(lua_State *L)
     struct obj *otmp;
     int argc = lua_gettop(L);
     boolean reststate = (argc > 0) ? lua_toboolean(L, -1) : FALSE;
+    int otyp;
 
     debugpline4("gamestate: %d:%d (%c vs %c)", u.uz.dnum, u.uz.dlevel,
                 reststate ? 'T' : 'F', gg.gmst_stored ? 't' : 'f');
@@ -1683,11 +1684,18 @@ nhl_gamestate(lua_State *L)
         assert(gg.gmst_mvitals != NULL);
         (void) memcpy((genericptr_t) &svm.mvitals, gg.gmst_mvitals,
                       sizeof svm.mvitals);
+        /* clear user-given object type names */
+        for (otyp = 0; otyp < NUM_OBJECTS; otyp++)
+            if (objects[otyp].oc_uname) {
+                free(objects[otyp].oc_uname);
+                objects[otyp].oc_uname = (char *) 0;
+            }
         /* some restored state would confuse the level change in progress */
         u.uz = cur_uz, u.uz0 = cur_uz0;
         init_uhunger();
         free_tutorial(); /* release gg.gmst_XYZ */
         gg.gmst_stored = FALSE;
+        (void) memcpy(svs.spl_book, gg.gmst_spl_book, sizeof svs.spl_book);
     } else if (!reststate && !gg.gmst_stored) {
         /* store game state */
         gg.gmst_moves = svm.moves;
@@ -1708,6 +1716,8 @@ nhl_gamestate(lua_State *L)
         gg.gmst_mvitals = (genericptr_t) alloc(sizeof svm.mvitals);
         (void) memcpy(gg.gmst_mvitals, (genericptr_t) &svm.mvitals,
                       sizeof svm.mvitals);
+        (void) memcpy(gg.gmst_spl_book, svs.spl_book, sizeof svs.spl_book);
+        (void) memset(svs.spl_book, 0, sizeof(svs.spl_book));
         gg.gmst_stored = TRUE;
     } else {
         impossible("nhl_gamestate: inconsistent state (%s vs %s)",
