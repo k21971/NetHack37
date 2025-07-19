@@ -1126,7 +1126,7 @@ really_done(int how)
     boolean taken;
     char pbuf[BUFSZ];
     winid endwin = WIN_ERR;
-    boolean bones_ok, have_windows = iflags.window_inited;
+    boolean bones_ok, have_windows = iflags.window_inited, startscummed;
     struct obj *corpse = (struct obj *) 0;
     time_t endtime;
     long umoney;
@@ -1172,7 +1172,11 @@ really_done(int how)
     if (how == ASCENDED)
         record_achievement(ACH_UWIN);
 
-    dump_open_log(endtime);
+    /* Don't produce a dumplog for scummed games */
+    startscummed = ((how == QUIT || how == ESCAPED) && svm.moves <= 100L);
+
+    if (!startscummed)
+        dump_open_log(endtime);
     /* Sometimes you die on the first move.  Life's not fair.
      * On those rare occasions you get hosed immediately, go out
      * smiling... :-)  -3.
@@ -1280,7 +1284,8 @@ really_done(int how)
             Strcpy(pbuf, deaths[how]);
         livelog_printf(LL_DUMP, "%s", pbuf);
 
-        dump_everything(how, endtime);
+        if (!startscummed)
+            dump_everything(how, endtime);
     }
 
     /* if pets will contribute to score, populate gm.mydogs list now
@@ -1556,7 +1561,8 @@ really_done(int how)
     if (endwin != WIN_ERR)
         destroy_nhwindow(endwin);
 
-    dump_close_log();
+    if (!startscummed)
+        dump_close_log();
 
     /* shut down soundlib */
     if (soundprocs.sound_exit_nhsound)
@@ -1588,7 +1594,8 @@ really_done(int how)
         raw_print("");
         raw_print("");
     }
-    livelog_dump_url(LL_DUMP_ALL | (how == ASCENDED ? LL_DUMP_ASC : 0));
+    if (!startscummed)
+        livelog_dump_url(LL_DUMP_ALL | (how == ASCENDED ? LL_DUMP_ASC : 0));
     nh_terminate(EXIT_SUCCESS);
 }
 
