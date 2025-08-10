@@ -855,11 +855,11 @@ $(OSFC)/sf-restore.o: $(SRC)/restore.c $(HACK_H) | $(OSFC)
 	$(cc) $(CFLAGSU) $(SFFLAGS) -c $(SRC)/restore.c -o$@
 $(OSFC)/sf-rumors.o: $(SRC)/\rumors.c $(HACK_H) | $(OSFC)
 	$(cc) $(CFLAGSU) $(SFFLAGS) -c $(SRC)/rumors.c -o$@
-$(OSFC)/sfbase.o: $(SRC)/sfbase.c $(HACK_H) | $(OSFC)
+$(OSFC)/sfbase.o: $(SRC)/sfbase.c $(HACK_H) $(INCL)/sfprocs.h $(INCL)/sfmacros.h | $(OSFC)
 	$(cc) $(CFLAGSU) $(SFFLAGS) -c $(SRC)/sfbase.c -o$@
-$(OSFC)/sfexpasc.o: $(U)sfexpasc.c $(HACK_H) $(INCL)/sfprocs.h $(INCL)/sfproto.h | $(OSFC)
+$(OSFC)/sfexpasc.o: $(U)sfexpasc.c $(HACK_H) $(INCL)/sfprocs.h $(INCL)/sfproto.h $(INCL)/sfmacros.h | $(OSFC)
 	$(cc) $(CFLAGSU) $(SFFLAGS) -c $(U)sfexpasc.c -o$@
-$(OSFC)/sf-struct.o: $(SRC)/sfstruct.c $(HACK_H) | $(OSFC)
+$(OSFC)/sf-struct.o: $(SRC)/sfstruct.c $(HACK_H) $(INCL)/sfprocs.h $(INCL)/sfmacros.h | $(OSFC)
 	$(cc) $(CFLAGSU) $(SFFLAGS) -c $(SRC)/sfstruct.c -o$@
 $(OSFC)/strutil.o: $(SRC)/strutil.c $(HACK_H) | $(OSFC)
 	$(cc) $(CFLAGSU) $(SFFLAGS) -c $(SRC)/strutil.c -o$@
@@ -1360,12 +1360,13 @@ $(ONH)/%.o: $(SRC)/%.c $(NHLUAH) | $(ONH)
 TARGET_CPU = x64
 NHV=370
 PKGFILES = nethackrc.template Guidebook.txt license NetHack.exe NetHack.txt \
-        NetHackW.exe opthelp nhdat370 record symbols sysconf.template
+	NetHackW.exe opthelp nhdat370 record symbols sysconf.template $(notdir $(LUADLL))
+
 FILESTOZIP = $(addprefix $(GAMEDIR)/, $(PKGFILES))
 MAINZIP = $(PkgDir)/nethack-$(NHV)-win-$(TARGET_CPU)-msys2.zip
 
 package: binary $(FILESTOZIP) $(MAINZIP)
-       @echo NetHack Windows package created: $(MAINZIP)
+	@echo NetHack Windows package created: $(MAINZIP)
 
 $(MAINZIP): $(FILESTOZIP) | $(PkgDir)
 	/c/Windows/System32/tar -a -cf $(MAINZIP) -C $(GAMEDIR) $(PKGFILES)

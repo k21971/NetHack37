@@ -1,4 +1,4 @@
-/* NetHack 3.7	mon.c	$NHDT-Date: 1722365546 2024/07/30 18:52:26 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.584 $ */
+/* NetHack 3.7	mon.c	$NHDT-Date: 1753856387 2025/07/29 22:19:47 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.611 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1022,14 +1022,22 @@ minliquid_core(struct monst *mtmp)
                         pline_mon(mtmp, "%s surrenders to the fire.",
                                   Monnam(mtmp));
                     mondead(mtmp); /* no corpse */
-                } else if (cansee(mtmp->mx, mtmp->my))
-                    pline_mon(mtmp, "%s burns slightly.",
-                              Monnam(mtmp));
+                } else if (cansee(mtmp->mx, mtmp->my)) {
+                    pline_mon(mtmp, "%s burns slightly.", Monnam(mtmp));
+                }
             }
             if (!DEADMONSTER(mtmp)) {
-                (void) fire_damage_chain(mtmp->minvent, FALSE, FALSE,
-                                         mtmp->mx, mtmp->my);
-                (void) rloc(mtmp, RLOC_MSG);
+                if (m_in_air(mtmp)) {
+                    ; /* vampshifter in wolf form can revert to vampire lord
+                       * and become a flyer so not need to teleport */
+                } else if (likes_lava(mtmp->data)) {
+                    ; /* likes_lava case is hypothetical */
+                } else {
+                    (void) fire_damage_chain(mtmp->minvent, FALSE, FALSE,
+                                             mtmp->mx, mtmp->my);
+                    if (!rloc(mtmp, RLOC_MSG))
+                        deal_with_overcrowding(mtmp);
+                }
                 return 0;
             }
             return 1;
@@ -1065,9 +1073,14 @@ minliquid_core(struct monst *mtmp)
             else
                 xkilled(mtmp, XKILL_NOMSG);
             if (!DEADMONSTER(mtmp)) {
-                water_damage_chain(mtmp->minvent, FALSE);
-                if (!rloc(mtmp, RLOC_NOMSG))
-                    deal_with_overcrowding(mtmp);
+                if (m_in_air(mtmp)) {
+                    ; /* vampshifter in wolf form can revert to vampire lord
+                       * and become a flyer so not need to teleport */
+                } else {
+                    water_damage_chain(mtmp->minvent, FALSE);
+                    if (!rloc(mtmp, RLOC_NOMSG))
+                        deal_with_overcrowding(mtmp);
+                }
                 return 0;
             }
             return 1;
@@ -2191,8 +2204,7 @@ mfndpos(
             if (IS_DOOR(ntyp)
                 /* an amorphous creature can only move under/through a
                    closed door if it doesn't currently have hero engulfed */
-                && !((amorphous(mdat) || can_fog(mon))
-                     && (mon != u.ustuck || !u.uswallow))
+                && !((amorphous(mdat) || can_fog(mon)) && !engulfing_u(mon))
                 && (((levl[nx][ny].doormask & D_CLOSED) && !(flag & OPENDOOR))
                     || ((levl[nx][ny].doormask & D_LOCKED)
                         && !(flag & UNLOCKDOOR))) && !thrudoor)
@@ -2657,11 +2669,25 @@ mon_leaving_level(struct monst *mon)
             remove_monster(mx, my);
 
 #if 0   /* mustn't do this; too many places assume that the stale
-           monst->mx,my values are still valid */
+         * monst->mx,my values are still valid */
         mon->mx = mon->my = 0; /* off normal map */
 #endif
     }
     if (onmap) {
+        /* gulpmm() tries to deal with this, but without this extra
+           place_monster() the messages for exploding engulfed gas spore
+           are delivered without the engulfer being shown on the map */
+        if (gm.mswallower && gm.mswallower != mon) {
+            if (gm.mswallower != &gy.youmonst) {
+                place_monster(gm.mswallower,
+                              gm.mswallower->mx, gm.mswallower->my);
+            } else {
+                u_on_newpos(u.ux, u.uy);
+                if (canspotself())
+                    display_self();
+            }
+        }
+
         mon->mundetected = 0; /* for migration; doesn't matter for death */
         /* unhide mimic in case its shape has been blocking line of sight
            or it is accompanying the hero to another level */
@@ -3133,6 +3159,9 @@ corpse_chance(
     struct permonst *mdat = mon->data;
     int i, tmp;
 
+    if (!magr && gm.mswallower && attacktype(gm.mswallower->data, AT_ENGL))
+        magr = gm.mswallower, was_swallowed = TRUE; /* for gas spore boom */
+
     if (mdat == &mons[PM_VLAD_THE_IMPALER] || mdat->mlet == S_LICH) {
         if (cansee(mon->mx, mon->my) && !was_swallowed)
             pline_mon(mon, "%s body crumbles into dust.",
@@ -3149,7 +3178,10 @@ corpse_chance(
                 tmp = d((int) mdat->mlevel + 1, (int) mdat->mattk[i].damd);
             else
                 tmp = 0;
+
             if (was_swallowed && magr) {
+                /* mdef is a gas spore (AT_BOOM) that is exploding inside an
+                   engulfer; suppress usual explosion since it's contained */
                 if (magr == &gy.youmonst) {
                     There("is an explosion in your %s!", body_part(STOMACH));
                     Sprintf(svk.killer.name, "%s explosion",
@@ -3163,14 +3195,11 @@ corpse_chance(
                         mondied(magr);
                     if (DEADMONSTER(magr)) { /* maybe lifesaved */
                         if (canspotmon(magr))
-                            pline_mon(magr, "%s rips open!",
-                                      Monnam(magr));
+                            pline_mon(magr, "%s rips open!", Monnam(magr));
                     } else if (canseemon(magr))
-                        pline_mon(magr,
-                                  "%s seems to have indigestion.",
+                        pline_mon(magr, "%s seems to have indigestion.",
                                   Monnam(magr));
                 }
-
                 return FALSE;
             }
 
@@ -4883,7 +4912,10 @@ pickvampshape(struct monst *mon)
         FALLTHROUGH;
     /*FALLTHRU*/
     case PM_VAMPIRE_LEADER: /* vampire lord or Vlad can become wolf */
-        if (!rn2(wolfchance) && !uppercase_only) {
+        if (!rn2(wolfchance) && !uppercase_only
+            /* don't pick a walking form if that would lead to immediate
+               drowning or immolation and reversion to vampire form */
+            && !is_pool_or_lava(mon->mx, mon->my)) {
             mndx = PM_WOLF;
             break;
         }
@@ -5891,16 +5923,57 @@ adj_erinys(unsigned abuse)
     pm->difficulty = min(10 + (u.ualign.abuse / 3), 25);
 }
 
-/* mark monster type as seen from close-up,
+/* mark individual monster type as seen from close-up,
    if we haven't seen it nearby before */
 void
-see_monster_closeup(struct monst *mtmp)
+see_monster_closeup(struct monst *mtmp, boolean photo)
 {
-    if (!svm.mvitals[monsndx(mtmp->data)].seen_close) {
-        svm.mvitals[monsndx(mtmp->data)].seen_close = TRUE;
-        if (Role_if(PM_TOURIST)) {
-            more_experienced(experience(mtmp, 0), 0);
-            newexplevel();
+    int mndx;
+
+    if (Hallucination || (Blind && !Blind_telepat))
+        return;
+
+    mndx = monsndx(mtmp->data);
+    if (M_AP_TYPE(mtmp) == M_AP_MONSTER && !sensemon(mtmp))
+        mndx = mtmp->mappearance;
+    if (mndx == PM_LONG_WORM && gn.notonhead)
+        mndx = PM_LONG_WORM_TAIL;
+
+    if (!svm.mvitals[mndx].seen_close) {
+        svm.mvitals[mndx].seen_close = 1;
+        svc.context.lifelist.total_seen_upclose++;
+    }
+
+    /* hallucinatory monsters don't reach here--they're not recorded;
+       being able to see invisible doesn't make invisible monsters show up
+       on photos; likewise, telepathy allows hero to see hidden monsters
+       but doesn't cause them to appear on photos */
+    if (photo && !mtmp->minvis && !mtmp->mundetected
+        && (M_AP_TYPE(mtmp) == M_AP_NOTHING
+            || M_AP_TYPE(mtmp) == M_AP_MONSTER)) {
+        if (M_AP_TYPE(mtmp) == M_AP_MONSTER) /* cloned Wizard of Yendor */
+            mndx = mtmp->mappearance;
+
+        if (!svm.mvitals[mndx].photographed) {
+            svm.mvitals[mndx].photographed = 1;
+            svc.context.lifelist.total_photographed++;
+
+            /* tourist earns points (toward EXP but not final score) for
+               the first instance of each type of monster photographed;
+               worm tail can be photographed but yields no EXP bonus */
+            if (Role_if(PM_TOURIST)
+                /* suppress extra points for photographing the pet that hero
+                   started with (unless it has changed shape due to growing
+                   up or being polymorphed) */
+                && (mtmp->m_id != svc.context.startingpet_mid
+                    || mndx != svc.context.startingpet_typ)
+                /* monsndx() check covers worm tail and also disguised
+                   Wizard of Yendor; experienced() won't yield a reasonable
+                   value for those */
+                && mndx == monsndx(mtmp->data)) {
+                more_experienced(experience(mtmp, 0), 0);
+                newexplevel();
+            }
         }
     }
 }
@@ -5909,16 +5982,32 @@ see_monster_closeup(struct monst *mtmp)
 void
 see_nearby_monsters(void)
 {
+    struct monst *mtmp;
+    int mndx;
     coordxy x, y;
 
-    for (x = u.ux - 1; x <= u.ux + 1; x++)
-        for (y = u.uy - 1; y <= u.uy + 1; y++)
-            if (isok(x, y) && MON_AT(x, y)) {
-                struct monst *mtmp = m_at(x, y);
+    if (Hallucination || (Blind && !Blind_telepat))
+        return;
 
-                if (canspotmon(mtmp) && !mtmp->mundetected && !M_AP_TYPE(mtmp))
-                    svm.mvitals[monsndx(mtmp->data)].seen_close = TRUE;
+    for (x = u.ux - 1; x <= u.ux + 1; x++)
+        for (y = u.uy - 1; y <= u.uy + 1; y++) {
+            if (!isok(x, y))
+                continue;
+            if (!(mtmp = m_at(x, y)))
+                continue;
+            mndx = monsndx(mtmp->data);
+            if (M_AP_TYPE(mtmp) == M_AP_MONSTER)
+                mndx = mtmp->mappearance;
+            /* skip closeup handling if this mon type has already been done */
+            if (svm.mvitals[mndx].seen_close)
+                continue;
+            /* disguised mimics pass canseemon(); undetected hiders don't */
+            if (canseemon(mtmp) || (mtmp->mundetected && sensemon(mtmp))) {
+                gb.bhitpos.x = x, gb.bhitpos.y = y;
+                gn.notonhead = (x != mtmp->mx || y != mtmp->my);
+                see_monster_closeup(mtmp, FALSE);
             }
+        }
 }
 
 /* monster resists something.
