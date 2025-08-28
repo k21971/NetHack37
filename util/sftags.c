@@ -1,9 +1,9 @@
 /* NetHack 3.6	sftags.c	$Date$ $Revision$	          */
-/* Copyright (c) Michael Allison, 2025			          */
+/* Copyright (c) Michael Allison, 2025                            */
 /* NetHack may be freely redistributed.  See license for details. */
 
 /*
- *  	Read the given ctags file and generate:
+ *      Read the given ctags file and generate:
  *      Intermediate temp files:
  *              include/sfo_proto.tmp
  *              include/sfi_proto.tmp
@@ -45,12 +45,12 @@
 #endif
 #endif
 
-#define NHTYPE_SIMPLE	1
-#define NHTYPE_COMPLEX	2
+#define NHTYPE_SIMPLE   1
+#define NHTYPE_COMPLEX  2
 struct nhdatatypes_t {
-	uint dtclass;
-	char *dtype;
-	size_t dtsize;
+        uint dtclass;
+        char *dtype;
+        size_t dtsize;
 };
 
 struct tagstruct {
@@ -867,7 +867,7 @@ findtype(char *st, char *tag)
             /* comma or semicolon immediately following tag */
             else {
                 volatile int y = 0;
-		nhUse(y);
+                nhUse(y);
                 y = 1;
             }
             if (strncmpi(ftbuf, "struct ", 7) == 0)
@@ -1108,10 +1108,10 @@ static void generate_c_files(void)
 
     /* begin sfnormptrs.tmp */
     Fprintf(SF_NORMALIZE_POINTERS,
-            "void normalize_pointers_any(union any *d_any);\n\n");
+            "void norm_ptrs_any(union any *d_any);\n\n");
     Fprintf(SF_NORMALIZE_POINTERS,
             "void\n"
-            "normalize_pointers_any(union any *d_any UNUSED)\n"
+            "norm_ptrs_any(union any *d_any UNUSED)\n"
             "{\n"
             "}\n");
 
@@ -1225,11 +1225,11 @@ static void generate_c_files(void)
 
 
         Fprintf(SF_NORMALIZE_POINTERS,
-                "\nvoid normalize_pointers_%s(%s "
+                "\nvoid norm_ptrs_%s(%s "
                 "*d_%s);\n",
                 readtagstypes[k].dtype, sfparent, readtagstypes[k].dtype);
         Fprintf(SF_NORMALIZE_POINTERS,
-                "\nvoid\nnormalize_pointers_%s(%s "
+                "\nvoid\nnorm_ptrs_%s(%s "
                 "*d_%s)\n{\n",
                 readtagstypes[k].dtype, sfparent, readtagstypes[k].dtype);
         Snprintf(norm_param_buf, sizeof norm_param_buf, "d_%s",
