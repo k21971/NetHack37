@@ -1558,7 +1558,7 @@ hmon_hitmon_pet(
     struct obj *obj UNUSED)
 {
     if (mon->mtame && hmd->dmg > 0) {
-        /* do this even if the pet is being killed (affects revival) */
+        /* do this even if the pet is being killed or migrating (affects revival) */
         abuse_dog(mon); /* reduces tameness */
         /* flee if still alive and still tame; if already suffering from
            untimed fleeing, no effect, otherwise increases timed fleeing */
@@ -1576,7 +1576,7 @@ hmon_hitmon_splitmon(
     if ((hmd->mdat == &mons[PM_BLACK_PUDDING]
          || hmd->mdat == &mons[PM_BROWN_PUDDING])
         /* pudding is alive and healthy enough to split */
-        && mon->mhp > 1 && !mon->mcan
+        && mon->mhp > 1 && !mon->mcan && !hmd->offmap
         /* iron weapon using melee or polearm hit [3.6.1: metal weapon too;
            also allow either or both weapons to cause split when twoweap] */
         && obj && (obj == uwep || (u.twoweap && obj == uswapwep))
@@ -1752,6 +1752,7 @@ hmon_hitmon(
     hmd.needpoismsg = FALSE;
     hmd.poiskilled = FALSE;
     hmd.already_killed = FALSE;
+    hmd.offmap = FALSE;
     hmd.destroyed = FALSE;
     hmd.dryit = FALSE;
     hmd.doreturn = FALSE;
@@ -1814,6 +1815,18 @@ hmon_hitmon(
        a level draining artifact has already done to max HP */
     if (mon->mhp > mon->mhpmax)
         mon->mhp = mon->mhpmax;
+    if (mon->mx == 0) {
+        /*
+         * jousting can lead to:
+         *     mhurtle_to_doom()
+         *      mhurtle()
+         *       mintrap()
+         *        trapeffect_hole()
+         *         trapeffect_level_telep()
+         *          migrate_to_level()
+         * Set offmap in that situation so code to follow can test for it.*/
+        hmd.offmap = TRUE;
+    }
     if (DEADMONSTER(mon))
         hmd.destroyed = TRUE;
 
@@ -1874,7 +1887,7 @@ hmon_hitmon(
         Your("%s %s no longer poisoned.", hmd.saved_oname,
              vtense(hmd.saved_oname, "are"));
 
-    if (!hmd.destroyed) {
+    if (!hmd.destroyed && !hmd.offmap) {
         int hitflags = M_ATTK_HIT;
 
         wakeup(mon, TRUE);
@@ -2058,6 +2071,11 @@ joust(struct monst *mon, /* target */
         return 0;
     /* sanity check; lance must be wielded in order to joust */
     if (obj != uwep && (obj != uswapwep || !u.twoweap))
+        return 0;
+    /* can't joust while trapped--not enough room to maneuver;
+     * TODO? if the steed is trapped in a pit, perhaps the hero ought to be
+     * able to joust against a monster that's in a conjoined pit */
+    if (u.utrap)
         return 0;
 
     /* if using two weapons, use worse of lance and two-weapon skills */
