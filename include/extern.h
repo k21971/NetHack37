@@ -746,6 +746,7 @@ extern void Ring_gone(struct obj *) NONNULLARG1;
 extern void Blindf_on(struct obj *) NONNULLARG1;
 extern void Blindf_off(struct obj *);
 extern int dotakeoff(void);
+extern int ia_dotakeoff(void);
 extern int doremring(void);
 extern int cursed(struct obj *);
 extern int armoroff(struct obj *);
@@ -1163,6 +1164,7 @@ extern void dump_glyphids(void);
 extern void clear_all_glyphmap_colors(void);
 extern void reset_customcolors(void);
 extern int glyph_to_cmap(int);
+extern void maybe_shuffle_customizations(void);
 
 /* ### hack.c ### */
 
@@ -2928,6 +2930,8 @@ extern void globby_bill_fixup(struct obj *, struct obj *) NONNULLARG12;
 extern void credit_report(struct monst *shkp, int idx,
                           boolean silent) NONNULLARG1;
 extern void use_unpaid_trapobj(struct obj *, coordxy, coordxy) NONNULLARG1;
+extern void noisy_shop(struct mkroom *);
+
 
 /* ### shknam.c ### */
 
@@ -3420,8 +3424,8 @@ extern int passive(struct monst *, struct obj *, boolean, boolean, uchar,
 extern void passive_obj(struct monst *, struct obj *, struct attack *) NONNULLARG1;
 extern void that_is_a_mimic(struct monst *, unsigned) NONNULLARG1;
 extern void stumble_onto_mimic(struct monst *) NONNULLARG1;
-extern boolean mimic_disguised_as_non_mon(struct monst *) NONNULLARG1;
-extern boolean mimic_disguised_as_mon(struct monst *) NONNULLARG1;
+extern boolean disguised_as_non_mon(struct monst *) NONNULLARG1;
+extern boolean disguised_as_mon(struct monst *) NONNULLARG1;
 extern int flash_hits_mon(struct monst *, struct obj *) NONNULLARG12;
 extern void light_hits_gremlin(struct monst *, int) NONNULLARG1;
 
@@ -3881,6 +3885,8 @@ extern void setworn(struct obj *, long) NO_NNARGS; /* has tests for obj */
 extern void setnotworn(struct obj *) NO_NNARGS; /* has tests for obj */
 extern void allunworn(void);
 extern struct obj *wearmask_to_obj(long);
+extern int wornmask_to_armcat(long);
+extern long armcat_to_wornmask(int);
 extern long wearslot(struct obj *) NONNULLARG1;
 extern void check_wornmask_slots(void);
 extern void mon_set_minvis(struct monst *) NONNULLARG1;
