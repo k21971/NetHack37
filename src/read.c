@@ -1,4 +1,4 @@
-/* NetHack 3.7	read.c	$NHDT-Date: 1715889745 2024/05/16 20:02:25 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.308 $ */
+/* NetHack 3.7	read.c	$NHDT-Date: 1762577372 2025/11/07 20:49:32 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.323 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -2755,7 +2755,7 @@ do_genocide(
               * 3 = forced genocide of player
               * 5 (4 | 1) = normal genocide from throne */
 {
-    char buf[BUFSZ], promptbuf[QBUFSZ];
+    char buf[BUFSZ], realbuf[BUFSZ], promptbuf[QBUFSZ];
     int i, killplayer = 0;
     int mndx;
     struct permonst *ptr;
@@ -2860,27 +2860,31 @@ do_genocide(
     }
 
     which = "all ";
+    Strcpy(realbuf, ptr->pmnames[NEUTRAL]); /* standard singular */
     if (Hallucination) {
-        if (Upolyd)
+        /* hallucinate hero's type */
+        if (Upolyd) {
             Strcpy(buf, pmname(gy.youmonst.data,
                                flags.female ? FEMALE : MALE));
-        else {
+        } else {
             Strcpy(buf, (flags.female && gu.urole.name.f) ? gu.urole.name.f
-                                                       : gu.urole.name.m);
+                                                          : gu.urole.name.m);
             buf[0] = lowc(buf[0]);
         }
     } else {
-        Strcpy(buf, ptr->pmnames[NEUTRAL]); /* standard singular */
+        /* use actual type */
+        Strcpy(buf, realbuf);
         if ((ptr->geno & G_UNIQ) && ptr != &mons[PM_HIGH_CLERIC])
             which = !type_is_pname(ptr) ? "the " : "";
     }
+
     if (how & REALLY) {
         if (!num_genocides())
             livelog_printf(LL_CONDUCT | LL_GENOCIDE,
                            "performed %s first genocide (%s)",
-                           uhis(), makeplural(buf));
+                           uhis(), makeplural(realbuf));
         else
-            livelog_printf(LL_GENOCIDE, "genocided %s", makeplural(buf));
+            livelog_printf(LL_GENOCIDE, "genocided %s", makeplural(realbuf));
 
         /* setting no-corpse affects wishing and random tin generation */
         svm.mvitals[mndx].mvflags |= (G_GENOD | G_NOCORPSE);
@@ -2902,13 +2906,13 @@ do_genocide(
             }
 
             /* Polymorphed characters will die as soon as they're rehumanized.
-             */
-            /* KMH -- Unchanging prevents rehumanization */
+               KMH -- Unchanging prevents rehumanization. */
             if (Upolyd && ptr != gy.youmonst.data) {
                 delayed_killer(POLYMORPH, svk.killer.format, svk.killer.name);
                 You_feel("%s inside.", udeadinside());
-            } else
+            } else {
                 done(GENOCIDED);
+            }
         } else if (ptr == gy.youmonst.data) {
             rehumanize();
         }
