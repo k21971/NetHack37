@@ -1367,7 +1367,7 @@ ini_inv(const struct trobj *trop)
 
    this function can be run multiple times and will overwrite the effects of
    previous runs */
-staticfn void
+void
 u_init_inventory_attrs(void)
 {
     gl.lastinvnr = 51;
@@ -1380,11 +1380,6 @@ u_init_inventory_attrs(void)
 
     if (discover)
         ini_inv(Wishing);
-
-    if (wizard) {
-        read_wizkit();
-        obj_delivery(FALSE); /* finish wizkit */
-    }
 
     if (u.umoney0)
         ini_inv(Money);

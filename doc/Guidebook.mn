@@ -47,7 +47,7 @@
 .ds f0 \*(vr
 .ds f1 \" empty
 .\"DO NOT REMOVE NH_DATESUB .ds f2 Date(%B %-d, %Y)
-.ds f2 October 24, 2025
+.ds f2 December 03, 2025
 .
 .\" A note on some special characters:
 .\" \(lq = left double quote
@@ -131,7 +131,8 @@ will vary with your background and training:
 .pg
 \fIArcheologists\fP understand dungeons pretty well; this enables them
 to move quickly and sneak up on the local nasties.  They start equipped
-with the tools for a proper scientific expedition.
+with the tools for a proper scientific expedition, and are able to read
+ancient languages.
 .pg
 \fIBarbarians\fP are warriors out of the hinterland, hardened to battle.
 They begin their quests with naught but uncommon strength, a trusty hauberk,
