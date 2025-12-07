@@ -2615,6 +2615,12 @@ reroll_menu(void)
 
     if (option == 'y') {
         ++u.uroleplay.numrerolls;
+        /* rate-limit rerolls to prevent CPU abuse */
+#if defined(UNIX) || defined(MACOS)
+        sleep(1);
+#elif defined(WIN32)
+        Sleep(1000);
+#endif
         return TRUE;
     }
     return FALSE;
