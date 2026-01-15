@@ -71,6 +71,10 @@
 #include "artifact.h"
 #endif
 
+#ifndef MFNDPOS_H
+#include "mfndpos.h"
+#endif
+
 /* ### alloc.c ### */
 
 #if 0
@@ -1244,6 +1248,10 @@ extern boolean pmatchi(const char *, const char *) NONNULLPTRS;
 extern boolean pmatchz(const char *, const char *) NONNULLPTRS;
 */
 
+/* ### iactions.c ### */
+
+extern int itemactions(struct obj *otmp) NONNULLARG1;
+
 /* ### insight.c ### */
 
 extern int doattributes(void);
@@ -1756,7 +1764,7 @@ extern boolean can_touch_safely(struct monst *, struct obj *) NONNULLARG12;
 extern int can_carry(struct monst *, struct obj *) NONNULLARG12;
 extern long mon_allowflags(struct monst *) NONNULLARG1;
 extern boolean m_in_air(struct monst *) NONNULLARG1;
-extern int mfndpos(struct monst *, coord *, long *, long) NONNULLPTRS;
+extern int mfndpos(struct monst *, struct mfndposdata *, long) NONNULLPTRS;
 extern boolean monnear(struct monst *, coordxy, coordxy) NONNULLARG1;
 extern void dmonsfree(void);
 extern void elemental_clog(struct monst *) NONNULLARG1;
@@ -1926,8 +1934,8 @@ extern boolean accessible(coordxy, coordxy);
 extern void set_apparxy(struct monst *) NONNULLARG1;
 extern boolean can_ooze(struct monst *) NONNULLARG1;
 extern boolean can_fog(struct monst *) NONNULLARG1;
-extern boolean should_displace(struct monst *, coord *, long *, int, coordxy,
-                               coordxy) NONNULLPTRS;
+extern boolean should_displace(struct monst *, const struct mfndposdata *,
+                               coordxy, coordxy) NONNULLPTRS;
 extern boolean undesirable_disp(struct monst *, coordxy, coordxy) NONNULLARG1;
 extern boolean can_hide_under_obj(struct obj *);
 

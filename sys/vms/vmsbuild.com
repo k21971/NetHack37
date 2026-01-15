@@ -28,9 +28,9 @@ $ !	  one, use "" in the earlier one's position, such as
 $ !	$ @[-.sys.vms]vmsbuild "" "" "" "" "TTY+CURSES"
 $ !
 $ ! Lua Version
-$ luaver = "546"
-$ luadotver = "5.4.6"
-$ luaunderver = "5_4_6"
+$ luaver = "548"
+$ luadotver = "5.4.8"
+$ luaunderver = "5_4_8"
 $
 $	  decc_dflt = f$trnlnm("DECC$CC_DEFAULT")
 $	  j = (decc_dflt.nes."") .and. 1
@@ -425,7 +425,7 @@ $ c_list = "allmain,apply,artifact,attrib,ball,bones,botl,calendar,cmd" -
 	+ ",do_wear,dog,dogmove,dokick,dungeon,eat,end,engrave,exper,explode" -
 	+ ",extralev,files,fountain,getpos,glyphs"
 $ gosub compile_list
-$ c_list = "hack,hacklib,insight,invent,light,lock,mail,makemon" -
+$ c_list = "hack,hacklib,iactions,insight,invent,light,lock,mail,makemon" -
 	+ ",mcastu,mdlib,mhitm,mhitu,minion,mklev,mkmap,mkmaze" -
 	+ ",mkobj,mkroom,mon,mondata,monmove,mplayer,mthrowu,muse" -
 	+ ",music"

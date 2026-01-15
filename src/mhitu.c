@@ -431,6 +431,13 @@ getmattk(
 
     }
 
+    /* elementals on their home plane do double damage */
+    if (attk != alt_attk_buf && is_home_elemental(mptr)) {
+        *alt_attk_buf = *attk;
+        attk = alt_attk_buf;
+        attk->damn *= 2;
+    }
+
     return attk;
 }
 
@@ -1535,8 +1542,15 @@ gulpmu(struct monst *mtmp, struct attack *mattk)
         break;
     }
 
-    if (physical_damage)
+    if (physical_damage) {
+        /* same damage reduction for AC as in hitmu */
+        if (u.uac < 0)
+            tmp -= rnd(-u.uac);
+        if (tmp < 0)
+            tmp = 1;
+
         tmp = Maybe_Half_Phys(tmp);
+    }
 
     gm.mswallower = mtmp; /* match gulpmm() */
     mdamageu(mtmp, tmp);
