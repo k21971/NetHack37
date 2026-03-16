@@ -2890,12 +2890,15 @@ enlightenment/attribute disclosure for saving-grace: include a line for have
 tourists gain experience by "taking photos" of new creatures, and
 	going to new dungeon levels
 healers gain experience by healing pets
-blessed scroll of destroy armor asks which armor to destroy
+blessed scroll of destroy armor asks which armor to destroy if wearing more
+	than one armor; otherwise it'll destroy a cursed armor, or erodes
+	random armor
 archeologists' fedora is lucky
 telepathic hero can discern which particular monster just read a scroll
 add "make fetch-docs" to download pre-formatted documentation
 monsters will use throw-and-return weapons such as an aklys
 archeologists can identify scrolls by deciphering their labels
+monster destroy armor -spell first erodes armor
 
 
 Platform- and/or Interface-Specific New Features

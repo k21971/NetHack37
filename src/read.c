@@ -22,6 +22,7 @@ staticfn int maybe_tame(struct monst *, struct obj *);
 staticfn boolean can_center_cloud(coordxy, coordxy);
 staticfn void display_stinking_cloud_positions(boolean);
 staticfn void seffect_enchant_armor(struct obj **);
+staticfn boolean disintegrate_cursed_armor(void);
 staticfn void seffect_destroy_armor(struct obj **);
 staticfn void seffect_confuse_monster(struct obj **);
 staticfn void seffect_scare_monster(struct obj **);
@@ -1281,6 +1282,29 @@ seffect_enchant_armor(struct obj **sobjp)
               Blind ? "again" : "unexpectedly");
 }
 
+/* destroy a random cursed armor worn by hero */
+staticfn boolean
+disintegrate_cursed_armor(void)
+{
+    struct obj *armors[7] = { NULL };
+    int idx = 0;
+
+    if (uarm && uarm->cursed) armors[idx++] = uarm;
+    if (uarmc && uarmc->cursed) armors[idx++] = uarmc;
+    if (uarmh && uarmh->cursed) armors[idx++] = uarmh;
+    if (uarms && uarms->cursed) armors[idx++] = uarms;
+    if (uarmg && uarmg->cursed) armors[idx++] = uarmg;
+    if (uarmf && uarmf->cursed) armors[idx++] = uarmf;
+    if (uarmu && uarmu->cursed) armors[idx++] = uarmu;
+    if (!idx)
+        return FALSE;
+
+    if (disintegrate_arm(armors[rn2(idx)]))
+        return TRUE;
+
+    return FALSE;
+}
+
 staticfn void
 seffect_destroy_armor(struct obj **sobjp)
 {
@@ -1310,7 +1334,21 @@ seffect_destroy_armor(struct obj **sobjp)
         otmp->oerodeproof = new_erodeproof ? 1 : 0;
         return;
     }
-    if (!scursed || !otmp || !otmp->cursed) {
+
+    if (scursed) {
+        if (otmp && otmp->cursed) {
+            /* armor and scroll both cursed */
+            pline("%s.", Yobjnam2(otmp, "vibrate"));
+            if (otmp->spe >= -6) {
+                otmp->spe += -1;
+                adj_abon(otmp, -1);
+            }
+            make_stunned((HStun & TIMEOUT) + (long) rn1(10, 10), TRUE);
+        } else if (disintegrate_arm(otmp)) {
+            gk.known = TRUE;
+            return;
+        }
+    } else {
         boolean gets_choice = (otmp && sobj && sobj->blessed
                                && count_worn_armor() > 1);
 
@@ -1324,9 +1362,14 @@ seffect_destroy_armor(struct obj **sobjp)
             /* check the return value, if user picked non-valid obj */
             if (any_worn_armor_ok(atmp) == GETOBJ_SUGGEST)
                 otmp = atmp;
-        }
-
-        if (!destroy_arm(otmp)) {
+            if (disintegrate_arm(otmp)) {
+                gk.known = TRUE;
+                return;
+            }
+        } else if (sobj->blessed && disintegrate_cursed_armor()) {
+            gk.known = TRUE;
+            return;
+        } else if (!destroy_arm()) {
             strange_feeling(sobj, "Your skin itches.");
             *sobjp = 0; /* useup() in strange_feeling() */
             exercise(A_STR, FALSE);
@@ -1334,13 +1377,6 @@ seffect_destroy_armor(struct obj **sobjp)
             return;
         } else
             gk.known = TRUE;
-    } else { /* armor and scroll both cursed */
-        pline("%s.", Yobjnam2(otmp, "vibrate"));
-        if (otmp->spe >= -6) {
-            otmp->spe += -1;
-            adj_abon(otmp, -1);
-        }
-        make_stunned((HStun & TIMEOUT) + (long) rn1(10, 10), TRUE);
     }
 }
 
