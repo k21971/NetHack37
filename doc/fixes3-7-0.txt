@@ -2899,6 +2899,7 @@ add "make fetch-docs" to download pre-formatted documentation
 monsters will use throw-and-return weapons such as an aklys
 archeologists can identify scrolls by deciphering their labels
 monster destroy armor -spell first erodes armor
+iron shoes protect the wearer against certain floor-based traps
 
 
 Platform- and/or Interface-Specific New Features
