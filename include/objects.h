@@ -44,7 +44,7 @@
 #define OBJECT(obj,bits,prp,sym,prob,dly,wt,        \
                cost,sdam,ldam,oc1,oc2,nut,color,sn) \
   { 0, 0, (char *) 0, bits, prp, sym, dly, color, prob, wt, \
-    cost, sdam, ldam, oc1, oc2, nut }
+    cost, sdam, ldam, oc1, oc2, nut, -1UL, 0, -1UL, 0 }
 #define MARKER(tag,sn) /*empty*/
 
 #elif defined(OBJECTS_ENUM)

@@ -2860,6 +2860,8 @@ extern void bclose(int);
 /* setpaid() has a conditional code block near the end of the
    function, where arg1 is tested for NULL, preventing NONNULLARG1 */
 extern void setpaid(struct monst *) NO_NNARGS;
+extern void record_price_quote(int, unsigned long, boolean);
+extern void append_price_quote(char *, char **, int) NONNULLARG12;
 extern long money2mon(struct monst *, long) NONNULLARG1;
 extern void money2u(struct monst *, long) NONNULLARG1;
 extern void shkgone(struct monst *) NONNULLARG1;
