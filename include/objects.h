@@ -41,10 +41,14 @@
    the second zero is oc_spare1 for padding between oc_tough and oc_dir */
 #define BITS(nmkn,mrg,uskn,ctnr,mgc,chrg,uniq,nwsh,big,tuf,dir,sub,mtrl) \
     nmkn,mrg,uskn,0,mgc,chrg,uniq,nwsh,big,tuf,0,dir,mtrl,sub /*cpp fodder*/
+/* note: 0UL-1UL is a method of expressing the largest possible
+   unsigned long value whilst working around a false-positive warning
+   in Microsoft Visual C (which assumes that a negative number was
+   intended despite the explicit U suffix) */
 #define OBJECT(obj,bits,prp,sym,prob,dly,wt,        \
                cost,sdam,ldam,oc1,oc2,nut,color,sn) \
   { 0, 0, (char *) 0, bits, prp, sym, dly, color, prob, wt, \
-    cost, sdam, ldam, oc1, oc2, nut, -1UL, 0, -1UL, 0 }
+    cost, sdam, ldam, oc1, oc2, nut, (0UL-1UL), 0, (0UL-1UL), 0 }
 #define MARKER(tag,sn) /*empty*/
 
 #elif defined(OBJECTS_ENUM)
