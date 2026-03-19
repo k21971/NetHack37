@@ -2210,6 +2210,8 @@ when reading an engraving, suppress the addition of a trailing period if the
 	text already has one
 cursed magic whistle could teleport hero on no-teleport levels
 give a brief explanation when receiving a wish for acquiring the Amulet
+teleportation traps no longer teleport you on levels made temporarily
+        no-teleport by the presence of a monster
 
 
 Fixes to 3.7.0-x Platform and/or Interface Problems Exposed Via git Repository

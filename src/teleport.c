@@ -1494,7 +1494,7 @@ tele_trap(struct trap *trap)
         return;
 
     in_tele_trap = TRUE;
-    if (In_endgame(&u.uz) || Antimagic) {
+    if (In_endgame(&u.uz) || Antimagic || noteleport_level(&gy.youmonst)) {
         if (Antimagic)
             shieldeff(u.ux, u.uy);
         You_feel("a wrenching sensation.");
