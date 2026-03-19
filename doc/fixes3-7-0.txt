@@ -2907,6 +2907,7 @@ the game now automatically tracks which sell prices and buy prices you have
         seen for each type of item; these are visible in the discoveries list,
         and can also be shown elsewhere using the new 'price_quotes' option
 new shields: shield of shock resistance, shield of drain resistance
+new wand: wand of stasis
 
 
 Platform- and/or Interface-Specific New Features
