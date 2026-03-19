@@ -2146,8 +2146,6 @@ mfndpos(
     wantpool = (mdat->mlet == S_EEL);
     poolok = ((!Is_waterlevel(&u.uz) && m_in_air(mon))
               || (is_swimmer(mdat) && !wantpool));
-    /* note: floating eye is the only is_floater() so this could be
-       simplified, but then adding another floater would be error prone */
     lavaok = (m_in_air(mon) || likes_lava(mdat));
     if (mdat == &mons[PM_FLOATING_EYE]) /* prefers to avoid heat */
         lavaok = FALSE;
@@ -3477,10 +3475,10 @@ xkilled(
     iflags.sad_feeling = FALSE;
 
     mtmp->mhp = 0; /* caller will usually have already done this */
-    if (!noconduct) /* KMH, conduct */
+    if (!noconduct) { /* KMH, conduct */
         if (!u.uconduct.killer++)
             livelog_printf(LL_CONDUCT, "killed for the first time");
-
+    }
     if (!nomsg) {
         boolean namedpet = has_mgivenname(mtmp) && !Hallucination;
 
