@@ -4750,13 +4750,13 @@ disintegrate_mon(
 void
 ubuzz(int type, int nd)
 {
-    dobuzz(type, nd, u.ux, u.uy, u.dx, u.dy, TRUE, FALSE);
+    dobuzz(type, nd, u.ux, u.uy, u.dx, u.dy, TRUE, FALSE, FALSE);
 }
 
 void
 buzz(int type, int nd, coordxy sx, coordxy sy, int dx, int dy)
 {
-    dobuzz(type, nd, sx, sy, dx, dy, TRUE, FALSE);
+    dobuzz(type, nd, sx, sy, dx, dy, TRUE, FALSE, FALSE);
 }
 
 /*
@@ -4774,7 +4774,8 @@ dobuzz(
     int nd,                 /* damage strength ('number of dice') */
     coordxy sx, coordxy sy, /* starting point */
     int dx, int dy,         /* direction delta */
-    boolean sayhit, boolean saymiss) /* report out of sight hit/miss events */
+    boolean sayhit, boolean saymiss, /* report out of sight hit/miss events */
+    boolean forcemiss)
 {
     int range, fltyp = zaptype(type), damgtype = fltyp % 10;
     coordxy lsx, lsy;
@@ -4860,7 +4861,7 @@ dobuzz(
  buzzmonst:
             gn.notonhead = (mon->mx != gb.bhitpos.x
                             || mon->my != gb.bhitpos.y);
-            if (zap_hit(find_mac(mon), spell_type)) {
+            if (!forcemiss && zap_hit(find_mac(mon), spell_type)) {
                 if (mon_reflects(mon, (char *) 0)) {
                     if (cansee(mon->mx, mon->my)) {
                         hit(flash_str(fltyp, FALSE), mon, exclam(0));
@@ -4950,7 +4951,7 @@ dobuzz(
             if (u.usteed && !rn2(3) && !mon_reflects(u.usteed, (char *) 0)) {
                 mon = u.usteed;
                 goto buzzmonst;
-            } else if (zap_hit((int) u.uac, 0)) {
+            } else if (!forcemiss && zap_hit((int) u.uac, 0)) {
                 range -= 2;
                 pline_dir(xytodir(-dx, -dy), "%s hits you!",
                           The(flash_str(fltyp, FALSE)));
