@@ -1545,7 +1545,7 @@ extern int monster_census(boolean);
 extern int msummon(struct monst *);
 extern void summon_minion(aligntyp, boolean);
 extern int demon_talk(struct monst *) NONNULLARG1;
-extern long bribe(struct monst *) NONNULLARG1;
+extern long bribe(struct monst *, const char *) NONNULLARG12;
 extern int dprince(aligntyp);
 extern int dlord(aligntyp);
 extern int llord(void);

@@ -1582,6 +1582,9 @@ healers may get tiny damage increase when attacking with knives
 allow rogues to also backstab sleeping or paralyzed monsters
 rogues cannot backstab monsters that have no backside
 give experience if opening Schroedinger's Box causes death of the cat inside
+priest donation amounts are explicitly stated, randomized slightly, based on
+       peak rather than current level, and allow for bulk donations (buying
+       larger amounts of clairvoyance/protection) if you have a lot of gold
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
