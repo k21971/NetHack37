@@ -55,7 +55,7 @@ CFLAGS+=-Wall -Wextra  \
 CFLAGS+=-pedantic
 CFLAGS+=-Wmissing-declarations
 #CFLAGS+=-Wformat=2
-CFLAGS+=-Wdiscarded-qualifiers
+#CFLAGS+=-Wdiscarded-qualifiers
 
 # these are left out of the C++ flags
 CFLAGS+=-Wformat-nonliteral
