@@ -29,6 +29,14 @@
 #define ECM_EXACTMATCH 0x02 /* needs exact match of findstr */
 #define ECM_NO1CHARCMD 0x04 /* ignore commands like '?' and '#' */
 
+/* a key bound to ext_func_tab */
+struct Cmd_bind {
+    uchar key;
+    boolean userbind; /* added by user */
+    const struct ext_func_tab *cmd;
+    struct Cmd_bind *next;
+};
+
 struct ext_func_tab {
     uchar key;
     const char *ef_txt, *ef_desc;

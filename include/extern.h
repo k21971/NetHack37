@@ -370,6 +370,7 @@ extern void change_palette(void);
 
 /* ### cmd.c ### */
 
+extern void cmdbind_freeall(void);
 extern void set_move_cmd(int, int);
 extern int do_move_west(void);
 extern int do_move_northwest(void);
@@ -447,7 +448,7 @@ extern int doextlist(void);
 extern int extcmd_via_menu(void);
 extern int enter_explore_mode(void);
 extern boolean bind_mousebtn(int, const char *);
-extern boolean bind_key(uchar, const char *);
+extern boolean bind_key(uchar, const char *, boolean);
 extern void dokeylist(void);
 extern int xytodir(int, int);
 extern void dirtocoord(coord *, int);

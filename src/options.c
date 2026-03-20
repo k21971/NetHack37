@@ -7682,7 +7682,7 @@ parsebindings(char *bindings)
     }
 
     /* extended command? */
-    if (!bind_key(key, bind)) {
+    if (!bind_key(key, bind, TRUE)) {
         config_error_add("Unknown key binding command '%s'", bind);
         return FALSE;
     }
