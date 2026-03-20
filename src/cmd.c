@@ -2547,6 +2547,7 @@ key2extcmddesc(uchar key)
     }
     /* finally, check whether 'key' is a command */
     if ((cmdbind = cmdbind_get(key)) != 0
+        && cmdbind->cmd
         && (txt = cmdbind->cmd->ef_txt) != 0) {
         Sprintf(key2cmdbuf, "%s (#%s)", cmdbind->cmd->ef_desc, txt);
 
@@ -2964,7 +2965,8 @@ cmd_from_func(int (*fn)(void))
             }
         }
     }
-    if ((bind = cmdbind_get(' ')) != 0 && bind->cmd->ef_funct == fn)
+    if ((bind = cmdbind_get(' ')) != 0 && bind->cmd
+        && bind->cmd->ef_funct == fn)
         return ' ';
     return ret;
 }
@@ -3774,7 +3776,7 @@ movecmd(char sym, int mode)
     int d = DIR_ERR;
     struct Cmd_bind *bind = cmdbind_get(sym);
 
-    if (bind) {
+    if (bind && bind->cmd) {
         int (*fnc)(void) = bind->cmd->ef_funct;
 
         if (mode == MV_ANY) {
@@ -3816,7 +3818,8 @@ redraw_cmd(char c)
     uchar uc = (uchar) c;
     struct Cmd_bind *bind = cmdbind_get(uc);
 
-    return (boolean) (bind && bind->cmd->ef_funct == doredraw);
+    return (boolean) (bind && bind->cmd
+                      && bind->cmd->ef_funct == doredraw);
 }
 
 /*
