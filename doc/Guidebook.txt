@@ -1367,7 +1367,7 @@
           Talk to someone.  Default key is `M-c'.
 
      #chronicle
-          Show a list of important game events.
+          Show a list of important game events.  Default key is `v'.
 
      #close
           Close a door.  Default key is `c'.
@@ -1486,7 +1486,7 @@
           command.
 
      #history
-          Show long version and game history.  Default key is `V'.
+          Show long version and game history.
 
      #inventory
           Show your inventory.  Default key is `i'.
@@ -1987,7 +1987,7 @@
      #versionshort
           Show  the  program's  version number, plus the date and time that
           the running copy  was  built  from  sources  (not  the  version's
-          release date).  Default key is `v'.
+          release date).  Default key is `V'.
 
      #vision
           Show vision array.  Autocompletes.  Debug mode only.
