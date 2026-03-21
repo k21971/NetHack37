@@ -3854,6 +3854,7 @@ extern void wizcustom_callback(winid win, int glyphnum, char *id);
 #if (NH_DEVEL_STATUS != NH_STATUS_RELEASED) || defined(DEBUG)
 extern int wiz_display_macros(void);
 extern int wiz_mon_diff(void);
+extern int wiz_objprobs(void);
 #endif
 extern void sanity_check(void);
 

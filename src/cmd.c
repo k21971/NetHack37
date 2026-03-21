@@ -1956,6 +1956,10 @@ struct ext_func_tab extcmdlist[] = {
               wiz_load_splua, IFBURIED | WIZMODECMD | NOFUZZERCMD, NULL },
     { '\0',   "wizloadlua", "load and execute a lua script",
               wiz_load_lua, IFBURIED | WIZMODECMD | NOFUZZERCMD, NULL },
+#if (NH_DEVEL_STATUS != NH_STATUS_RELEASED) || defined(DEBUG)
+    { '\0',   "wizobjprobs", "list object generation probabilities",
+              wiz_objprobs, IFBURIED | WIZMODECMD, NULL },
+#endif
     { '\0',   "wizmakemap", "recreate the current level",
               wiz_makemap, IFBURIED | WIZMODECMD, NULL },
     { C('f'), "wizmap", "map the level",
