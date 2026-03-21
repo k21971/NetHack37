@@ -34,10 +34,10 @@ struct icp {
 };
 
 static const struct icp mkobjprobs[] = { { 10, WEAPON_CLASS },
-                                         { 10, ARMOR_CLASS },
+                                         { 11, ARMOR_CLASS },
                                          { 20, FOOD_CLASS },
                                          { 8, TOOL_CLASS },
-                                         { 8, GEM_CLASS },
+                                         { 7, GEM_CLASS },
                                          { 16, POTION_CLASS },
                                          { 16, SCROLL_CLASS },
                                          { 4, SPBOOK_CLASS },
