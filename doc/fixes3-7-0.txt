@@ -1585,6 +1585,7 @@ give experience if opening Schroedinger's Box causes death of the cat inside
 priest donation amounts are explicitly stated, randomized slightly, based on
        peak rather than current level, and allow for bulk donations (buying
        larger amounts of clairvoyance/protection) if you have a lot of gold
+amulet of magical breathing increases power regeneration
 
 
 Fixes to 3.7.0-x General Problems Exposed Via git Repository
