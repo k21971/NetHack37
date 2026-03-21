@@ -2912,6 +2912,7 @@ the game now automatically tracks which sell prices and buy prices you have
 new shields: shield of shock resistance, shield of drain resistance
 new wand: wand of stasis
 early-game monsters always miss with their first use of an attack wand
+new command #toggle which can be used to toggle a boolean option
 
 
 Platform- and/or Interface-Specific New Features

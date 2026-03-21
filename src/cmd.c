@@ -1368,6 +1368,21 @@ dolookaround(void)
     return ECMD_OK;
 }
 
+/* #toggle extended command
+
+   BIND=':toggle(price_quotes)
+   BIND=@:toggle(autopickup) */
+int
+dotoggleoption(void)
+{
+    if (gc.cmd_bind && gc.cmd_bind->param) {
+        return toggle_bool_option(gc.cmd_bind->param);
+    } else {
+        pline("Use #optionsfull to set any option instead.");
+        return ECMD_OK;
+    }
+}
+
 void
 set_move_cmd(int dir, int run)
 {
@@ -1889,6 +1904,8 @@ struct ext_func_tab extcmdlist[] = {
               wiz_timeout_queue, IFBURIED | AUTOCOMPLETE | WIZMODECMD, NULL },
     { M('T'), "tip", "empty a container",
               dotip, AUTOCOMPLETE | CMD_M_PREFIX, NULL },
+    { '\0',   "toggle", "toggle boolean option",
+              dotoggleoption, IFBURIED | GENERALCMD | CMD_PARAM, NULL },
     { '_',    "travel", "travel to a specific location on the map",
               dotravel, CMD_M_PREFIX, NULL },
     { M('t'), "turn", "turn undead away",
@@ -2119,11 +2136,16 @@ cmdbind_add(uchar key, const struct ext_func_tab *extcmd, boolean user)
     if (bind) {
         bind->cmd = extcmd;
         bind->userbind = user;
+        if (bind->param) {
+            free(bind->param);
+            bind->param = NULL;
+        }
         return;
     } else {
         bind = (struct Cmd_bind *) alloc(sizeof(struct Cmd_bind));
         bind->key = key;
         bind->userbind = user;
+        bind->param = NULL;
         bind->cmd = extcmd;
         bind->next = gc.Cmd.cmdbinds;
         gc.Cmd.cmdbinds = bind;
@@ -2142,6 +2164,8 @@ cmdbind_remove(uchar key)
                 prev->next = bind->next;
             else
                 gc.Cmd.cmdbinds = bind->next;
+            if (bind->param)
+                free(bind->param);
             free(bind);
             return;
         }
@@ -2157,6 +2181,8 @@ cmdbind_freeall(void)
 
     while (gc.Cmd.cmdbinds) {
         next = gc.Cmd.cmdbinds->next;
+        if (gc.Cmd.cmdbinds->param)
+            free(gc.Cmd.cmdbinds->param);
         free(gc.Cmd.cmdbinds);
         gc.Cmd.cmdbinds = next;
     }
@@ -2222,9 +2248,15 @@ get_changed_key_binds(strbuf_t *sbuf)
     while (bind) {
         keys[bind->key] = 1;
         if (bind->userbind && bind->cmd && bind->cmd->key != bind->key) {
-            Sprintf(buf, "BIND=%s:%s%s", key2txt(bind->key, buf2),
-                    bind->cmd->ef_txt,
-                    sbuf ? "\n" : "");
+            if ((bind->cmd->flags & CMD_PARAM) != 0)
+                Sprintf(buf, "BIND=%s:%s(%s)%s", key2txt(bind->key, buf2),
+                        bind->cmd->ef_txt,
+                        bind->param,
+                        sbuf ? "\n" : "");
+            else
+                Sprintf(buf, "BIND=%s:%s%s", key2txt(bind->key, buf2),
+                        bind->cmd->ef_txt,
+                        sbuf ? "\n" : "");
             if (sbuf)
                 strbuf_append(sbuf, buf);
             else
@@ -2319,18 +2351,31 @@ handler_rebind_keys_add(boolean keyfirst)
     destroy_nhwindow(win);
     if (npick > 0) {
         struct Cmd_bind *prevcmd;
-        const char *cmdstr;
+        char cmdstr[BUFSZ];
 
         i = picks->item.a_int;
         free((genericptr_t) picks);
 
         if (i == -1) {
             ec = NULL;
-            cmdstr = "nothing";
+            Strcat(cmdstr, "nothing");
             goto bindit;
         } else {
             ec = &extcmdlist[i-1];
-            cmdstr = ec->ef_txt;
+
+            if ((ec->flags & CMD_PARAM) != 0) {
+                char parambuf[BUFSZ];
+                char querybuf[BUFSZ];
+
+                parambuf[0] = '\0';
+                Sprintf(querybuf, "Command %s requires a parameter:", ec->ef_txt);
+                getlin(querybuf, parambuf);
+                (void) mungspaces(parambuf);
+                Snprintf(cmdstr, BUFSZ-1, "%s(%s)", ec->ef_txt, parambuf);
+                cmdstr[BUFSZ-1] = '\0';
+            } else {
+                Strcat(cmdstr, ec->ef_txt);
+            }
         }
  bindit:
         if (!key) {
@@ -2615,6 +2660,8 @@ boolean
 bind_key(uchar key, const char *command, boolean user)
 {
     struct ext_func_tab *extcmd;
+    long len;
+    char *buf, *p = NULL, *lastp = NULL;
 
     /* special case: "nothing" is reserved for unbinding */
     if (!strcmpi(command, "nothing")) {
@@ -2622,12 +2669,46 @@ bind_key(uchar key, const char *command, boolean user)
         return TRUE;
     }
 
+    /* copy command to buf for modification */
+    len = strlen(command) + 1;
+    buf = (char *)alloc(len);
+    (void) strncpy(buf, command, len);
+
+    /* does buf have a parameter in parenthesis? */
+    if ((p = strchr(buf, '(')) != 0
+        && (lastp = strrchr(buf, ')')) != 0
+        && (lastp > p)) {
+        *p = '\0';
+        *lastp = '\0';
+        /* p points to the parameter */
+        p++;
+    }
+
     for (extcmd = extcmdlist; extcmd->ef_txt; extcmd++) {
-        if (strcmpi(command, extcmd->ef_txt))
+        if (strcmpi(buf, extcmd->ef_txt))
             continue;
         if ((extcmd->flags & INTERNALCMD) != 0)
             continue;
         cmdbind_add(key, extcmd, user);
+
+        if ((extcmd->flags & CMD_PARAM) != 0) {
+            if (!p) {
+                config_error_add("'%s' requires a parameter", buf);
+            } else {
+                struct Cmd_bind *bind = cmdbind_get(key);
+                int maxlen = min(30, strlen(p)) + 1;
+
+                if (maxlen <= 1) {
+                    config_error_add("Required parameter cannot be empty");
+                } else {
+                    bind->param = (char *) alloc(maxlen);
+                    (void) strncpy(bind->param, p, maxlen);
+                    bind->param[maxlen-1] = '\0';
+                }
+            }
+        } else if (p && strlen(p) > 0)
+            config_error_add("'%s' does not take a parameter", buf);
+
 #if 0 /* silently accept key binding for unavailable command (!SHELL,&c) */
         if ((extcmd->flags & CMD_NOT_AVAILABLE) != 0) {
             char buf[BUFSZ];
@@ -2636,9 +2717,11 @@ bind_key(uchar key, const char *command, boolean user)
             config_error_add("%s", buf);
         }
 #endif
+        free(buf);
         return TRUE;
     }
 
+    free(buf);
     return FALSE;
 }
 
@@ -2742,8 +2825,13 @@ keylist_putcmds(winid datawin, boolean docount,
                 count++;
                 continue;
             }
-            Sprintf(buf, "%-7s %-13s %s", key2txt(key, buf2),
-                    bind->cmd->ef_txt, bind->cmd->ef_desc);
+            if ((bind->cmd->flags & CMD_PARAM) != 0)
+                Sprintf(buf, "%-7s %-13s %s \"%s\"", key2txt(key, buf2),
+                        bind->cmd->ef_txt, bind->cmd->ef_desc,
+                        bind->param);
+            else
+                Sprintf(buf, "%-7s %-13s %s", key2txt(key, buf2),
+                        bind->cmd->ef_txt, bind->cmd->ef_desc);
             putstr(datawin, 0, buf);
             keys_used[i] = TRUE;
         }

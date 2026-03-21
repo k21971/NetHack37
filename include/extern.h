@@ -371,6 +371,7 @@ extern void change_palette(void);
 /* ### cmd.c ### */
 
 extern void cmdbind_freeall(void);
+extern int dotoggleoption(void);
 extern void set_move_cmd(int, int);
 extern int do_move_west(void);
 extern int do_move_northwest(void);
@@ -2285,6 +2286,7 @@ extern char *get_option_value(const char *, boolean) NONNULLARG1;
 extern int doset_simple(void);
 extern int doset(void);
 extern int dotogglepickup(void);
+extern int toggle_bool_option(const char *);
 extern void option_help(void);
 extern void all_options_strbuf(strbuf_t *) NONNULLARG1;
 extern void next_opt(winid, const char *) NONNULLARG2;

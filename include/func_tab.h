@@ -22,6 +22,7 @@
 #define MOUSECMD     0x0800 /* cmd allowed to be bound to mouse button */
 #define CMD_INSANE   0x1000 /* suppress sanity check (for ^P and ^R) */
 #define AUTOCOMP_ADJ 0x2000 /* user changed command autocompletion */
+#define CMD_PARAM    0x4000 /* command requires a param from key bind */
 
 /* flags for extcmds_match() */
 #define ECM_NOFLAGS       0
@@ -33,6 +34,7 @@
 struct Cmd_bind {
     uchar key;
     boolean userbind; /* added by user */
+    char *param;
     const struct ext_func_tab *cmd;
     struct Cmd_bind *next;
 };

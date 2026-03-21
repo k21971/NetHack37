@@ -1754,6 +1754,18 @@ floor container menu.
 .lp ""
 Autocompletes.
 Default key is \(oqM-T\(cq.
+.lp "#toggle  "
+Toggle a boolean option on or off.
+Requires a parameter in parenthesis, the name of the option to toggle.
+The option must be settable in-game.
+.lp ""
+For example:
+.sd
+.ft CR
+BIND=':toggle(price_quotes)
+BIND=@:toggle(autopickup)
+.ft
+.ed
 .lp "#travel  "
 Travel to a specific location on the map.
 Default key is \(oq_\(cq. \" underscore
