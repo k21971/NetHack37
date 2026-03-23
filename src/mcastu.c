@@ -932,6 +932,7 @@ spell_would_be_useless(struct monst *mtmp, int spellnum)
             return TRUE;
         break;
     default:
+        break;
     }
     return FALSE;
 }
