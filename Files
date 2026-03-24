@@ -315,7 +315,7 @@ submodules:
 CHKSUMS      lua          pdcurses     pdcursesmod
 
 sys/amiga:
-(files in top directory)
+(files for Amiga versions)
 README.amiga    amidos.c        amidos.p        amifont.uu
 amifont8.uu     amigst.c        amii.hlp        amimenu.c
 amirip.c        amistack.c      amitty.c        amiwind.c
