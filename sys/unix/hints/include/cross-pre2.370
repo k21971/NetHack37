@@ -472,6 +472,7 @@ ifdef CROSS_TO_AMIGA
 # Install to /opt/amiga, then:
 #     sys/unix/setup.sh sys/unix/hints/linux.370
 #     make fetch-lua
+#     make CROSS_TO_AMIGA=1 fetch-regex
 #     make CROSS_TO_AMIGA=1 all
 #     make CROSS_TO_AMIGA=1 package
 #=================================================================

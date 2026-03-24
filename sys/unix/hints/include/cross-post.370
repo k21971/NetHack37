@@ -269,7 +269,39 @@ $(TARGETPFX)tiles32.iff: ../dat/nhtiles.bmp $(TARGETPFX)bmp2iff_host
 
 AMITILES = $(TARGETPFX)tiles16.iff $(TARGETPFX)tiles32.iff $(TARGETPFX)tomb.iff
 
-.PHONY: amigapkg amitiles
+AMIREGEX_URL = https://github.com/garyhouston/regex.git
+AMIREGEX_SRCDIR = $(AMISRC)/regex
+
+.PHONY: fetch-regex amigapkg amitiles
+
+fetch-regex:
+	@DSTDIR=sys/amiga/regex; \
+	if [ ! -d src ]; then DSTDIR=../$$DSTDIR; fi; \
+	if [ -f $$DSTDIR/regcomp.c ]; then \
+	  echo "BSD regex already present"; \
+	else \
+	  echo "Fetching BSD regex from $(AMIREGEX_URL)"; \
+	  tmpdir=$$(mktemp -d) && \
+	  git clone --depth 1 $(AMIREGEX_URL) $$tmpdir && \
+	  cd $$tmpdir && \
+	  sh ./mkh -p regcomp.c > regcomp.ih && \
+	  sh ./mkh -p engine.c > engine.ih && \
+	  sh ./mkh -p regexec.c > regexec.ih && \
+	  sh ./mkh -p regerror.c > regerror.ih && \
+	  sh ./mkh -i _REGEX_H_ regex2.h regcomp.c \
+	    regexec.c regerror.c regfree.c > regex.h && \
+	  cd - > /dev/null && \
+	  mkdir -p $$DSTDIR && \
+	  for f in regcomp.c regexec.c regerror.c regfree.c \
+	    engine.c regex.h regex2.h cclass.h cname.h \
+	    utils.h regcomp.ih engine.ih regexec.ih \
+	    regerror.ih \
+	    COPYRIGHT; do \
+	    cp $$tmpdir/$$f $$DSTDIR/; \
+	  done && \
+	  rm -rf $$tmpdir && \
+	  echo "BSD regex installed in $$DSTDIR"; \
+	fi
 amitiles: $(AMITILES)
 
 amigapkg: $(AMITILES)
