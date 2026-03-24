@@ -5,32 +5,17 @@
 
 #include "hack.h"
 
+#define MCASTU_ENUM
 enum mcast_spells {
-    MCAST_PSI_BOLT = 0,
-    MCAST_OPEN_WOUNDS,
-    MCAST_LIGHTNING,
-    MCAST_FIRE_PILLAR,
-    MCAST_GEYSER,
-    MCAST_DEATH_TOUCH,
-
-    MCAST_CURE_SELF,
-    MCAST_HASTE_SELF,
-    MCAST_DISAPPEAR,
-
-    MCAST_AGGRAVATION,
-    MCAST_STUN_YOU,
-    MCAST_WEAKEN_YOU,
-    MCAST_CONFUSE_YOU,
-    MCAST_PARALYZE,
-    MCAST_BLIND_YOU,
-
-    MCAST_DESTRY_ARMR,
-    MCAST_CURSE_ITEMS,
-
-    MCAST_INSECTS,
-    MCAST_SUMMON_MONS,
-    MCAST_CLONE_WIZ
+    #include "mcastu.h"
 };
+#undef MCASTU_ENUM
+
+#define MCASTU_INIT
+static int mcast_flags[] = {
+    #include "mcastu.h"
+};
+#undef MCASTU_INIT
 
 staticfn void cursetxt(struct monst *, boolean);
 staticfn int choose_magic_spell(struct monst *);
@@ -965,18 +950,8 @@ mcast_spell(struct monst *mtmp, int dmg, int spellnum)
 staticfn boolean
 is_undirected_spell(int spellnum)
 {
-    switch (spellnum) {
-    case MCAST_CLONE_WIZ:
-    case MCAST_SUMMON_MONS:
-    case MCAST_AGGRAVATION:
-    case MCAST_DISAPPEAR:
-    case MCAST_HASTE_SELF:
-    case MCAST_CURE_SELF:
-    case MCAST_INSECTS:
+    if ((mcast_flags[spellnum] & MCF_INDIRECT) != 0)
         return TRUE;
-    default:
-        break;
-    }
     return FALSE;
 }
 
@@ -990,25 +965,28 @@ spell_would_be_useless(struct monst *mtmp, int spellnum)
      * This check isn't quite right because it always uses your real position.
      * We really want something like "if the monster could see mux, muy".
      */
-    boolean mcouldseeu = couldsee(mtmp->mx, mtmp->my);
+
+    /* spell is only cast by hostile monsters */
+    if ((mcast_flags[spellnum] & MCF_HOSTILE) != 0) {
+        if (mtmp->mpeaceful)
+            return TRUE;
+    }
+
+    /* spell needs the monster to see hero */
+    if ((mcast_flags[spellnum] & MCF_SIGHT) != 0) {
+        boolean mcouldseeu = couldsee(mtmp->mx, mtmp->my);
+
+        if (!mcouldseeu)
+            return TRUE;
+    }
 
     switch (spellnum) {
     case MCAST_CLONE_WIZ:
         /* only the Wizard is allowed to clone himself */
         if (!mtmp->iswiz || svc.context.no_of_wizards > 1)
             return TRUE;
-        if (!mcouldseeu)
-            return TRUE;
-        break;
-    case MCAST_SUMMON_MONS:
-        /* don't summon monsters if it doesn't think you're around */
-        if (!mcouldseeu || mtmp->mpeaceful)
-            return TRUE;
         break;
     case MCAST_AGGRAVATION:
-        /* aggravate monsters, etc. won't be cast by peaceful monsters */
-        if (!mcouldseeu || mtmp->mpeaceful)
-            return TRUE;
         /* aggravation (global wakeup) when everyone is already active */
         /* if nothing needs to be awakened then this spell is useless
            but caster might not realize that [chance to pick it then
@@ -1037,11 +1015,6 @@ spell_would_be_useless(struct monst *mtmp, int spellnum)
     case MCAST_CURE_SELF:
         /* healing when already healed */
         if (mtmp->mhp == mtmp->mhpmax)
-            return TRUE;
-        break;
-    case MCAST_INSECTS:
-        /* summon insects/sticks to snakes won't be cast by peaceful monsters */
-        if (!mcouldseeu || mtmp->mpeaceful)
             return TRUE;
         break;
     case MCAST_BLIND_YOU:
