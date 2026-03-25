@@ -1935,6 +1935,7 @@ Wish for something.
 Autocompletes.
 Debug mode only.
 Default key is \(oq\(haW\(cq.
+Precede this command with the \(oq\f(CRm\fP\(cq prefix to show a wish history menu.
 .lp "#wmode   "
 Show wall modes.
 Autocompletes.
@@ -3747,6 +3748,7 @@ Debug mode only:  extra items to add to initial inventory.
 Value is the name of a text file containing a list of item names,
 one per line, up to a maximum of 128 lines.
 Each line is processed by the function that handles wishing.
+Entries are added to the wish history; see the wizwish-command.
 .lp ""
 Example:
 .sd
