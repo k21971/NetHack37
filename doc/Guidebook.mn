@@ -3399,6 +3399,14 @@ not penalized for being spoken to by an angry god, priest(ess), or
 other religious figure; a true atheist would hear the words but
 attach no special meaning to them.
 .pg
+A pauper starts the game with no possessions, no spells, and no weapon or
+spell skills (and if playing as a knight, your pony will not have a saddle).
+Can only be initiated by starting a new game with \f(CROPTIONS=pauper\fP
+set in your run-time configurtion file or \f(CRNETHACKOPTIONS\fP environment
+variable.
+Once the game is underway, you can acquire and use items, spells, and skills
+in the usual way.
+.pg
 Most players fight with a wielded weapon (or tool intended to be
 wielded as a weapon).  Another challenge is to win the game without
 using such a wielded weapon.  You are still permitted to throw,
@@ -3555,7 +3563,8 @@ the Castle level's drawbridge or can be given to you via prayer boon.
 and \fIPauper\fP are also conducts, and they can only be
 enabled by setting the correspondingly named option in NETHACKOPTIONS
 or run-time configuration file prior to game start.
-In the case of \fIBlind\fP and \fIDeaf\fP, the option also enforces the conduct.
+In the case of \fIBlind\fP and \fIDeaf\fP, the option also enforces the
+conduct.
 They aren't really significant accomplishments unless/until you make
 substantial progress into the dungeon.
 .
@@ -4488,6 +4497,10 @@ The positive (no \(oq!\(cq) and negative (with \(oq!\(cq) entries
 can be intermixed.
 .lp pauper
 Start the character with no possessions (default false).  Persistent.
+.lp ""
+Also start with no spells or skills, which are tied to starting equipment.
+Does not inhibit acquiring and using items, spells, and skills once play
+has started.
 .lp perm_invent
 If true, always display your current inventory in a window (default false).
 .lp ""
