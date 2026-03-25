@@ -17,6 +17,10 @@
 #ifdef CROSS_TO_AMIGA
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <dos/dos.h>
+#include <clib/dos_protos.h>
+#include <proto/dos.h>
 #endif
 
 #ifdef __SASC_60    /* since SAS can prevent re-inclusion */
