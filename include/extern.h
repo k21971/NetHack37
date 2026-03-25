@@ -3989,6 +3989,7 @@ extern char *item_what(int);
 extern int destroy_items(struct monst *, int, int) NONNULLARG1;
 extern int resist(struct monst *, char, int, int) NONNULLARG1;
 extern void wish_history_add(char *);
+extern void wish_history_flush(void);
 extern void makewish(void);
 extern const char *flash_str(int, boolean) NONNULL;
 

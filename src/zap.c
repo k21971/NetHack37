@@ -6240,11 +6240,26 @@ wish_history_add(char *buf)
 
         if (wish_history[idx])
             free(wish_history[idx]);
-        wish_history[idx] = (char *)alloc(strlen(buf) + 1);
+        wish_history[idx] = (char *) alloc(strlen(buf) + 1);
         strcpy(wish_history[idx], buf);
         wish_history_idx = (wish_history_idx + 1) % MAX_WISH_HISTORY;
     }
 #endif /* DEBUG */
+}
+
+/* release any old wish text; called from freedynamicdata(save.c) */
+void
+wish_history_flush(void)
+{
+#ifdef DEBUG
+    int idx;
+
+    for (idx = 0; idx < MAX_WISH_HISTORY; ++idx) {
+        if (wish_history[idx])
+            free((genericptr_t) wish_history[idx]), wish_history[idx] = NULL;
+    }
+    wish_history_idx = 0;
+#endif
 }
 
 /* shows menu of previous wishes, copies selected into buf, max BUFSZ len.
