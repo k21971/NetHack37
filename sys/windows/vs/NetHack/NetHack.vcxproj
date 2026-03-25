@@ -259,6 +259,7 @@
     <ClInclude Include="$(IncDir)isaac64.h" />
     <ClInclude Include="$(IncDir)lint.h" />
     <ClInclude Include="$(IncDir)load_img.h" />
+    <ClInclude Include="$(IncDir)mcastu.h" />
     <ClInclude Include="$(IncDir)mextra.h" />
     <ClInclude Include="$(IncDir)mfndpos.h" />
     <ClInclude Include="$(IncDir)mkroom.h" />

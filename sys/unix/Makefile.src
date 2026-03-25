@@ -571,6 +571,7 @@ HACKINCL = align.h artifact.h artilist.h attrib.h botl.h \
 	color.h config.h config1.h context.h coord.h cstd.h decl.h \
 	defsym.h display.h dlb.h dungeon.h engrave.h extern.h flag.h \
 	fnamesiz.h func_tab.h global.h warnings.h hack.h lint.h mextra.h \
+	mcastu.h \
 	micro.h mfndpos.h mkroom.h monattk.h mondata.h monflag.h monst.h \
 	monsters.h nhmd4.h obj.h objects.h objclass.h optlist.h patchlevel.h \
 	pcconf.h permonst.h prop.h rect.h region.h savefile.h selvar.h sym.h \
@@ -812,7 +813,7 @@ tags: $(CSOURCES)
 clean:
 	-rm -f *.o $(HACK_H) $(CONFIG_H)
 	-rm -f monstr.c vis_tab.c ../include/vis_tab.h #obsolete generated files
-	true; $(CLEANMORE)
+	-true; $(CLEANMORE)
 	true; $(CLEAN_CC_RESPONSEFILE) $(CLEAN_CXX_RESPONSEFILE)
 
 spotless: clean
@@ -896,6 +897,7 @@ $(HACK_H): $(CONFIG_H) ../include/align.h ../include/artilist.h \
 		../include/decl.h ../include/defsym.h ../include/display.h \
 		../include/dungeon.h ../include/engrave.h ../include/flag.h \
 		../include/hack.h ../include/lint.h ../include/mextra.h \
+		../include/mcastu.h \
 		../include/mkroom.h ../include/monattk.h ../include/mondata.h \
 		../include/monflag.h ../include/monst.h ../include/monsters.h \
 		../include/nhlua.h ../include/obj.h ../include/objclass.h \
@@ -1185,7 +1187,7 @@ $(TARGETPFX)light.o: light.c $(HACK_H)
 $(TARGETPFX)lock.o: lock.c $(HACK_H)
 $(TARGETPFX)mail.o: mail.c $(HACK_H) ../include/mail.h
 $(TARGETPFX)makemon.o: makemon.c $(HACK_H)
-$(TARGETPFX)mcastu.o: mcastu.c $(HACK_H)
+$(TARGETPFX)mcastu.o: mcastu.c $(HACK_H) ../include/mcastu.h
 $(TARGETPFX)mdlib.o: mdlib.c $(CONFIG_H) ../include/align.h \
 		../include/artilist.h ../include/attrib.h \
 		../include/context.h ../include/defsym.h ../include/dlb.h \

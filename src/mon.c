@@ -1,4 +1,4 @@
-/* NetHack 3.7	mon.c	$NHDT-Date: 1753856387 2025/07/29 22:19:47 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.611 $ */
+/* NetHack 3.7	mon.c	$NHDT-Date: 1770949988 2026/02/12 18:33:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.621 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Derek S. Ray, 2015. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -1119,7 +1119,7 @@ mcalcmove(
     if (mon->mspeed == MSLOW) {
         /* slow-monster effects work better against faster monsters: they
            lose 1/3 of their speed below 12 but 2/3 of their speed above */
-        if (mmove < 12)
+        if (mmove < NORMAL_SPEED)
             mmove = (2 * mmove + 1) / 3;
         else
             mmove = 4 + (mmove / 3);
@@ -1784,7 +1784,7 @@ mon_givit(struct monst *mtmp, struct permonst *ptr)
             char mtmpbuf[BUFSZ];
 
             Strcpy(mtmpbuf, Monnam(mtmp));
-            mon_set_minvis(mtmp);
+            mon_set_minvis(mtmp, FALSE);
             if (vis)
                 pline_mon(mtmp, "%s %s.", mtmpbuf,
                       !canspotmon(mtmp) ? "vanishes"
@@ -2146,8 +2146,6 @@ mfndpos(
     wantpool = (mdat->mlet == S_EEL);
     poolok = ((!Is_waterlevel(&u.uz) && m_in_air(mon))
               || (is_swimmer(mdat) && !wantpool));
-    /* note: floating eye is the only is_floater() so this could be
-       simplified, but then adding another floater would be error prone */
     lavaok = (m_in_air(mon) || likes_lava(mdat));
     if (mdat == &mons[PM_FLOATING_EYE]) /* prefers to avoid heat */
         lavaok = FALSE;
@@ -2696,20 +2694,6 @@ mon_leaving_level(struct monst *mon)
 #endif
     }
     if (onmap) {
-        /* gulpmm() tries to deal with this, but without this extra
-           place_monster() the messages for exploding engulfed gas spore
-           are delivered without the engulfer being shown on the map */
-        if (gm.mswallower && gm.mswallower != mon) {
-            if (gm.mswallower != &gy.youmonst) {
-                place_monster(gm.mswallower,
-                              gm.mswallower->mx, gm.mswallower->my);
-            } else {
-                u_on_newpos(u.ux, u.uy);
-                if (canspotself())
-                    display_self();
-            }
-        }
-
         mon->mundetected = 0; /* for migration; doesn't matter for death */
         /* unhide mimic in case its shape has been blocking line of sight
            or it is accompanying the hero to another level */
@@ -3441,6 +3425,7 @@ unstuck(struct monst *mtmp)
         set_ustuck((struct monst *) 0);
 
         if (swallowed) {
+            gm.mswallower = (struct monst *) 0;
             u.ux = mtmp->mx;
             u.uy = mtmp->my;
             if (Punished && uchain->where != OBJ_FLOOR)
@@ -3490,10 +3475,10 @@ xkilled(
     iflags.sad_feeling = FALSE;
 
     mtmp->mhp = 0; /* caller will usually have already done this */
-    if (!noconduct) /* KMH, conduct */
+    if (!noconduct) { /* KMH, conduct */
         if (!u.uconduct.killer++)
             livelog_printf(LL_CONDUCT, "killed for the first time");
-
+    }
     if (!nomsg) {
         boolean namedpet = has_mgivenname(mtmp) && !Hallucination;
 

@@ -1,4 +1,4 @@
-/* NetHack 3.7	zap.c	$NHDT-Date: 1741793439 2025/03/12 07:30:39 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.564 $ */
+/* NetHack 3.7	zap.c	$NHDT-Date: 1770949988 2026/02/12 18:33:08 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.584 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2013. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -353,7 +353,7 @@ bhitm(struct monst *mtmp, struct obj *otmp)
             seemimic(mtmp);
         /* format monster's name before altering its visibility */
         Strcpy(nambuf, Monnam(mtmp));
-        mon_set_minvis(mtmp);
+        mon_set_minvis(mtmp, FALSE);
         if (!oldinvis && knowninvisible(mtmp)) {
             pline("%s turns transparent!", nambuf);
             reveal_invis = TRUE;
@@ -2555,6 +2555,11 @@ zapnodir(struct obj *obj)
         known = !!obj->dknown;
         (void) findit();
         break;
+    case WAN_STASIS:
+        /* no immediately obvious effect, and no message so that it isn't
+           distinguishable from other NODIR wands that produce no message */
+        svl.level.flags.stasis_until = svm.moves + rn1(21, 10);
+        break;
     case WAN_CREATE_MONSTER:
         /* create_critters() returns True iff hero sees a new monster appear */
         if (create_critters(rn2(23) ? 1 : rn1(7, 2),
@@ -3814,7 +3819,7 @@ zap_map(
  */
 struct monst *
 bhit(
-    coordxy ddx, coordxy ddy, int range,  /* direction and range */
+    int ddx, int ddy, int range,  /* direction and range */
     enum bhit_call_types weapon,  /* defined in hack.h */
     int (*fhitm)(MONST_P, OBJ_P), /* fns called when mon/obj hit */
     int (*fhito)(OBJ_P, OBJ_P),
@@ -4134,13 +4139,13 @@ bhit(
  * is too obviously silly.
  */
 struct monst *
-boomhit(struct obj *obj, coordxy dx, coordxy dy)
+boomhit(struct obj *obj, int dx, int dy)
 {
     int i, ct;
     int boom; /* showsym[] index  */
     struct monst *mtmp;
     boolean counterclockwise = URIGHTY; /* ULEFTY => clockwise */
-    int nhits = (obj->spe + 1);
+    int nhits = max(1, obj->spe + 1);
 
     /* counterclockwise traversal patterns, from @ to 1 then on through to 9
      *  ..........................54.................................
@@ -4158,7 +4163,7 @@ boomhit(struct obj *obj, coordxy dx, coordxy dy)
     gb.bhitpos.x = u.ux;
     gb.bhitpos.y = u.uy;
     boom = counterclockwise ? S_boomleft : S_boomright;
-    i = xytod(dx, dy);
+    i = xytodir(dx, dy);
     tmp_at(DISP_FLASH, cmap_to_glyph(boom));
     for (ct = 0; ct < 10; ct++) {
         i = DIR_CLAMP(i);
@@ -4462,21 +4467,21 @@ zhitu(
             monstunseesu(M_SEEN_DISINT);
             if (uarms) {
                 /* destroy shield; other possessions are safe */
-                (void) destroy_arm(uarms);
+                (void) disintegrate_arm(uarms);
                 break;
             } else if (uarm) {
                 /* destroy suit; if present, cloak goes too */
                 if (uarmc)
-                    (void) destroy_arm(uarmc);
-                (void) destroy_arm(uarm);
+                    (void) disintegrate_arm(uarmc);
+                (void) disintegrate_arm(uarm);
                 break;
             }
             /* no shield or suit, you're dead; wipe out cloak
                and/or shirt in case of life-saving or bones */
             if (uarmc)
-                (void) destroy_arm(uarmc);
+                (void) disintegrate_arm(uarmc);
             if (uarmu)
-                (void) destroy_arm(uarmu);
+                (void) disintegrate_arm(uarmu);
         } else if (nonliving(gy.youmonst.data) || is_demon(gy.youmonst.data)) {
             shieldeff(sx, sy);
             You("seem unaffected.");
@@ -4745,13 +4750,13 @@ disintegrate_mon(
 void
 ubuzz(int type, int nd)
 {
-    dobuzz(type, nd, u.ux, u.uy, u.dx, u.dy, TRUE, FALSE);
+    dobuzz(type, nd, u.ux, u.uy, u.dx, u.dy, TRUE, FALSE, FALSE);
 }
 
 void
 buzz(int type, int nd, coordxy sx, coordxy sy, int dx, int dy)
 {
-    dobuzz(type, nd, sx, sy, dx, dy, TRUE, FALSE);
+    dobuzz(type, nd, sx, sy, dx, dy, TRUE, FALSE, FALSE);
 }
 
 /*
@@ -4769,7 +4774,8 @@ dobuzz(
     int nd,                 /* damage strength ('number of dice') */
     coordxy sx, coordxy sy, /* starting point */
     int dx, int dy,         /* direction delta */
-    boolean sayhit, boolean saymiss) /* report out of sight hit/miss events */
+    boolean sayhit, boolean saymiss, /* report out of sight hit/miss events */
+    boolean forcemiss)
 {
     int range, fltyp = zaptype(type), damgtype = fltyp % 10;
     coordxy lsx, lsy;
@@ -4855,7 +4861,7 @@ dobuzz(
  buzzmonst:
             gn.notonhead = (mon->mx != gb.bhitpos.x
                             || mon->my != gb.bhitpos.y);
-            if (zap_hit(find_mac(mon), spell_type)) {
+            if (!forcemiss && zap_hit(find_mac(mon), spell_type)) {
                 if (mon_reflects(mon, (char *) 0)) {
                     if (cansee(mon->mx, mon->my)) {
                         hit(flash_str(fltyp, FALSE), mon, exclam(0));
@@ -4945,9 +4951,9 @@ dobuzz(
             if (u.usteed && !rn2(3) && !mon_reflects(u.usteed, (char *) 0)) {
                 mon = u.usteed;
                 goto buzzmonst;
-            } else if (zap_hit((int) u.uac, 0)) {
+            } else if (!forcemiss && zap_hit((int) u.uac, 0)) {
                 range -= 2;
-                pline_dir(xytod(-dx, -dy), "%s hits you!",
+                pline_dir(xytodir(-dx, -dy), "%s hits you!",
                           The(flash_str(fltyp, FALSE)));
                 if (Reflecting) {
                     if (!Blind) {

@@ -8,8 +8,8 @@
 #       MS Visual Studio Visual C++ compiler
 #
 #       Visual Studio Compilers Tested:
-#            - Microsoft Visual Studio Community 2022 v 17.14.25
-#            - Microsoft Visual Studio Community 2026 v 18.2.1
+#            - Microsoft Visual Studio Community 2022 v 17.14.29
+#            - Microsoft Visual Studio Community 2026 v 18.4.1
 #
 #==============================================================================
 #   This is used for building two distinct executables of NetHack:
@@ -694,6 +694,7 @@ HACKINCL = \
 	$(INCL)flag.h       $(INCL)fnamesiz.h $(INCL)func_tab.h \
 	$(INCL)global.h     $(INCL)warnings.h $(INCL)hack.h \
 	$(INCL)lint.h       $(INCL)mextra.h   $(INCL)micro.h \
+	$(INCL)mcastu.h \
 	$(INCL)mfndpos.h    $(INCL)mkroom.h   $(INCL)monattk.h \
 	$(INCL)mondata.h    $(INCL)monflag.h  $(INCL)monst.h \
 	$(INCL)monsters.h   $(INCL)nhmd4.h    $(INCL)obj.h \
@@ -1131,6 +1132,7 @@ HACK_H = $(CONFIG_H) $(INCL)align.h $(INCL)artilist.h \
 	$(INCL)decl.h $(INCL)defsym.h $(INCL)display.h \
 	$(INCL)dungeon.h $(INCL)engrave.h $(INCL)flag.h \
 	$(INCL)hack.h $(INCL)lint.h $(INCL)mextra.h \
+	$(INCL)mcastu.h \
 	$(INCL)mkroom.h $(INCL)monattk.h $(INCL)mondata.h \
 	$(INCL)monflag.h $(INCL)monst.h $(INCL)monsters.h \
 	$(INCL)nhlua.h $(INCL)obj.h $(INCL)objclass.h \
@@ -1189,7 +1191,8 @@ rc=Rc.exe
 #
 # Recently tested versions:
 TESTEDVS2022 = 14.44.35222.0
-TESTEDVS2026 = 14.50.35723.0
+TESTEDVS2026 = 14.50.35726.0
+TESTEDVS2026 = 14.50.35727.0
 
 VS20261ST = 1450000000
 VS2026CUR = $(TESTEDVS2026:.=)
@@ -2663,7 +2666,7 @@ CTAGDEP = $(INCL)align.h  $(INCL)artifact.h $(INCL)artilist.h \
 	  $(INCL)attrib.h $(INCL)context.h  $(INCL)coord.h    \
 	  $(INCL)decl.h   $(INCL)dungeon.h  $(INCL)engrave.h  \
 	  $(INCL)flag.h   $(INCL)func_tab.h $(INCL)global.h   \
-	  $(INCL)hack.h   $(INCL)mextra.h   \
+	  $(INCL)hack.h   $(INCL)mextra.h   $(INCL)mcastu.h   \
 	  $(INCL)mkroom.h $(INCL)monst.h    \
 	  $(INCL)obj.h    $(INCL)objclass.h $(INCL)prop.h     \
 	  $(INCL)quest.h  $(INCL)rect.h     $(INCL)region.h   \
@@ -2693,6 +2696,7 @@ $(UTIL)sf.tags: $(CTAGSCMD) $(CTAGDEP)
 	$(CTAGSCMD) $(CTAGSOPT) -a -f $@ $(INCL)global.h
 	$(CTAGSCMD) $(CTAGSOPT) -a -f $@ $(INCL)hack.h
 	$(CTAGSCMD) $(CTAGSOPT) -a -f $@ $(INCL)mextra.h
+	$(CTAGSCMD) $(CTAGSOPT) -a -f $@ $(INCL)mcastu.h
 	$(CTAGSCMD) $(CTAGSOPT) -a -f $@ $(INCL)mkroom.h
 	$(CTAGSCMD) $(CTAGSOPT) -a -f $@ $(INCL)monst.h
 	$(CTAGSCMD) $(CTAGSOPT) -a -f $@ $(INCL)defsym.h
@@ -3268,7 +3272,7 @@ $(OTTY)light.o: light.c $(HACK_H)
 $(OTTY)lock.o: lock.c $(HACK_H)
 $(OTTY)mail.o: mail.c $(HACK_H) $(INCL)mail.h
 $(OTTY)makemon.o: makemon.c $(HACK_H)
-$(OTTY)mcastu.o: mcastu.c $(HACK_H)
+$(OTTY)mcastu.o: mcastu.c $(HACK_H) $(INCL)mcastu.h
 $(OTTY)mdlib.o: mdlib.c $(CONFIG_H) $(INCL)align.h \
 		$(INCL)artilist.h $(INCL)attrib.h \
 		$(INCL)context.h $(INCL)defsym.h $(INCL)dlb.h \

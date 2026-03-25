@@ -1,4 +1,4 @@
-/* NetHack 3.7	allmain.c	$NHDT-Date: 1744860497 2025/04/16 19:28:17 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.276 $ */
+/* NetHack 3.7	allmain.c	$NHDT-Date: 1771213100 2026/02/15 19:38:20 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.286 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2012. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -13,6 +13,7 @@
 
 staticfn void moveloop_preamble(boolean);
 staticfn void u_calc_moveamt(int);
+
 staticfn void maybe_do_tutorial(void);
 #ifdef POSITIONBAR
 staticfn void do_positionbar(void);
@@ -460,6 +461,8 @@ moveloop_core(void)
     /* the Amulet of Yendor gives a wish when initially picked up */
     if (u.uhave.amulet && !u.uevent.amulet_wish) {
         u.uevent.amulet_wish = 1;
+        display_nhwindow(WIN_MESSAGE, TRUE);
+        urgent_pline("The Amulet is bestowing a wish upon you!");
         makewish();
     }
 
@@ -523,11 +526,6 @@ moveloop_core(void)
         return;
     }
 
-#ifdef CLIPPING
-    /* just before rhack */
-    cliparound(u.ux, u.uy);
-#endif
-
     u.umoved = FALSE;
 
     if (gm.multi > 0) {
@@ -558,6 +556,11 @@ moveloop_core(void)
 
     if (gv.vision_full_recalc)
         vision_recalc(0); /* vision! */
+#ifdef CLIPPING
+    /* after rhack() and vision_recalc() so that the map is redrawn
+       once with correct vision data, not twice (overshoot+correct) */
+    cliparound(u.ux, u.uy);
+#endif
     /* when running in non-tport mode, this gets done through domove() */
     if ((!svc.context.run || flags.runmode == RUN_TPORT)
         && (gm.multi && (!svc.context.travel ? !(gm.multi % 7)
@@ -618,6 +621,9 @@ regen_pw(int wtcap)
                               * (Role_if(PM_WIZARD) ? 3 : 4)
                               / 6)))) || Energy_regeneration)) {
         int upper = (int) (ACURR(A_WIS) + ACURR(A_INT)) / 15 + 1;
+
+        if (EMagical_breathing)
+            upper += 2;
 
         u.uen += rn1(upper, 1);
         if (u.uen > u.uenmax)
