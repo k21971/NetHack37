@@ -57,7 +57,7 @@ do_statusline1(void)
     Strcpy(newbot1, svp.plname);
     if ('a' <= newbot1[0] && newbot1[0] <= 'z')
         newbot1[0] += 'A' - 'a';
-    newbot1[10] = 0;
+    newbot1[BOTL_NSIZ] = 0;
     Sprintf(nb = eos(newbot1), " the ");
 
     if (Upolyd) {
@@ -769,12 +769,12 @@ bot_via_windowport(void)
     nb[0] = highc(nb[0]);
     titl = !Upolyd ? rank() : pmname(&mons[u.umonnum], Ugender);
     i = (int) (strlen(buf) + sizeof " the " + strlen(titl) - sizeof "");
-    /* if "Name the Rank/monster" is too long, we truncate the name
-       but always keep at least 10 characters of it; when hitpointbar is
+    /* if "Name the Rank/monster" is too long, we truncate the name but
+       always keep at least BOTL_NSIZ characters of it; when hitpointbar is
        enabled, anything beyond 30 (long monster name) will be truncated */
     if (i > 30) {
         i = 30 - (int) (sizeof " the " + strlen(titl) - sizeof "");
-        nb[max(i, 10)] = '\0';
+        nb[max(i, BOTL_NSIZ)] = '\0';
     }
     Strcpy(nb = eos(nb), " the ");
     Strcpy(nb = eos(nb), titl);
