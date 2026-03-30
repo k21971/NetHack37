@@ -3637,6 +3637,7 @@ status_hilite_menu_add(int origfld)
     unsigned long cond = 0UL;
     char colorqry[BUFSZ];
     char attrqry[BUFSZ];
+    int retry = 0;
 
  choose_field:
     fld = origfld;
@@ -3672,6 +3673,10 @@ status_hilite_menu_add(int origfld)
     hilite.behavior = behavior;
 
  choose_value:
+    if (retry++ > 5) {
+        pline("That's enough tries.");
+        return FALSE;
+    }
     if (behavior == BL_TH_VAL_PERCENTAGE
         || behavior == BL_TH_VAL_ABSOLUTE) {
         char inbuf[BUFSZ], buf[BUFSZ];
