@@ -1519,7 +1519,8 @@ optfn_disclose(
                                              DISCLOSE_NO_WITHOUT_PROMPT,
                                              DISCLOSE_SPECIAL_WITHOUT_PROMPT,
                                              '\0' };
-            char c, *dop;
+            char c;
+            const char *dop;
 
             c = lowc(*op);
             if (c == 'k')

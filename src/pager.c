@@ -1143,7 +1143,8 @@ add_cmap_descr(
     const char **firstmatch, /* output: pointer to 1st matching description */
     char *out_str)      /* input/output: current description gets appended */
 {
-    char *mbuf = NULL, *p;
+    char *mbuf = NULL;
+    const char *p;
     int absidx = abs(idx);
 
     if (glyph == NO_GLYPH) {

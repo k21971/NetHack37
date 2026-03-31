@@ -21,7 +21,7 @@ staticfn void do_positionbar(void);
 staticfn void regen_pw(int);
 staticfn void regen_hp(int);
 staticfn void interrupt_multi(const char *);
-staticfn void debug_fields(const char *);
+staticfn void debug_fields(char *);
 #ifndef NODUMPENUMS
 staticfn void dump_enums(void);
 #endif
@@ -1041,8 +1041,11 @@ argcheck(int argc, char *argv[], enum earlyarg e_arg)
         switch(e_arg) {
         case ARG_DEBUG:
             if (extended_opt) {
-                extended_opt++;
-                debug_fields(extended_opt);
+                char *cpy_extended_opt;
+
+                cpy_extended_opt = dupstr(extended_opt);
+                debug_fields(cpy_extended_opt + 1);
+                free((genericptr_t) cpy_extended_opt);
             }
             return 1;
         case ARG_VERSION: {
@@ -1125,7 +1128,7 @@ argcheck(int argc, char *argv[], enum earlyarg e_arg)
  * fuzzer           - enable fuzzer without debugger intervention.
  */
 staticfn void
-debug_fields(const char *opts)
+debug_fields(char *opts)
 {
     char *op;
     boolean negated = FALSE;
