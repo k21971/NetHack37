@@ -289,17 +289,17 @@ static struct enum_dump arti_enum_dump[] = {
 #undef DUMP_ARTI_ENUM
 
 /* the enums are not part of hack.h for this one */
-#define MCASTU_ENUM
-enum mcast_spells {
+#define DUMP_MCASTU_ENUM1
+enum mcast_dumpenum_spells {
     #include "mcastu.h"
 };
-#undef MCASTU_ENUM
+#undef DUMP_MCASTU_ENUM1
 
-#define DUMP_MCASTU_ENUM
+#define DUMP_MCASTU_ENUM2
 static struct enum_dump mcastu_enum_dump[] = {
 #include "mcastu.h"
 };
-#undef DUMP_MCASTU_ENUM
+#undef DUMP_MCASTU_ENUM2
 
 #undef DUMP_ENUMS
 
