@@ -9,6 +9,8 @@
 #define MONSPELL(def, lvl, flags) MCAST_##def
 #elif defined(MCASTU_INIT)
 #define MONSPELL(def, lvl, flags) { lvl, flags }
+#elif defined(DUMP_MCASTU_ENUM)
+#define MONSPELL(def, lvl, flags) { MCAST_##def, #def }
 #endif
 
 MONSPELL(PSI_BOLT,     0, MCF_HOSTILE|MCF_SIGHT),
