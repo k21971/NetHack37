@@ -2363,7 +2363,8 @@ assess_dmg(struct monst *mtmp, int tmp)
    callback (optional). Callback returns 0 if the attack is
    active */
 
-boolean ranged_attk_assessed(
+boolean
+ranged_attk_assessed(
 struct monst *mtmp,
 boolean (*assessfunc)(struct monst *, int))
 {
