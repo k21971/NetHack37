@@ -2649,8 +2649,10 @@ $(OUTL)sf-sys.o: $(SRC)sys.c $(HACK_H)
 $(OUTL)sf-windsys.o: $(MSWSYS)windsys.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) $(SFFLAGS) -Fo$@ -c $(MSWSYS)windsys.c
 
-$(UTIL)sftags.exe: $(OUTL)sftags.o $(OUTLHACKLIB)
-	$(link) $(LFLAGS) /OUT:$@ $(OUTL)sftags.o $(OUTLHACKLIB)
+$(UTIL)sftags.exe: $(OUTL)sftags.o $(OUTL)sf-alloc.o $(OUTL)panic.o $(OUTLHACKLIB)
+	$(link) $(LFLAGS) /OUT:$@ $(OUTL)sftags.o \
+		$(OUTL)sf-alloc.o $(OUTL)panic.o \
+		$(OUTLHACKLIB)
 $(OUTL)sftags.o: $(UTIL)sftags.c $(HACK_H)
 	$(Q)$(CC) $(CFLAGS) -Fo$@ -c $(UTIL)sftags.c
 $(INCL)sfproto.h: $(UTIL)sftags.exe $(UTIL)sf.tags
