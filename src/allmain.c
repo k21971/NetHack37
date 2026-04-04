@@ -13,7 +13,7 @@
 
 staticfn void moveloop_preamble(boolean);
 staticfn void u_calc_moveamt(int);
-
+staticfn void maybe_generate_rnd_mon(void);
 staticfn void maybe_do_tutorial(void);
 #ifdef POSITIONBAR
 staticfn void do_positionbar(void);
@@ -156,6 +156,16 @@ u_calc_moveamt(int wtcap)
         u.umovement = 0;
 }
 
+/* small chance of generating a new random monster */
+staticfn void
+maybe_generate_rnd_mon(void)
+{
+    if (!rn2(u.uevent.udemigod ? 25
+             : (depth(&u.uz) > depth(&stronghold_level)) ? 50
+             : 70))
+        (void) makemon((struct permonst *) 0, 0, 0, NO_MM_FLAGS);
+}
+
 #if defined(MICRO) || defined(WIN32)
 static int mvl_abort_lev;
 #endif
@@ -226,11 +236,7 @@ moveloop_core(void)
                 /* occasionally add another monster; since this takes
                    place after movement has been allotted, the new
                    monster effectively loses its first turn */
-                if (!rn2(u.uevent.udemigod ? 25
-                         : (depth(&u.uz) > depth(&stronghold_level)) ? 50
-                         : 70))
-                    (void) makemon((struct permonst *) 0, 0, 0,
-                                   NO_MM_FLAGS);
+                maybe_generate_rnd_mon();
 
                 u_calc_moveamt(mvl_wtcap);
                 settrack();
