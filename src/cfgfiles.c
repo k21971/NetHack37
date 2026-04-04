@@ -1907,9 +1907,9 @@ assure_syscf_file(void)
 #else
     fd = open(SYSCF_FILE, O_RDONLY);
 #endif
-#else
+#else   /* VMS */
     fd = open(SYSCF_FILE, O_RDONLY, 0);
-#endif
+#endif  /* VMS */
     if (fd >= 0) {
         /* readable */
         close(fd);

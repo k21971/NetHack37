@@ -19,7 +19,6 @@
 #endif
 
 static void nhusage(void);
-static void early_options(int argc, char **argv);
 char *exename(void);
 boolean fakeconsole(void);
 void freefakeconsole(void);
@@ -157,6 +156,7 @@ MAIN(int argc, char *argv[])
     HWND hwnd;
     HDC hdc;
     int bpp;
+    char *dir = NULL;
 
 #ifdef _MSC_VER
     _CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
@@ -167,12 +167,10 @@ MAIN(int argc, char *argv[])
      * Get a set of valid safe windowport function
      * pointers during early startup initialization.
      */
-    safe_routines();
+//    safe_routines();
 #endif /* WIN32CON */
 
-#ifndef MSWIN_GRAPHICS
-    early_init(argc, argv); /* already in WinMain for MSWIN_GRAPHICS */
-#endif
+
     /* setting iflags.colorcount has to be after early_init()
      * because it zeros out all of iflags */
     hwnd = GetDesktopWindow();
@@ -207,6 +205,35 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
 #endif
 
     gh.hname = "NetHack"; /* used for syntax messages */
+#ifndef MSWIN_GRAPHICS
+    early_init(argc, argv); /* already in WinMain for MSWIN_GRAPHICS */
+#endif
+    set_default_prefix_locations(argv[0]); /* must be re-done after initoptions_init()
+                                            * which clears out gp.fqn_prefix[] */
+    copy_sysconf_content();
+    copy_symbols_content();
+    /* Now that sysconf has had a chance to set the TROUBLEPREFIX, don't
+       allow it to be changed from here on out. */
+    fqn_prefix_locked[TROUBLEPREFIX] = TRUE;
+    copy_config_content();
+
+ //   if (iflags.windowtype_deferred && gc.chosen_windowtype[0])
+ //       windowtype = gc.chosen_windowtype;
+ //   windowtype = gc.chosen_windowtype;
+
+#if !defined(MSWIN_GRAPHICS)
+    consoletty_open(1);
+    nethack_enter_consoletty();
+#endif
+
+    if (!windowtype) {
+#ifdef MSWIN_GRAPHICS
+        windowtype = "mswin";
+#else
+        windowtype = "tty";
+#endif
+    }
+    choose_windows(windowtype);  /* sets all the window port function pointers */
 
 #if defined(CHDIR) && !defined(NOCWD_ASSUMPTIONS)
     /* Save current directory and make sure it gets restored when
@@ -216,7 +243,14 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
         error("NetHack: current directory path too long");
 #endif
     initoptions_init(); // This allows OPTIONS in syscf on Windows.
-    set_default_prefix_locations(argv[0]);
+    set_default_prefix_locations(argv[0]); /* must be re-done after initoptions_init()
+                                            * which clears out gp.fqn_prefix[] */
+    iflags.windowtype_deferred = TRUE;
+
+    program_state.early_options = 1;
+    early_options(&argc, &argv, &dir);
+    program_state.early_options = 0;
+    initoptions();
 
 #if defined(CHDIR) && !defined(NOCWD_ASSUMPTIONS)
     chdir(gf.fqn_prefix[HACKPREFIX]);
@@ -226,18 +260,6 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
     getreturn_enabled = TRUE;
 
     check_recordfile((char *) 0);
-    iflags.windowtype_deferred = TRUE;
-    copy_sysconf_content();
-    copy_symbols_content();
-    early_options(argc, argv);
-    initoptions();
-
-    /* Now that sysconf has had a chance to set the TROUBLEPREFIX, don't
-       allow it to be changed from here on out. */
-    fqn_prefix_locked[TROUBLEPREFIX] = TRUE;
-
-    copy_config_content();
-
     /* did something earlier flag a need to exit without starting a game? */
     if (windows_startup_state > 0) {
         raw_printf("Exiting.");
@@ -287,10 +309,10 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
         Strcpy(default_window_sys, "curses");
 #endif /* CURSES */
 #endif /* TTY */
-        if (iflags.windowtype_deferred && gc.chosen_windowtype[0])
-            windowtype = gc.chosen_windowtype;
+ //       if (iflags.windowtype_deferred && gc.chosen_windowtype[0])
+ //           windowtype = gc.chosen_windowtype;
     }
-    choose_windows(windowtype);
+ //   choose_windows(windowtype);
 #if defined(SND_LIB_FMOD)
     assign_soundlib(soundlib_fmod);
 #elif defined(SND_LIB_WINDSOUND)
@@ -451,6 +473,7 @@ attempt_restore:
 
 RESTORE_WARNING_UNREACHABLE_CODE
 
+#if 0
 static void
 early_options(int argc, char *argv[])
 {
@@ -671,6 +694,7 @@ nhusage(void)
         (void) printf("%s\n", buf1);
 #undef ADD_USAGE
 }
+#endif /* 0 */
 
 /* copy file if destination does not exist */
 void
@@ -1297,4 +1321,23 @@ other_self_recover_prompt(void)
     }
     return retval;
 }
+
+#ifdef CHDIR
+void
+chdirx(const char *dir, boolean wr)
+{
+    static char thisdir[] = ".";
+
+    if (dir && chdir(dir) < 0) {
+        error("Cannot chdir to %s.", dir);
+    }
+
+    /* warn the player if we can't write the record file */
+    /* perhaps we should also test whether . is writable */
+    /* unfortunately the access system-call is worthless */
+    if (wr)
+        check_recordfile(dir ? dir : thisdir);
+}
+#endif /* CHDIR */
+
 /*windmain.c*/

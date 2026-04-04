@@ -922,6 +922,10 @@ extern const char *endgamelevelname(char *, int);
 /* ### earlyarg.c ### */
 
 extern int argcheck(int, char **, enum earlyarg);
+extern void early_options(int *argc_p, char ***argv_p, char **hackdir_p);
+#ifdef WIN32
+int windows_early_options(const char *);
+#endif
 
 /* ### eat.c ### */
 
@@ -2344,9 +2348,9 @@ extern int dohistory(void);
 
 /* ### xxmain.c ### */
 
-#if defined(MICRO) || defined(WIN32)
+#if defined(UNIX) || defined(MICRO) || defined(WIN32)
 #ifdef CHDIR
-extern void chdirx(char *, boolean);
+extern void chdirx(const char *, boolean);
 #endif /* CHDIR */
 extern boolean authorize_wizard_mode(void);
 extern boolean authorize_explore_mode(void);

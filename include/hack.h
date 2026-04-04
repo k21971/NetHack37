@@ -817,6 +817,7 @@ struct sinfo {
        interface to suppress menu commands in similar conditions;
        readchar() always resets it to 'otherInp' prior to returning */
     int input_state; /* whether next key pressed will be entering a command */
+    int early_options; /* inside early_options processing */
 #ifdef TTY_GRAPHICS
     /* resize_pending only matters when handling a SIGWINCH signal for tty;
        getting_char is used along with that and also separately for UNIX;

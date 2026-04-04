@@ -2590,19 +2590,19 @@ void nethack_enter_consoletty(void)
 
 
     /* clear the entire console buffer */
-    int size = console.orig_csbi.dwSize.X * console.orig_csbi.dwSize.Y;
-    DWORD unused;
-    set_console_cursor(0, 0);
-    FillConsoleOutputAttribute(
-        console.hConOut, CONSOLE_CLEAR_ATTRIBUTE,
-        size, console.cursor, &unused);
+    //int size = console.orig_csbi.dwSize.X * console.orig_csbi.dwSize.Y;
+    //DWORD unused;
+    //set_console_cursor(0, 0);
+  //  FillConsoleOutputAttribute(
+  //      console.hConOut, CONSOLE_CLEAR_ATTRIBUTE,
+  //      size, console.cursor, &unused);
 
-    FillConsoleOutputCharacter(
-        console.hConOut, CONSOLE_CLEAR_CHARACTER,
-        size, console.cursor, &unused);
+  //  FillConsoleOutputCharacter(
+  //      console.hConOut, CONSOLE_CLEAR_CHARACTER,
+  //      size, console.cursor, &unused);
 
-    set_console_cursor(1, 0);
-    SetConsoleCursorPosition(console.hConOut, console.cursor);
+    //set_console_cursor(1, 0);
+    //SetConsoleCursorPosition(console.hConOut, console.cursor);
 
     /* At this point early_raw_print will work */
 
@@ -2757,7 +2757,7 @@ VA_DECL(const char *, fmt)
     VA_START(fmt);
     VA_INIT(fmt, const char *);
     (void) vsnprintf(buf, sizeof buf, fmt, VA_ARGS);
-    if (redirect_stdout)
+    if (redirect_stdout || program_state.early_options)
         fprintf(stdout, "%s", buf);
     else {
 #ifdef TTY_GRAPHICS
