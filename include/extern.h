@@ -335,6 +335,8 @@ extern boolean parse_conf_file(FILE *fp, boolean (*proc)(char *arg));
 extern void set_configfile_name(const char *);
 extern char *get_configfile(void);
 extern const char *get_default_configfile(void);
+extern void rcfile(void);
+extern void rcfile_interface_options(void);
 
 /* ### coloratt.c ### */
 
@@ -1976,7 +1978,7 @@ extern long filesize(char *);
 #endif /* MSDOS */
 extern char *foundfile_buffer(void);
 #endif /* __GO32__ */
-extern void chdrive(char *);
+extern void chdrive(const char *);
 #ifndef TOS
 extern void disable_ctrlP(void);
 extern void enable_ctrlP(void);
@@ -2320,6 +2322,10 @@ extern int msgtype_type(const char *, boolean) NONNULLARG1;
 extern void hide_unhide_msgtypes(boolean, int);
 extern void msgtype_free(void);
 extern void options_free_window_colors(void);
+extern void set_all_options_heeded(void);
+extern void set_all_options_disregarded(void);
+extern void heed_this_option(enum opt);
+extern void disregard_this_option(enum opt);
 #ifdef TTY_PERM_INVENT
 extern void check_perm_invent_again(void);
 #endif
@@ -2345,6 +2351,7 @@ extern int dowhatdoes(void);
 extern char *dowhatdoes_core(char, char *) NONNULLARG2; /*might return NULL*/
 extern int dohelp(void);
 extern int dohistory(void);
+void allopt_array_init(void);
 
 /* ### xxmain.c ### */
 
@@ -3463,8 +3470,8 @@ extern void append_slash(char *) NONNULLARG1;
 extern boolean check_user_string(const char *) NONNULLARG1;
 extern char *get_login_name(void);
 extern unsigned long sys_random_seed(void);
-ATTRNORETURN extern void after_opt_showpaths(const char *) NORETURN;
 #endif /* UNIX */
+ATTRNORETURN extern void after_opt_showpaths(const char *) NORETURN;
 
 /* ### unixtty.c ### */
 
