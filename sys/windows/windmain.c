@@ -14,10 +14,6 @@
 #include <errno.h>
 #include <ShlObj.h>
 
-#if !defined(SAFEPROCS)
-#error You must #define SAFEPROCS to build windmain.c
-#endif
-
 static void nhusage(void);
 char *exename(void);
 boolean fakeconsole(void);
@@ -67,7 +63,6 @@ char windows_yn_function(const char *, const char *, char);
 
 #ifdef WIN32CON
 extern int windows_console_custom_nhgetch(void);
-void safe_routines(void);
 int tty_self_recover_prompt(void);
 #endif
 
@@ -105,6 +100,13 @@ void copy_file(const char *, const char *,
 void update_file(const char *, const char *,
                  const char *, const char *, BOOL);
 void windows_raw_print_bold(const char *);
+
+staticfn void set_emergency_io(void);
+staticfn void stdio_wait_synch(void);
+staticfn void stdio_raw_print(const char *str);
+staticfn void stdio_nonl_raw_print(const char *str);
+staticfn void stdio_raw_print_bold(const char *str);
+staticfn int stdio_nhgetch(void);
 
 #ifdef PORT_HELP
 void port_help(void);
@@ -159,17 +161,8 @@ MAIN(int argc, char *argv[])
     char *dir = NULL;
 
 #ifdef _MSC_VER
-    _CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
-
-#ifdef WIN32CON
-    /*
-     * Get a set of valid safe windowport function
-     * pointers during early startup initialization.
-     */
-//    safe_routines();
-#endif /* WIN32CON */
-
 
     /* setting iflags.colorcount has to be after early_init()
      * because it zeros out all of iflags */
@@ -208,8 +201,9 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
 #ifndef MSWIN_GRAPHICS
     early_init(argc, argv); /* already in WinMain for MSWIN_GRAPHICS */
 #endif
-    set_default_prefix_locations(argv[0]); /* must be re-done after initoptions_init()
-                                            * which clears out gp.fqn_prefix[] */
+    set_default_prefix_locations(
+        argv[0]); /* must be re-done after initoptions_init()
+                   * which clears out gp.fqn_prefix[] */
     copy_sysconf_content();
     copy_symbols_content();
     /* Now that sysconf has had a chance to set the TROUBLEPREFIX, don't
@@ -217,13 +211,20 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
     fqn_prefix_locked[TROUBLEPREFIX] = TRUE;
     copy_config_content();
 
- //   if (iflags.windowtype_deferred && gc.chosen_windowtype[0])
- //       windowtype = gc.chosen_windowtype;
- //   windowtype = gc.chosen_windowtype;
+    //   if (iflags.windowtype_deferred && gc.chosen_windowtype[0])
+    //       windowtype = gc.chosen_windowtype;
+    //   windowtype = gc.chosen_windowtype;
 
 #if !defined(MSWIN_GRAPHICS)
-    consoletty_open(1);
     nethack_enter_consoletty();
+    consoletty_open(1);
+#endif
+    set_emergency_io();
+
+#ifdef EARLY_CONFIGFILE_PASS
+    rcfile_interface_options();
+    if (gc.chosen_windowtype && *gc.chosen_windowtype)
+        windowtype = gc.chosen_windowtype;
 #endif
 
     if (!windowtype) {
@@ -233,7 +234,10 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
         windowtype = "tty";
 #endif
     }
-    choose_windows(windowtype);  /* sets all the window port function pointers */
+    choose_windows(
+        windowtype); /* sets all the window port function pointers */
+
+    init_nhwindows(&argc, argv);
 
 #if defined(CHDIR) && !defined(NOCWD_ASSUMPTIONS)
     /* Save current directory and make sure it gets restored when
@@ -243,8 +247,9 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
         error("NetHack: current directory path too long");
 #endif
     initoptions_init(); // This allows OPTIONS in syscf on Windows.
-    set_default_prefix_locations(argv[0]); /* must be re-done after initoptions_init()
-                                            * which clears out gp.fqn_prefix[] */
+    set_default_prefix_locations(
+        argv[0]); /* must be re-done after initoptions_init()
+                   * which clears out gp.fqn_prefix[] */
     iflags.windowtype_deferred = TRUE;
 
     program_state.early_options = 1;
@@ -286,7 +291,6 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
         && (strstri(argv[0], "nethackw.exe") || GUILaunched))
         iflags.windowtype_locked = TRUE;
 #endif
-    windowtype = default_window_sys;
 
 #ifdef DLB
     if (!dlb_init()) {
@@ -301,18 +305,6 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
     }
 #endif
 
-    if (!iflags.windowtype_locked) {
-#if defined(TTY_GRAPHICS)
-        Strcpy(default_window_sys, "tty");
-#else
-#if defined(CURSES_GRAPHICS) && !defined(MSWIN_GRAPHICS)
-        Strcpy(default_window_sys, "curses");
-#endif /* CURSES */
-#endif /* TTY */
- //       if (iflags.windowtype_deferred && gc.chosen_windowtype[0])
- //           windowtype = gc.chosen_windowtype;
-    }
- //   choose_windows(windowtype);
 #if defined(SND_LIB_FMOD)
     assign_soundlib(soundlib_fmod);
 #elif defined(SND_LIB_WINDSOUND)
@@ -322,19 +314,14 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
     u.uhp = 1; /* prevent RIP on early quits */
     u.ux = 0;  /* prevent flush_screen() */
 
-    nethack_enter(argc, argv);
     iflags.use_background_glyph = FALSE;
     if (WINDOWPORT(mswin))
         iflags.use_background_glyph = TRUE;
-#ifdef WIN32CON
-    if (WINDOWPORT(tty))
-        consoletty_open(1);
-#endif
 #ifdef WINCHAIN
     commit_windowchain();
 #endif
 
-    init_nhwindows(&argc, argv);
+//    init_nhwindows(&argc, argv);
 
 #ifdef WIN32CON
     if (WINDOWPORT(tty))
@@ -837,20 +824,6 @@ copy_hack_content(void)
                 gf.fqn_prefix[DATAPREFIX], OPTIONFILE, FALSE);
 }
 
-#ifdef WIN32CON
-void
-safe_routines(void)
-{
-    /*
-     * Get a set of valid safe windowport function
-     * pointers during early startup initialization.
-     */
-    if (!WINDOWPORT(safestartup))
-        windowprocs = *get_safe_procs(1);
-    if (!GUILaunched)
-        windowprocs.win_nhgetch = windows_console_custom_nhgetch;
-}
-#endif
 
 #ifdef PORT_HELP
 void
@@ -1205,9 +1178,7 @@ tty_self_recover_prompt(void)
     c = 'n';
     ct = 0;
     saved_procs = windowprocs;
-    if (!WINDOWPORT(safestartup))
-        windowprocs = *get_safe_procs(2); /* arg 2 uses no-newline variant */
-    windowprocs.win_nhgetch = windows_console_custom_nhgetch;
+
     raw_print("\n");
     raw_print("\n");
     raw_print("\n");
@@ -1340,4 +1311,60 @@ chdirx(const char *dir, boolean wr)
 }
 #endif /* CHDIR */
 
-/*windmain.c*/
+void
+set_emergency_io(void)
+{
+    windowprocs.win_raw_print = stdio_raw_print;
+    windowprocs.win_raw_print_bold = stdio_raw_print_bold;
+    windowprocs.win_nhgetch = stdio_nhgetch;
+    windowprocs.win_wait_synch = stdio_wait_synch;
+}
+
+
+/* Add to your code: windowprocs.win_raw_print = stdio_wait_synch; */
+void
+stdio_wait_synch(void)
+{
+    char valid[] = { ' ', '\n', '\r', '\033', '\0' };
+
+    fprintf(stdout, "--More--");
+    (void) fflush(stdout);
+    while (!strchr(valid, nhgetch()))
+        ;
+}
+
+/* Add to your code: windowprocs.win_raw_print = stdio_raw_print; */
+void
+stdio_raw_print(const char *str)
+{
+    if (str)
+        fprintf(stdout, "%s\n", str);
+    return;
+}
+
+/* no newline variation, add to your code:
+    windowprocs.win_raw_print = stdio_nonl_raw_print;  */
+void
+stdio_nonl_raw_print(const char *str)
+{
+    if (str)
+        fprintf(stdout, "%s", str);
+    return;
+}
+
+/* Add to your code: windowprocs.win_raw_print_bold = stdio_raw_print_bold; */
+void
+stdio_raw_print_bold(const char *str)
+{
+    stdio_raw_print(str);
+    return;
+}
+
+/* Add to your code: windowprocs.win_nhgetch = stdio_nhgetch; */
+int
+stdio_nhgetch(void)
+{
+    return getchar();
+}
+
+    /*windmain.c*/

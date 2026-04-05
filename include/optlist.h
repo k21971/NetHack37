@@ -4,10 +4,6 @@
 #ifndef OPTLIST_H
 #define OPTLIST_H
 
-#ifdef OPTIONS_C
-static int optfn_boolean(int, int, boolean, char *, char *);
-#endif
-
 /*
  *  NOTE:  If you add (or delete) an option, please review:
  *             doc/options.txt
@@ -15,6 +11,37 @@ static int optfn_boolean(int, int, boolean, char *, char *);
  *         It contains how-to info and outlines some required/suggested
  *         updates that should accompany your change.
  */
+
+#define BACKWARD_COMPAT
+
+extern int optfn_boolean(int, int, boolean, char *, char *);
+enum optchoice { opt_in, opt_out };
+
+/*
+ * option setting restrictions
+ */
+enum optset_restrictions {
+    set_in_sysconf = 0, /* system config file option only */
+    set_in_config = 1,  /* config file option only */
+    set_viaprog = 2,    /* may be set via extern program, not seen in game */
+    set_gameview = 3,   /* may be set via extern program, displayed in game */
+    set_in_game = 4,    /* may be set via extern program or set in the game */
+    set_wizonly = 5,    /* may be set in the game if wizmode */
+    set_wiznofuz = 6,   /* wizard-mode only, but not by fuzzer */
+    set_hidden = 7      /* placeholder for prefixed entries, never show it  */
+};
+
+/* these aren't the same as set_xxx */
+enum option_phases {
+    phase_not_set = 0,
+    builtin_opt = 1, /* compiled-in default value of an option */
+    syscf_opt,       /* sysconf setting of an option, overrides builtin */
+    rc_file_opt, /* player's run-time config file setting, overrides syscf */
+    environ_opt, /* player's environment NETHACKOPTIONS, overrides rc_file */
+    cmdline_opt, /* program invocation command-line, overrides environ */
+    play_opt,    /* 'O' command, interactively set so overrides all */
+    num_opt_phases
+};
 
 enum OptType { BoolOpt, CompOpt, OthrOpt };
 enum Y_N { No, Yes };
@@ -45,7 +72,7 @@ struct allopt_t {
     const char *alias;
     const char *descr;
     const char *prefixgw;
-    boolean initval, has_handler, dupdetected;
+    boolean initval, has_handler, dupdetected, disregarded;
 };
 
 #endif /* OPTLIST_H */
@@ -74,16 +101,16 @@ static int optfn_##a(int, int, boolean, char *, char *);
 #elif defined(NHOPT_PARSE)
 #define NHOPTB(a, sec, b, c, s, i, n, v, d, al, bp, termp, desc)             \
     { #a, OptS_##sec, 0, b, opt_##a, s, BoolOpt, n, v, d, No, termp, c,  \
-      bp, &optfn_boolean, al, desc, (const char *) 0, i, 0, 0 },
+      bp, &optfn_boolean, al, desc, (const char *) 0, i, 0, 0 , 0 },
 #define NHOPTC(a, sec, b, c, s, n, v, d, h, al, z) \
     { #a, OptS_##sec, 0, b, opt_##a, s, CompOpt, n, v, d, No, 0, c,  \
-      (boolean *) 0, &optfn_##a, al, z, (const char *) 0, Off, h, 0 },
+      (boolean *) 0, &optfn_##a, al, z, (const char *) 0, Off, h, 0, 0 },
 #define NHOPTP(a, sec, b, c, s, n, v, d, h, al, z) \
     { #a, OptS_##sec, 0, b, pfx_##a, s, CompOpt, n, v, d, Yes, 0, c, \
-      (boolean *) 0, &pfxfn_##a, al, z, #a, Off, h, 0 },
+      (boolean *) 0, &pfxfn_##a, al, z, #a, Off, h, 0, 0 },
 #define NHOPTO(m, sec, a, b, c, s, n, v, d, al, z) \
     { m, OptS_##sec, 0, b, opt_##a, s, OthrOpt, n, v, d, No, 0, c,   \
-      (boolean *) 0, &optfn_##a, al, z, (const char *) 0, On, On, 0 },
+      (boolean *) 0, &optfn_##a, al, z, (const char *) 0, On, On, 0, 0 },
 
 /* this is not reliable because TILES_IN_GLYPHMAP might be defined
  * in a multi-interface binary but not apply to the current interface */
