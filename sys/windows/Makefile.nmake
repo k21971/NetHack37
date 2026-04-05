@@ -847,7 +847,8 @@ REGEXTTY  = $(OTTY)cppregex.o
 LUAOBJTTY = $(OTTY)nhlua.o    $(OTTY)nhlsel.o    $(OTTY)nhlobj.o
 VVOBJTTY  = $(OTTY)version.o
 
-SOBJTTY   = $(OTTY)windmain.o $(OTTY)windsys.o $(OTTY)win10.o
+SOBJTTY   = $(OTTY)windmain.o $(OTTY)windsys.o $(OTTY)win10.o \
+		$(OTTY)safeproc.o
 
 TTYOBJTTY = $(OTTY)topl.o $(OTTY)getline.o  $(OTTY)wintty.o
 
@@ -907,7 +908,8 @@ REGEXGUI  = $(OGUI)cppregex.o
 LUAOBJGUI = $(OGUI)nhlua.o    $(OGUI)nhlsel.o   $(OGUI)nhlobj.o
 VVOBJGUI  = $(OGUI)version.o
 
-SOBJGUI   = $(OGUI)windmain.o $(OGUI)windsys.o $(OGUI)win10.o
+SOBJGUI   = $(OGUI)windmain.o $(OGUI)windsys.o $(OGUI)win10.o \
+		$(OGUI)safeproc.o
 
 GUIOBJ	= $(OGUI)mhaskyn.o $(OGUI)mhdlg.o \
 	$(OGUI)mhfont.o $(OGUI)mhinput.o $(OGUI)mhmain.o $(OGUI)mhmap.o \
@@ -1362,8 +1364,8 @@ INCLUSIONS= /I$(R_INCL) /I$(R_MSWSYS) $(R_LUAINCL) $(R_SOUNDLIBINCL)
 # Util and console builds
 #==========================================
 
-CFLAGS   = $(ctmpflags) $(INCLUSIONS) $(DLBDEF) $(SOUNDLIBDEFS)
-CPPFLAGS = $(cpptmpflags) $(INCLUSIONS) $(DLBDEF) $(SOUNDLIBDEFS)
+CFLAGS   = $(ctmpflags) $(INCLUSIONS) $(DLBDEF) -DSAFEPROCS $(SOUNDLIBDEFS)
+CPPFLAGS = $(cpptmpflags) $(INCLUSIONS) $(DLBDEF) -DSAFEPROCS $(SOUNDLIBDEFS)
 LFLAGS   = $(lflags) $(conlibs) $(MACHINE)
 
 #==========================================
@@ -2388,12 +2390,14 @@ $(OTTY)windsys.o:  $(MSWSYS)windsys.c $(WINDHDR) $(HACK_H)
 $(OTTY)windsound.o: $(WINDSOUNDDIR)windsound.c $(HACK_H)
 #$(OTTY)sample.o: $(SOUNDDIR)sample.c $(HACK_H)
 $(OTTY)windmain.o: $(MSWSYS)windmain.c $(WINDHDR) $(HACK_H)
+$(OTTY)safeproc.o: $(WSHR)safeproc.c $(WINDHDR) $(HACK_H)
 
 $(OGUI)consoletty.o:   $(MSWSYS)consoletty.c $(WINDHDR) $(HACK_H) $(TILE_H)
 $(OGUI)win10.o:  $(MSWSYS)win10.c $(WINDHDR) $(HACK_H)
 $(OGUI)windsys.o:  $(MSWSYS)windsys.c $(WINDHDR) $(HACK_H)
 $(OGUI)windsound.o: $(WINDSOUNDDIR)windsound.c $(HACK_H)
 $(OGUI)windmain.o: $(MSWSYS)windmain.c $(WINDHDR) $(HACK_H)
+$(OGUI)safeproc.o: $(WSHR)safeproc.c $(WINDHDR) $(HACK_H)
 
 #===================================================================
 # win/win32 dependencies

@@ -102,6 +102,8 @@ typedef unsigned readLenType;
 #endif
 #define BOOL_RANDOM (-1)
 
+enum optchoice { opt_in, opt_out};
+
 /*
  * type nhsym: loadable symbols go into this type
  */
@@ -150,16 +152,6 @@ typedef uchar nhsym;
 #endif  /* __SANITIZE_ADDRESS__ */
 #endif  /* __GNUC__ || _MSC_VER */
 #endif  /* !__clang__ */
-
-#define SET__IS_VALUE_VALID(s) ((s < set_in_sysconf) || (s > set_wiznofuz))
-#include "optlist.h"
-enum opt {
-    opt_prefix_only = -1,
-#define NHOPT_ENUM
-#include "optlist.h"
-#undef NHOPT_ENUM
-    OPTCOUNT
-};
 
 /*
  * Automatic inclusions for the subsidiary files.

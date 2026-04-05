@@ -725,8 +725,7 @@ struct instance_globals_o {
 
     /* options.c */
 
-    /* builtin_opt, syscf_, rc_file_, environ_, play_opt */
-    enum option_phases opt_phase;
+    int opt_phase; /* builtin_opt, syscf_, rc_file_, environ_, play_opt */
     boolean opt_initial;
     boolean opt_from_file;
     boolean opt_need_redraw; /* for doset() */
