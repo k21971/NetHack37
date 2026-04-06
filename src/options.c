@@ -7360,67 +7360,6 @@ initoptions_finish(void)
 }
 
 #if 0
-    (void) fruitadd(svp.pl_fruit, (struct fruit *) 0);
-    /*
-     * Remove "slime mold" from list of object names.  This will
-     * prevent it from being wished unless it's actually present
-     * as a named (or default) fruit.  Wishing for "fruit" will
-     * result in the player's preferred fruit.  [Once upon a time
-     * the override value used was "\033" which prevented wishing
-     * for the slime mold object at all except by asking for a
-     * specific named fruit.]  Note that there are multiple fruit
-     * object types (apple, melon, &c) but the "fruit" object is
-     * slime mold or whatever custom name player assigns to that.
-     */
-    obj_descr[SLIME_MOLD].oc_name = "fruit";
-
-    sym = get_othersym(SYM_BOULDER,
-                Is_rogue_level(&u.uz) ? ROGUESET : PRIMARYSET);
-    if (sym)
-        gs.showsyms[SYM_BOULDER + SYM_OFF_X] = sym;
-    reglyph_darkroom();
-    reset_glyphmap(gm_optionchange);
-#ifdef STATUS_HILITES
-    /*
-     * A multi-interface binary might only support status highlighting
-     * for some of the interfaces; check whether we asked for it but are
-     * using one which doesn't.
-     *
-     * Option processing can take place before a user-decided WindowPort
-     * is even initialized, so check for that too.
-     */
-    if (!WINDOWPORT(safestartup)) {
-        if (iflags.hilite_delta && !wc2_supported("statushilites")) {
-            raw_printf("Status highlighting not supported for %s interface.",
-                       windowprocs.name);
-            iflags.hilite_delta = 0;
-        }
-    }
-#endif
-    update_rest_on_space();
-
-    /* these can't rely on compile-time initialization for their defaults
-       because a multi-interface binary might need different values for
-       different interfaces; if neither tiled_map nor ascii_map pass the
-       wc_supported() test, assume ascii_map */
-    if (iflags.wc_tiled_map && !wc_supported("tiled_map"))
-        iflags.wc_tiled_map = FALSE, iflags.wc_ascii_map = TRUE;
-    else if (iflags.wc_ascii_map && !wc_supported("ascii_map")
-             && wc_supported("tiled_map"))
-        iflags.wc_ascii_map = FALSE, iflags.wc_tiled_map = TRUE;
-
-    if (iflags.wc_tiled_map && !opt_set_in_config[opt_color])
-        iflags.wc_color = TRUE;
-    if (iflags.wc_ascii_map && !iflags.wc_color
-        && !opt_set_in_config[opt_bgcolors])
-        iflags.bgcolors = FALSE;
-
-    if (glyphid_cache_status())
-        free_glyphid_cache();
-    apply_customizations(gc.currentgraphics,
-                        (do_custom_colors | do_custom_symbols));
-    go.opt_initial = FALSE;
-
     /*
      * Do these after clearing the 'opt_initial' flag.
      */
@@ -7435,9 +7374,9 @@ initoptions_finish(void)
         if (can_set_perm_invent())
             iflags.perm_invent = TRUE;
     }
-    return;
 }
 #endif
+
 void
 allopt_array_init(void)
 {
