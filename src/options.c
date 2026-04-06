@@ -7277,7 +7277,6 @@ initoptions_init(void)
      */
 #endif
 #endif /* SYSCF */
-    initoptions_finish();
 }
 
 /*
