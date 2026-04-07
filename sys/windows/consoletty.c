@@ -2569,7 +2569,10 @@ void nethack_enter_consoletty(void)
         /* srWindow identifies the visible area; dwSize identifies the buffer
          */
         width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-        fprintf(stdout, "width = %d\n", width);
+#ifdef DEBUG
+        if (NH_DEVEL_STATUS != NH_STATUS_RELEASED)
+            fprintf(stdout, "width = %d\n", width);
+#endif
     }
 
     console.hConOut = GetStdHandle(STD_OUTPUT_HANDLE);
