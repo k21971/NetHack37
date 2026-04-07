@@ -1865,8 +1865,7 @@ config_error_add(const char *str, ...)
     va_list the_args;
 
     va_start(the_args, str);
-    if (!config_unmatched_ignored())
-        vconfig_error_add(str, the_args);
+    vconfig_error_add(str, the_args);
     va_end(the_args);
 }
 
