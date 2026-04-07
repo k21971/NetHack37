@@ -34,7 +34,7 @@ staticfn void free_config_sections(void);
 staticfn char *is_config_section(char *);
 staticfn boolean handle_config_section(char *);
 boolean parse_config_line(char *);
-staticfn char *find_optparam(const char *);
+staticfn char *find_optparam(char *);
 #ifndef SFCTOOL
 staticfn boolean cnf_line_OPTIONS(char *);
 staticfn boolean cnf_line_AUTOPICKUP_EXCEPTION(char *);
@@ -585,7 +585,7 @@ handle_config_section(char *buf)
 
 /* find the '=' or ':' */
 staticfn char *
-find_optparam(const char *buf)
+find_optparam(char *buf)
 {
     char *bufp, *altp;
 
@@ -1907,6 +1907,85 @@ vconfig_error_add(const char *str, va_list the_args)
     config_erradd(buf);
 }
 
+void
+rcfile(void)
+{
+    char *opts = 0, *xtraopts = 0;
+    const char *envname, *namesrc, *nameval;
+
+    go.opt_phase = environ_opt;
+    /* getenv() instead of nhgetenv(): let total length of options be long;
+       parseoptions() will check each individually */
+    envname = "NETHACKOPTIONS";
+    opts = getenv(envname);
+    if (!opts) {
+        /* fall back to original name; discouraged */
+        envname = "HACKOPTIONS";
+        opts = getenv(envname);
+    }
+
+    if (gc.cmdline_rcfile) {
+        namesrc = "command line";
+        nameval = gc.cmdline_rcfile;
+        xtraopts = opts;
+        if (opts && (*opts == '/' || *opts == '\\' || *opts == '@'))
+            xtraopts = 0; /* NETHACKOPTIONS is a file name; ignore it */
+    } else if (opts && (*opts == '/' || *opts == '\\' || *opts == '@')) {
+        /* NETHACKOPTIONS is a file name; use that instead of the default */
+        if (*opts == '@')
+            ++opts; /* @filename */
+        namesrc = envname;
+        nameval = opts;
+        xtraopts = 0;
+    } else {
+        /* either no NETHACKOPTIONS or it wasn't a file name;
+           read the default configuration file */
+        nameval = namesrc = 0;
+        xtraopts = opts;
+    }
+
+    go.opt_phase = rc_file_opt;
+    /* seemingly arbitrary name length restriction is to prevent error
+       messages, if any were to be delivered while accessing the file,
+       from potentially overflowing buffers */
+    if (nameval && (int) strlen(nameval) >= BUFSZ / 2) {
+        config_error_init(TRUE, namesrc, FALSE);
+        config_error_add(
+            "nethackrc file name \"%.40s\"... too long; using default",
+            nameval);
+        config_error_done();
+        nameval = namesrc = 0; /* revert to default nethackrc */
+    }
+
+    config_error_init(TRUE, nameval, nameval ? CONFIG_ERROR_SECURE : FALSE);
+    (void) read_config_file(nameval, set_in_config);
+    config_error_done();
+    if (xtraopts) {
+        /* NETHACKOPTIONS is present and not a file name */
+        go.opt_phase = environ_opt;
+        config_error_init(FALSE, envname, FALSE);
+        (void) parseoptions(xtraopts, TRUE, FALSE);
+        config_error_done();
+    }
+
+    if (gc.cmdline_rcfile)
+        free((genericptr_t) gc.cmdline_rcfile), gc.cmdline_rcfile = 0;
+    /*[end of nethackrc handling]*/
+}
+
+void
+rcfile_interface_options(void)
+{
+    allopt_array_init();
+    set_all_options_disregarded();
+    heed_this_option(opt_windowtype);
+    heed_this_option(opt_soundlib);
+    rcfile();
+    set_all_options_heeded();
+    disregard_this_option(opt_windowtype);
+    disregard_this_option(opt_soundlib);
+}
+
 #ifdef SYSCF
 #ifdef SYSCF_FILE
 void
@@ -1933,9 +2012,9 @@ assure_syscf_file(void)
 #else
     fd = open(SYSCF_FILE, O_RDONLY);
 #endif
-#else
+#else   /* VMS */
     fd = open(SYSCF_FILE, O_RDONLY, 0);
-#endif
+#endif  /* VMS */
     if (fd >= 0) {
         /* readable */
         close(fd);
