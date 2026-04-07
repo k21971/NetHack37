@@ -110,6 +110,7 @@ staticfn void parse_conf_buf(struct _cnf_parser_state *parser,
                            boolean (*proc)(char *arg));
 /* next one is in extern.h; why here too? */
 boolean parse_conf_str(const char *str, boolean (*proc)(char *arg));
+static boolean ignore_errors_on_unmatched = FALSE;
 
 #ifdef SFCTOOL
 #ifdef wait_synch
@@ -1203,7 +1204,8 @@ cnf_line_SYMBOLS(char *bufp)
         switch_symbols(TRUE);
         return TRUE;
     }
-    config_error_add("Error in SYMBOLS definition '%s'", bufp);
+    if (!config_unmatched_ignored())
+        config_error_add("Error in SYMBOLS definition '%s'", bufp);
     return FALSE;
 }
 
@@ -1295,7 +1297,7 @@ typedef boolean (*config_line_stmt_func)(char *);
 /* normal, alias */
 #define CNFL_NA(n, l, f) { #n, l, FALSE, FALSE, cnf_line_##f }
 /* sysconf only */
-#define CNFL_S(n, l) { #n, l, TRUE, FALSE,  cnf_line_##n }
+#define CNFL_S(n, l) { #n, l, TRUE, FALSE, cnf_line_##n }
 
 static const struct match_config_line_stmt {
     const char *name;
@@ -1380,6 +1382,8 @@ static const struct match_config_line_stmt {
 #undef CNFL_NA
 #undef CNFL_S
 
+static boolean disregarded_config_lines[SIZE(config_line_stmt)];
+
 boolean
 parse_config_line(char *origbuf)
 {
@@ -1422,11 +1426,13 @@ parse_config_line(char *origbuf)
                           config_line_stmt[i].len)) {
             char *parm = config_line_stmt[i].origbuf ? origbuf : bufp;
 
-            return config_line_stmt[i].fn(parm);
+            if (!disregarded_config_lines[i])
+                return config_line_stmt[i].fn(parm);
         }
     }
 
-    config_error_add("Unknown config statement");
+    if (!ignore_errors_on_unmatched)
+        config_error_add("Unknown config statement");
     return FALSE;
 }
 
@@ -1859,7 +1865,8 @@ config_error_add(const char *str, ...)
     va_list the_args;
 
     va_start(the_args, str);
-    vconfig_error_add(str, the_args);
+    if (!config_unmatched_ignored())
+        vconfig_error_add(str, the_args);
     va_end(the_args);
 }
 
@@ -1951,13 +1958,66 @@ void
 rcfile_interface_options(void)
 {
     allopt_array_init();
-    set_all_options_disregarded();
+    disregard_all_options();
+    disregard_all_config_statements();
     heed_this_option(opt_windowtype);
     heed_this_option(opt_soundlib);
+    set_ignore_errors_on_unmatched();
     rcfile();
-    set_all_options_heeded();
+    heed_all_config_statements();
+    heed_all_options();
     disregard_this_option(opt_windowtype);
     disregard_this_option(opt_soundlib);
+    clear_ignore_errors_on_unmatched();
+}
+
+void
+heed_all_config_statements(void)
+{
+    int i;
+
+    for (i = 0; i < SIZE(disregarded_config_lines); i++) {
+        disregarded_config_lines[i] = FALSE;
+    }
+}
+void
+disregard_all_config_statements(void)
+{
+    int i;
+
+    for (i = 0; i < SIZE(disregarded_config_lines); i++) {
+        disregarded_config_lines[i] = TRUE;
+    }
+}
+void
+heed_this_config_statement(int statement_idx)
+{
+    if (statement_idx >= 0 && statement_idx < SIZE(disregarded_config_lines))
+        disregarded_config_lines[statement_idx] = FALSE;
+}
+void
+disregard_this_config_statement(int statement_idx)
+{
+    if (statement_idx >= 0 && statement_idx < SIZE(disregarded_config_lines))
+        disregarded_config_lines[statement_idx] = TRUE;
+}
+
+void
+clear_ignore_errors_on_unmatched(void)
+{
+    ignore_errors_on_unmatched = FALSE;
+}
+void
+set_ignore_errors_on_unmatched(void)
+{
+    ignore_errors_on_unmatched = TRUE;
+}
+boolean
+config_unmatched_ignored(void)
+{
+    if (ignore_errors_on_unmatched)
+        return TRUE;
+    return FALSE;
 }
 
 #ifdef SYSCF
