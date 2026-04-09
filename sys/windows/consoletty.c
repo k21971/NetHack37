@@ -2777,9 +2777,10 @@ void nethack_enter_consoletty(void)
     console.is_ready = TRUE;
     nhUse(apisuccess);
 }
-#endif /* TTY_GRAPHICS */
 
 RESTORE_WARNING_CONDEXPR_IS_CONSTANT
+
+#endif /* TTY_GRAPHICS */
 
 /* this is used as a printf() replacement when the window
  * system isn't initialized yet
