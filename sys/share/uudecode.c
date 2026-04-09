@@ -99,7 +99,7 @@ int
 main(int argc, char **argv)
 {
     FILE *in, *out;
-    int mode;
+    unsigned int mode;
     char dest[128];
     char buf[80];
 
