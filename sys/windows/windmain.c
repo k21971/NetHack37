@@ -244,6 +244,7 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
     if (getcwd(orgdir, sizeof orgdir) == (char *) 0)
         error("NetHack: current directory path too long");
 #endif
+    getreturn_enabled = TRUE;
     initoptions_init(); // This allows OPTIONS in syscf on Windows.
     set_default_prefix_locations(
         argv[0]); /* must be re-done after initoptions_init()
@@ -251,10 +252,10 @@ _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);*/
     // iflags.windowtype_deferred = TRUE;
 
     program_state.early_options = 1;
+    /* if (GUILaunched || IsDebuggerPresent()) */
     early_options(&argc, &argv, &dir);
     program_state.early_options = 0;
-    /* if (GUILaunched || IsDebuggerPresent()) */
-    getreturn_enabled = TRUE;
+
 
     initoptions();
 #if defined(CHDIR) && !defined(NOCWD_ASSUMPTIONS)

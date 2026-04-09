@@ -7331,12 +7331,10 @@ initoptions_finish(void)
      * Option processing can take place before a user-decided WindowPort
      * is even initialized, so check for that too.
      */
-    if (!WINDOWPORT(safestartup)) {
-        if (iflags.hilite_delta && !wc2_supported("statushilites")) {
-            raw_printf("Status highlighting not supported for %s interface.",
-                       windowprocs.name);
-            iflags.hilite_delta = 0;
-        }
+    if (iflags.hilite_delta && !wc2_supported("statushilites")) {
+        raw_printf("Status highlighting not supported for %s interface.",
+                    windowprocs.name);
+        iflags.hilite_delta = 0;
     }
 #endif
     update_rest_on_space();
