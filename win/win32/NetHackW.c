@@ -214,7 +214,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine,
     /* emergency IO */
     windowprocs.win_raw_print = mswin_raw_print;
     windowprocs.win_raw_print_bold = mswin_raw_print_bold;
-    mswin_nh_input_init();
     windowprocs.win_nhgetch = mswin_nhgetch;
     windowprocs.win_wait_synch = mswin_wait_synch;
 
