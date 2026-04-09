@@ -43,6 +43,9 @@
  *
  * Modified 05 Jan 2024 to avoid K&R function declarations, marked KR_PROTO.
  *
+ * Modified 09 Apr 2026 to change mode variable from (int) to (unsigned int)
+ * to match prototype of sscanf %o
+ *
  * $NHDT-Date: 1432512787 2015/05/25 00:13:07 $  $NHDT-Branch: master $:$NHDT-Revision: 1.7 $
  */
 
