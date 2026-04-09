@@ -2541,6 +2541,9 @@ void early_raw_print(const char *s)
  *
  */
 
+
+DISABLE_WARNING_CONDEXPR_IS_CONSTANT
+
 void nethack_enter_consoletty(void)
 {
     int width;
@@ -2775,6 +2778,8 @@ void nethack_enter_consoletty(void)
     nhUse(apisuccess);
 }
 #endif /* TTY_GRAPHICS */
+
+RESTORE_WARNING_CONDEXPR_IS_CONSTANT
 
 /* this is used as a printf() replacement when the window
  * system isn't initialized yet
