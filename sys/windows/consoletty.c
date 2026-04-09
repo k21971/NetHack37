@@ -2541,6 +2541,9 @@ void early_raw_print(const char *s)
  *
  */
 
+
+DISABLE_WARNING_CONDEXPR_IS_CONSTANT
+
 void nethack_enter_consoletty(void)
 {
     int width;
@@ -2569,7 +2572,10 @@ void nethack_enter_consoletty(void)
         /* srWindow identifies the visible area; dwSize identifies the buffer
          */
         width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-        fprintf(stdout, "width = %d\n", width);
+#ifdef DEBUG
+        if (NH_DEVEL_STATUS != NH_STATUS_RELEASED)
+            fprintf(stdout, "width = %d\n", width);
+#endif
     }
 
     console.hConOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -2771,6 +2777,9 @@ void nethack_enter_consoletty(void)
     console.is_ready = TRUE;
     nhUse(apisuccess);
 }
+
+RESTORE_WARNING_CONDEXPR_IS_CONSTANT
+
 #endif /* TTY_GRAPHICS */
 
 /* this is used as a printf() replacement when the window

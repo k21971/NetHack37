@@ -106,7 +106,6 @@ extern char ttycolors[CLR_MAX]; /* in sys/msdos/video.c */
 static char empty_optstr[] = { '\0' };
 static boolean duplicate, using_alias;
 static boolean give_opt_msg = TRUE;
-static boolean restricted_options_mode = FALSE;
 
 enum { MAX_ROLEOPT = 4 };  /* 4: role,race,gend,algn */
 static boolean opt_set_in_config[OPTCOUNT];
@@ -668,7 +667,9 @@ parseoptions(
         }
     }
 
-    if (optresult == optn_silenterr || restricted_options_mode)
+    if (optresult == optn_silenterr
+        || (got_match && allopt[matchidx].disregarded)
+            || (!got_match && config_unmatched_ignored()))
         return FALSE;
     if (pfx_match && optresult == optn_err) {
         char pfxbuf[BUFSZ], *pfxp;
@@ -7391,7 +7392,7 @@ allopt_array_init(void)
             if (allopt[i].addr)
                 *(allopt[i].addr) = allopt[i].initval;
         }
-        set_all_options_heeded();
+        heed_all_options();
         /*
          * Call each option function with an init flag and give it a chance
          * to make any preparations that it might require.  We do this
@@ -10182,23 +10183,21 @@ enhance_menu_text(
 }
 
 void
-set_all_options_heeded(void)
+heed_all_options(void)
 {
     int i;
 
     for (i = 0; i < OPTCOUNT; i++)
         allopt[i].disregarded = FALSE;
-    restricted_options_mode = FALSE;
 }
 
 void
-set_all_options_disregarded(void)
+disregard_all_options(void)
 {
     int i;
 
     for (i = 0; i < OPTCOUNT ; i++)
         allopt[i].disregarded = TRUE;
-    restricted_options_mode = TRUE;
 }
 
 void
@@ -10212,9 +10211,9 @@ disregard_this_option(enum opt optidx)
 {
     if (optidx >= 0 && optidx < (enum opt) OPTCOUNT)
         allopt[optidx].disregarded = TRUE;
-    if (!restricted_options_mode)
-        restricted_options_mode = TRUE;
 }
+
+
 
 #undef OPTIONS_HEADING
 #undef CONFIG_SLOT
