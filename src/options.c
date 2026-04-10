@@ -1978,6 +1978,8 @@ optfn_map_mode(
          */
         op = string_for_opt(opts, negated);
         if (op != empty_optstr && !negated) {
+            int save_map_mode = iflags.wc_map_mode;
+
             if (!strcmpi(op, "tiles"))
                 iflags.wc_map_mode = MAP_MODE_TILES;
             else if (!strncmpi(op, "ascii4x6", sizeof "ascii4x6" - 1))
@@ -2011,6 +2013,11 @@ optfn_map_mode(
                 config_error_add("Unknown %s parameter '%s'",
                                  allopt[optidx].name, op);
                 return optn_err;
+            }
+            if (wc_supported("map_mode")) {
+                if (!iflags.wc_map_mode
+                    || save_map_mode != iflags.wc_map_mode)
+                    preference_update("map_mode");
             }
         } else if (negated) {
             bad_negation(allopt[optidx].name, TRUE);
