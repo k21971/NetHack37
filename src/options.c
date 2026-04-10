@@ -5482,9 +5482,6 @@ can_set_perm_invent(void)
 
 #ifdef TTY_PERM_INVENT
     if ((WINDOWPORT(tty)
-#ifdef WIN32
-         || WINDOWPORT(safestartup)
-#endif
          ) && !go.opt_initial) {
         perm_invent_toggled(FALSE);
         /* perm_invent_toggled()
