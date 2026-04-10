@@ -24,11 +24,11 @@ strategy:
       imageName: 'macOS-15'
       toolchainName: clang
       buildTargetName: all
-    windows-visualstudio:
+    windows-x64-vstudio:
       imageName: 'windows-latest'
       toolchainName: vs
       buildTargetName: all
-    windows-visualstudio-arm64:
+    windows-arm64-vstudio:
       imageName: 'windows-latest'
       toolchainName: vs
       buildTargetName: all
