@@ -28,6 +28,11 @@ strategy:
       imageName: 'windows-latest'
       toolchainName: vs
       buildTargetName: all
+    windows-visualstudio-arm64:
+      imageName: 'windows-latest'
+      toolchainName: vs
+      buildTargetName: all
+      buildPlatform: 'ARM64' # Targeting Snapdragon
     windows-mingw:
       imageName: 'windows-2025'
       toolchainName: mingw
