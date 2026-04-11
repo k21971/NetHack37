@@ -101,7 +101,7 @@ void update_file(const char *, const char *,
                  const char *, const char *, BOOL);
 void windows_raw_print_bold(const char *);
 
-staticfn void set_emergency_io(void);
+void set_emergency_io(void);
 staticfn void stdio_wait_synch(void);
 staticfn void stdio_raw_print(const char *str);
 staticfn void stdio_nonl_raw_print(const char *str);
