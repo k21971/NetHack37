@@ -8862,7 +8862,7 @@ doset(void) /* changing options via menu by Per Liboriussen */
                     enhance_menu_text(buf, sizeof buf, pass, bool_p,
                                       &allopt[i]);
                 add_menu(tmpwin, &nul_glyphinfo, &any, 0, 0,
-                         ATR_NONE, clr, buf, MENU_ITEMFLAGS_NONE);
+                         ATR_NONE, clr, buf, MENU_ITEMFLAGS_SKIPINVERT);
             }
 
     add_menu_str(tmpwin, "");
@@ -9067,7 +9067,7 @@ doset_add_menu(
     indent = !any.a_int ? "    " : "";
     Sprintf(buf, fmtstr, indent, option, value);
     add_menu(win, &nul_glyphinfo, &any, 0, 0,
-             ATR_NONE, clr, buf, MENU_ITEMFLAGS_NONE);
+             ATR_NONE, clr, buf, MENU_ITEMFLAGS_SKIPINVERT);
 }
 
 
