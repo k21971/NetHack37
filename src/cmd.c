@@ -3704,7 +3704,8 @@ rhack(int key)
                  * the former call to help_dir() (for 'bad_command' below).
                  */
                 if (was_m_prefix) {
-                    pline("The %s command does not accept '%s' prefix.",
+                    custompline(SUPPRESS_HISTORY,
+                          "The %s command does not accept '%s' prefix.",
                           tlist->ef_txt, which);
                 } else {
                     uchar ch = tlist->key;
