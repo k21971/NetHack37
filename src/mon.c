@@ -4878,8 +4878,10 @@ decide_to_shapeshift(struct monst *mon)
 
     if (!is_vampshifter(mon)) {
         /* regular shapeshifter; 'ptr' is Null */
-        if (!rn2(6))
+        if (!mon->mspec_used && !rn2(6)) {
             dochng = TRUE;
+            mon->mspec_used = 3 + rn2(10);
+        }
     } else if (!(mon->mstrategy & STRAT_WAITFORU)) {
         /* The vampire has to be in good health (mhp) to maintain
          * its shifted form.
