@@ -2564,6 +2564,8 @@ query_annotation(d_level *lev)
 int
 donamelevel(void)
 {
+    if (iflags.menu_requested)
+        return dooverview();
     query_annotation((d_level *) 0);
     return ECMD_OK;
 }
