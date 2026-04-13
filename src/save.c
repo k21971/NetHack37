@@ -31,7 +31,7 @@ staticfn void save_gamelog(NHFILE *);
 staticfn void savegamestate(NHFILE *);
 staticfn void savelev_core(NHFILE *, xint8);
 staticfn void save_msghistory(NHFILE *);
-
+staticfn void save_adjust_levelflags(void);
 #if defined(HANGUPHANDLING)
 #define HUP if (!program_state.done_hup)
 #else
@@ -509,7 +509,9 @@ savelev_core(NHFILE *nhfp, xint8 lev)
     save_stairs(nhfp);
     Sfo_dest_area(nhfp, &svu.updest, "lev-updest");
     Sfo_dest_area(nhfp, &svd.dndest, "lev-dndest");
+    save_adjust_levelflags();
     Sfo_levelflags(nhfp, &svl.level.flags, "lev-level_flags");
+    rest_adjust_levelflags();
 
     Sfo_int(nhfp, &svd.doors_alloc, "lev-doors_alloc");
     /* don't rely on underlying write() behavior to write
@@ -554,6 +556,13 @@ savelev_core(NHFILE *nhfp, xint8 lev)
         (void) memset(svr.rooms, 0, sizeof(svr.rooms));
     }
     return;
+}
+
+void
+save_adjust_levelflags(void)
+{
+    /* adjust any timestamps */
+    moves_to_relative_time(&svl.level.flags.stasis_until);
 }
 
 staticfn void
@@ -1031,6 +1040,22 @@ save_msghistory(NHFILE *nhfp)
     }
     debugpline1("Stored %d messages into savefile.", msgcount);
     /* note: we don't attempt to handle release_data() here */
+}
+
+void
+moves_to_relative_time(long *timestamp)
+{
+    long prevts = *timestamp;
+
+    *timestamp = prevts - svm.moves;
+}
+
+void
+relative_time_to_moves(long *timestamp)
+{
+    long prevts = *timestamp;
+
+    *timestamp = svm.moves + prevts;
 }
 
 /* also called by prscore(); this probably belongs in dungeon.c... */

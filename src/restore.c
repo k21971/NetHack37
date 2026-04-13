@@ -35,6 +35,7 @@ staticfn boolean restgamestate(NHFILE *);
 staticfn void rest_bubbles(NHFILE *);
 staticfn void restore_gamelog(NHFILE *);
 staticfn void restore_msghistory(NHFILE *);
+staticfn void rest_adjust_levelflags(void);
 #endif
 
 /*
@@ -1106,7 +1107,7 @@ getlev(NHFILE *nhfp, int pid, xint8 lev)
     Sfi_dest_area(nhfp, &svu.updest, "lev-updest");
     Sfi_dest_area(nhfp, &svd.dndest, "lev-dndest");
     Sfi_levelflags(nhfp, &svl.level.flags, "lev-level_flags");
-
+    rest_adjust_levelflags();
     if (svd.doors) {
         free(svd.doors);
         svd.doors = 0;
@@ -1300,6 +1301,13 @@ getlev(NHFILE *nhfp, int pid, xint8 lev)
     nhUse(lev);
 #endif /* !SFCTOOL */
     program_state.in_getlev = FALSE;
+}
+
+void
+rest_adjust_levelflags(void)
+{
+    /* adjust timestamps */
+    relative_time_to_moves(&svl.level.flags.stasis_until);
 }
 
 /* "name-role-race-gend-algn" occurs very early in a save file; sometimes we
