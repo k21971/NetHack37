@@ -2734,6 +2734,8 @@ boolean restgamestate(NHFILE *);
 void restore_msghistory(NHFILE *);
 #endif
 extern void rest_adjust_levelflags(void);
+extern void moves_to_relative_time(long *);
+extern void relative_time_to_moves(long *);
 
 /* ### rip.c ### */
 
@@ -2828,8 +2830,6 @@ extern void freedynamicdata(void);
 extern void store_savefileinfo(NHFILE *) NONNULLARG1;
 extern void store_savefileinfo(NHFILE *) NONNULLARG1;
 extern int nhdatatypes_size(void);
-extern void moves_to_relative_time(long *);
-extern void relative_time_to_moves(long *);
 #if 0
 extern void assignlog(char *, char*, int);
 extern FILE *getlog(NHFILE *);
