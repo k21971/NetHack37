@@ -35,7 +35,6 @@ staticfn boolean restgamestate(NHFILE *);
 staticfn void rest_bubbles(NHFILE *);
 staticfn void restore_gamelog(NHFILE *);
 staticfn void restore_msghistory(NHFILE *);
-staticfn void rest_adjust_levelflags(void);
 #endif
 
 /*

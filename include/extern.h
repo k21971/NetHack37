@@ -2733,6 +2733,7 @@ void restore_gamelog(NHFILE *);
 boolean restgamestate(NHFILE *);
 void restore_msghistory(NHFILE *);
 #endif
+extern void rest_adjust_levelflags(void);
 
 /* ### rip.c ### */
 
