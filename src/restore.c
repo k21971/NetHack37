@@ -353,6 +353,7 @@ restmon(NHFILE *nhfp, struct monst *mtmp)
             Sfi_edog(nhfp, EDOG(mtmp), "monst-edog");
             /* save or bones held a relative time */
             relative_time_to_moves(&EDOG(mtmp)->droptime);
+            relative_time_to_moves(&EDOG(mtmp)->hungrytime);
             /* sanity check to prevent rn2(0) */
            if (EDOG(mtmp)->apport <= 0) {
                EDOG(mtmp)->apport = 1;
@@ -552,6 +553,8 @@ restgamestate(NHFILE *nhfp)
 #endif  /* SFCTOOL */
     newgamecontext = svc.context; /* copy statically init'd context */
     Sfi_context_info(nhfp, &svc.context, "gamestate-context");
+    relative_time_to_moves(&svc.context.seer_turn);
+    relative_time_to_moves(&svc.context.digging.lastdigtime);
     svc.context.warntype.species = (ismnum(svc.context.warntype.speciesidx))
                                   ? &mons[svc.context.warntype.speciesidx]
                                   : (struct permonst *) 0;

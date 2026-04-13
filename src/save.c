@@ -270,7 +270,12 @@ savegamestate(NHFILE *nhfp)
     program_state.saving++; /* caller should/did already set this... */
     uid = (unsigned long) getuid();
     Sfo_ulong(nhfp, &uid, "gamestate-uid");
+    moves_to_relative_time(&svc.context.seer_turn);
+    moves_to_relative_time(&svc.context.digging.lastdigtime);
     Sfo_context_info(nhfp, &svc.context, "gamestate-context");
+    relative_time_to_moves(&svc.context.seer_turn);
+    relative_time_to_moves(&svc.context.digging.lastdigtime);
+
     Sfo_flag(nhfp, &flags, "gamestate-flags");
     urealtime.finish_time = getnow();
     urealtime.realtime += timet_delta(urealtime.finish_time,
@@ -855,8 +860,10 @@ savemon(NHFILE *nhfp, struct monst *mtmp)
         if (buflen > 0) {
             /* we only store relative times in save and bones */
             moves_to_relative_time(&EDOG(mtmp)->droptime);
+            moves_to_relative_time(&EDOG(mtmp)->hungrytime);
             Sfo_edog(nhfp, EDOG(mtmp), "monst-edog");
             relative_time_to_moves(&EDOG(mtmp)->droptime);
+            relative_time_to_moves(&EDOG(mtmp)->hungrytime);
         }
         buflen = EBONES(mtmp) ? (int) sizeof (struct ebones) : 0;
         Sfo_int(nhfp, &buflen, "monst-ebones_length");
