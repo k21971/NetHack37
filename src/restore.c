@@ -351,6 +351,8 @@ restmon(NHFILE *nhfp, struct monst *mtmp)
         if (buflen > 0) {
             newedog(mtmp);
             Sfi_edog(nhfp, EDOG(mtmp), "monst-edog");
+	    /* save or bones held a relative time */
+	    relative_time_to_moves(&EDOG(mtmp)->droptime);
             /* sanity check to prevent rn2(0) */
            if (EDOG(mtmp)->apport <= 0) {
                EDOG(mtmp)->apport = 1;
