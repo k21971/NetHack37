@@ -853,10 +853,10 @@ savemon(NHFILE *nhfp, struct monst *mtmp)
         buflen = EDOG(mtmp) ? (int) sizeof (struct edog) : 0;
         Sfo_int(nhfp, &buflen, "monst-edog_length");
         if (buflen > 0) {
-	    /* we only store relative times in save and bones */
-	    moves_to_relative_time(&EDOG(mtmp)->droptime);
+            /* we only store relative times in save and bones */
+            moves_to_relative_time(&EDOG(mtmp)->droptime);
             Sfo_edog(nhfp, EDOG(mtmp), "monst-edog");
-	    relative_time_to_moves(&EDOG(mtmp)->droptime);
+            relative_time_to_moves(&EDOG(mtmp)->droptime);
         }
         buflen = EBONES(mtmp) ? (int) sizeof (struct ebones) : 0;
         Sfo_int(nhfp, &buflen, "monst-ebones_length");
