@@ -2820,6 +2820,8 @@ immune_to_trap(struct monst *mon, unsigned ttype)
            hanging to the ceiling */
         if (Sokoban && (is_pit(ttype) || is_hole(ttype)))
             return TRAP_NOT_IMMUNE;
+        if (In_sokoban(&u.uz) && ttype == ROLLING_BOULDER_TRAP)
+            return TRAP_CLEARLY_IMMUNE; /* not dangerous in Sokoban */
         if (is_floater(pm) || is_flyer(pm)
             || (is_clinger(pm) && has_ceiling(&u.uz)))
             return TRAP_CLEARLY_IMMUNE;
@@ -3589,7 +3591,7 @@ find_random_launch_coord(struct trap *ttmp, coord *cc)
     coordxy dx, dy;
     coordxy x, y;
 
-    if (!ttmp || !cc)
+    if (!ttmp || !cc || Sokoban)
         return FALSE;
 
     x = ttmp->tx;
