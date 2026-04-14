@@ -16,7 +16,6 @@ staticfn boolean mu_maybe_destroy_web(struct monst *, boolean, struct trap *);
 staticfn struct obj *t_missile(int, struct trap *);
 staticfn boolean floor_trigger(int);
 staticfn boolean check_in_air(struct monst *, unsigned);
-staticfn boolean wearing_iron_shoes(struct monst *);
 staticfn int trapeffect_arrow_trap(struct monst *, struct trap *, unsigned);
 staticfn int trapeffect_dart_trap(struct monst *, struct trap *, unsigned);
 staticfn int trapeffect_rocktrap(struct monst *, struct trap *, unsigned);
@@ -1094,12 +1093,12 @@ check_in_air(struct monst *mtmp, unsigned trflags)
             || ((is_you ? Flying : is_flyer(mtmp->data)) && !plunged));
 }
 
-/* return TRUE if mtmp is wearing iron shoes */
-staticfn boolean
+/* return TRUE if mtmp is wearing shoes made of iron (iron/kicking) */
+boolean
 wearing_iron_shoes(struct monst *mtmp)
 {
     struct obj *armf = which_armor(mtmp, W_ARMF);
-    return armf && armf->otyp == IRON_SHOES;
+    return armf && objects[armf->otyp].oc_material == IRON;
 }
 
 /* is trap ttmp harmless to monster mtmp? */
@@ -2453,10 +2452,6 @@ trapeffect_poly_trap(
     struct trap *trap,
     unsigned int trflags)
 {
-    static int possible_boots[] = {
-        ELVEN_BOOTS, KICKING_BOOTS, FUMBLE_BOOTS, LEVITATION_BOOTS,
-        JUMPING_BOOTS, SPEED_BOOTS, WATER_WALKING_BOOTS };
-
     if (mtmp == &gy.youmonst) {
         boolean viasitting = (trflags & VIASITTING) != 0;
         int steed_article = ARTICLE_THE;
@@ -2480,7 +2475,8 @@ trapeffect_poly_trap(
         if (wearing_iron_shoes(mtmp)) {
             deltrap(trap);
             pline("%s warps strangely.", Yname2(uarmf));
-            poly_obj(uarmf, ROLL_FROM(possible_boots));
+            poly_obj(
+                uarmf, uarmf->otyp == IRON_SHOES ? KICKING_BOOTS : IRON_SHOES);
             update_inventory();
             if (uarmf)
                 prinv(NULL, uarmf, 0);
@@ -2506,7 +2502,8 @@ trapeffect_poly_trap(
                 impossible("re-equipping iron shoes destroyed them?");
                 return Trap_Effect_Finished;
             }
-            shoes = poly_obj(shoes, ROLL_FROM(possible_boots));
+            shoes = poly_obj(
+                shoes, shoes->otyp == IRON_SHOES ? KICKING_BOOTS : IRON_SHOES);
             /* now equip them again */
             if (shoes) {
                 mtmp->misc_worn_check |= W_ARMF;
