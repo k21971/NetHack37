@@ -592,6 +592,26 @@ moverock_core(coordxy sx, coordxy sy)
                     }
                     seetrap(ttmp);
                     return sobj_at(BOULDER, sx, sy) ? -1 : 0;
+                case ROLLING_BOULDER_TRAP:
+                {
+                    int tox = rx;
+                    int toy = ry;
+                    /* the boulder continues until it reaches one of
+                       the trap's launch spots or hits a wall / out-of-bounds */
+                    while (isok(tox + u.dx, toy + u.dy)) {
+                        tox += u.dx;
+                        toy += u.dy;
+                        if (tox == ttmp->launch.x && toy == ttmp->launch.y)
+                            break;
+                        if (tox == ttmp->launch2.x && toy == ttmp->launch2.y)
+                            break;
+                    }
+                    pline("%s away from you!",
+                          Tobjnam(otmp, "suddenly roll"));
+                    feeltrap(ttmp);
+                    launch_obj(BOULDER, sx, sy, tox, toy, ROLL | LAUNCH_KNOWN);
+                    return sobj_at(BOULDER, sx, sy) ? -1 : 0;
+                }
                 default:
                     break; /* boulder not affected by this trap */
                 }

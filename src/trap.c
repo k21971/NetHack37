@@ -2671,9 +2671,13 @@ trapeffect_rolling_boulder_trap(
               !Deaf ? "Click!  " : "");
         if (!launch_obj(BOULDER, trap->launch.x, trap->launch.y,
                         trap->launch2.x, trap->launch2.y, style)) {
-            deltrap(trap);
-            newsym(u.ux, u.uy); /* get rid of trap symbol */
-            pline("Fortunately for you, no boulder was released.");
+            /* if this is a known trap, the player may have known there wasn't
+               a lined up boulder, so use a shorter message to avoid --More--
+               spam */
+            if (style & LAUNCH_KNOWN)
+                pline("No boulder was released.");
+            else
+                pline("Fortunately for you, no boulder was released.");
         }
     } else {
         if (!m_in_air(mtmp)) {
