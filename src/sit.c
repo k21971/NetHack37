@@ -326,7 +326,7 @@ special_throne_effect(int effect) {
         /* polymorph effect (not blocked by magic resistance, but other things
            that protect from polymorphs work) */
         if (is_vampire(gy.youmonst.data)) {
-            pline("You feel unworthy.");
+            You_feel("unworthy.");
         } else {
             pline("This throne was not meant for those such as you!");
             You_feel("a change coming over you.");
