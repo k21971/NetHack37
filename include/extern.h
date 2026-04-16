@@ -276,6 +276,8 @@ extern void max_rank_sz(void);
 extern long botl_score(void);
 #endif
 extern int describe_level(char *, int);
+extern char *weapon_status(char *) NONNULL NONNULLARG1;
+extern char *armor_status(char *) NONNULL NONNULLARG1;
 extern void status_initialize(boolean);
 extern void status_finish(void);
 extern boolean exp_percent_changing(void);
@@ -1215,6 +1217,7 @@ extern void runmode_delay_output(void);
 extern void overexert_hp(void);
 extern boolean overexertion(void);
 extern void invocation_message(void);
+extern void classify_terrain(void);
 extern void switch_terrain(void);
 extern void set_uinwater(int);
 extern boolean pooleffects(boolean);
