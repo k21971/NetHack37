@@ -164,14 +164,14 @@ static int optfn_##a(int, int, boolean, char *, char *);
            Off, Yes, No, No, NoAlias, (boolean *) 0, Term_False,
            (char *)0)
 #endif
-    NHOPTB(armorstatus, Status, 0, opt_in, set_in_game,
+    NHOPTB(armorstatus, Advanced, 0, opt_in, set_in_game,
                 Off, Yes, No, No, NoAlias, &flags.armorstatus, Term_False,
                 "summarize currently worn armor in a status field")
     NHOPTB(ascii_map, Advanced, 0, opt_in, set_in_game,
                 ascii_map_Def, Yes, No, No, NoAlias, &iflags.wc_ascii_map,
-           Term_False, "show map as text")
-    NHOPTO("autocompletions", Advanced, o_autocomplete, BUFSZ, opt_in, set_in_game,
-                No, Yes, No, NoAlias, "edit autocompletions")
+                Term_False, "show map as text")
+    NHOPTO("autocompletions", Advanced, o_autocomplete, BUFSZ, opt_in,
+                set_in_game, No, Yes, No, NoAlias, "edit autocompletions")
     NHOPTB(autodescribe, Advanced, 0, opt_out, set_in_game,
            On, Yes, No, No, NoAlias, &iflags.autodescribe, Term_False,
            "describe terrain under cursor")
@@ -744,7 +744,7 @@ static int optfn_##a(int, int, boolean, char *, char *);
                 No, Yes, No, No, "termcolumns", "number of columns")
     NHOPTC(term_rows, Advanced, 6, opt_in, set_in_config,
                 No, Yes, No, No, NoAlias, "number of rows")
-    NHOPTB(terrainstatus, Status, 0, opt_in, set_in_game,
+    NHOPTB(terrainstatus, Advanced, 0, opt_in, set_in_game,
                 Off, Yes, No, No, NoAlias, &flags.terrainstatus, Term_False,
                 "show hero's location as a status field")
     NHOPTC(tile_file, Advanced, 70, opt_in, set_gameview,
@@ -859,7 +859,7 @@ static int optfn_##a(int, int, boolean, char *, char *);
 #endif
     NHOPTC(warnings, Advanced, 10, opt_in, set_in_config,
                 No, Yes, No, No, NoAlias, "display characters for warnings")
-    NHOPTB(weaponstatus, Status, 0, opt_in, set_in_game,
+    NHOPTB(weaponstatus, Advanced, 0, opt_in, set_in_game,
                 Off, Yes, No, No, NoAlias, &flags.weaponstatus, Term_False,
                 "show currently wielded weapon in a status field")
     NHOPTC(whatis_coord, Advanced, 1, opt_in, set_in_game,
