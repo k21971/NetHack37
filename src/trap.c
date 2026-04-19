@@ -1193,6 +1193,7 @@ trapeffect_arrow_trap(
     unsigned trflags UNUSED)
 {
     struct obj *otmp;
+    int dam;
 
     if (mtmp == &gy.youmonst) {
         if (trap->once && trap->tseen && !rn2(15)) {
@@ -1206,9 +1207,10 @@ trapeffect_arrow_trap(
         seetrap(trap);
         pline("An arrow shoots out at you!");
         otmp = t_missile(ARROW, trap);
+        dam = dmgval(otmp, &gy.youmonst);
         if (u.usteed && !rn2(2) && steedintrap(trap, otmp)) {
             ; /* nothing */
-        } else if (thitu(8, dmgval(otmp, &gy.youmonst), &otmp, "arrow")) {
+        } else if (thitu(8, Maybe_Half_Phys(dam), &otmp, "arrow")) {
             if (otmp)
                 obfree(otmp, (struct obj *) 0);
         } else {
@@ -1252,6 +1254,7 @@ trapeffect_dart_trap(
     unsigned int trflags UNUSED)
 {
     struct obj *otmp;
+    int dam;
 
     if (mtmp == &gy.youmonst) {
         int oldumort = u.umortality;
@@ -1269,10 +1272,10 @@ trapeffect_dart_trap(
         otmp = t_missile(DART, trap);
         if (!rn2(6))
             otmp->opoisoned = 1;
+        dam = dmgval(otmp, &gy.youmonst);
         if (u.usteed && !rn2(2) && steedintrap(trap, otmp)) {
             ; /* nothing */
-        } else if (thitu(7, dmgval(otmp, &gy.youmonst),
-                         &otmp, "little dart")) {
+        } else if (thitu(7, Maybe_Half_Phys(dam), &otmp, "little dart")) {
             if (otmp) {
                 if (otmp->opoisoned)
                     poisoned("dart", A_CON, "little dart",
@@ -3395,9 +3398,11 @@ launch_obj(
                 break;
             }
         } else if (u_at(x, y)) {
+            int dam = dmgval(singleobj, &gy.youmonst);
+
             if (gm.multi)
                 nomul(0);
-            if (thitu(9 + singleobj->spe, dmgval(singleobj, &gy.youmonst),
+            if (thitu(9 + singleobj->spe, Maybe_Half_Phys(dam),
                       &singleobj, (char *) 0))
                 stop_occupation();
         }
