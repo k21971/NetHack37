@@ -510,6 +510,7 @@ extern void destroy_drawbridge(coordxy, coordxy);
 
 /* ### decl.c ### */
 
+extern void program_state_init(void);
 extern void decl_globals_init(void);
 extern void sa_victual(volatile struct victual_info *);
 

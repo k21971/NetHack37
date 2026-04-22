@@ -32,6 +32,7 @@ staticfn void interrupt_multi(const char *);
 void
 early_init(int argc USED_FOR_CRASHREPORT, char *argv[] USED_FOR_CRASHREPORT)
 {
+    program_state_init();
 #ifdef CRASHREPORT
     /* Do this as early as possible, but let ports do other things first. */
     crashreport_init(argc, argv);
