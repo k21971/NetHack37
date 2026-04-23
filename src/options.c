@@ -7368,7 +7368,7 @@ initoptions_finish(void)
 #ifdef ENHANCED_SYMBOLS
     if (glyphid_cache_status())
         free_glyphid_cache();
-    apply_customizations(gc.currentgraphics, do_custom_symbols);
+    apply_customizations(gc.currentgraphics, do_custom_symbols | do_custom_colors);
 #endif
     go.opt_initial = FALSE;
     return;

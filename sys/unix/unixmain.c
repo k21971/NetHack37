@@ -123,10 +123,6 @@ main(int argc, char *argv[])
         dir = nh_getenv("HACKDIR");
 #endif /* CHDIR */
     program_state.early_options = 1;
-#ifdef ENHANCED_SYMBOLS
-    if (argcheck(argc, argv, ARG_DUMPGLYPHIDS) == 2)
-        exit(EXIT_SUCCESS);
-#endif
     /* handle -dalthackdir, -s <score stuff>, --version, --showpaths */
     early_options(&argc, &argv, &dir);
     program_state.early_options = 0;
