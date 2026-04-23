@@ -920,7 +920,7 @@ finish
 
 start: Enhanced2
 #       contributed in GitHub pull request 1503 by abcbarryn.
-#       This has double line symbols.
+#       This has double line wall symbols.
 	Description: Enhanced with more Unicode glyphs and 24-bit color
 	Restrictions: primary
 	Handling: UTF8
