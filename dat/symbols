@@ -803,15 +803,33 @@ start: MACgraphics
 	S_pool: \xe0
 finish
 
+# When using Unicode glyphs, care must be taken with how terminals
+# render them and how completely fonts cover them.
+#
+# Depending on the font, terminal, and operating system, unsupported
+# glyphs may be replaced by placeholder symbols (e.g. � U+FFFD
+# replacement character or □ U+25A1 white square), omitted entirely, or
+# substituted from fallback fonts. Such fallback can introduce visual
+# inconsistencies due to differences in style, metrics, or alignment.
+#
+# Support for glyphs defined in the Windows Glyph List 4
+# (https://en.wikipedia.org/wiki/WGL4) is generally good across common
+# fonts and platforms. Beyond that baseline, coverage becomes less
+# predictable and should be evaluated case by case.
+#
+# Emoji support often is problematic, and wide glyphs occupy two display
+# columns, which NetHack does not support.
+#
+# Symset Enhanced1 should be considered the conservative Unicode symset,
+# while Enhanced2 (and any future symsets) may make use of more advanced
+# Unicode features.
 start: Enhanced1
 	Description: Enhanced with Unicode glyphs and 24-bit color
 	Restrictions: primary
 	Handling: UTF8
-	S_corr: U+2591
-	S_litcorr: U+2592
-	S_engrcorr: U+2591
-	S_amulet: U+2299                    # ☉
-	S_cloud: U+2601                     # ☁
+	S_corr: U+2591                      # LIGHT SHADE
+	S_engrcorr: U+2591                  # LIGHT SHADE
+	S_litcorr: U+2592                   # MEDIUM SHADE
 	S_vwall: U+2502                     # BOX DRAWINGS LIGHT VERTICAL
 	S_hwall: U+2500                     # BOX DRAWINGS LIGHT HORIZONTAL
 	S_tlcorn: U+250c                    # BOX DRAWINGS LIGHT DOWN AND RIGHT
@@ -826,8 +844,8 @@ start: Enhanced1
 	S_ndoor: U+00b7                     # MIDDLE DOT
 	S_vodoor: U+2592                    # MEDIUM SHADE
 	S_hodoor: U+2592                    # MEDIUM SHADE
-	S_bars: U+2551                      # ║
-	S_tree: U+2660                      # ♠
+	S_bars: U+2261                      # IDENTICAL TO
+	S_tree: U+03a8                      # GREEK CAPITAL LETTER PSI
 	S_room: U+00b7                      # MIDDLE DOT
 	S_engroom: U+03BE                   # Greek Small Letter Xi
 	S_darkroom: U+00b7                  # MIDDLE DOT
@@ -903,7 +921,7 @@ finish
 start: Enhanced2
 #       contributed in GitHub pull request 1503 by abcbarryn.
 #       This has double line symbols.
-	Description: Enhanced with Unicode glyphs and 24-bit color
+	Description: Enhanced with more Unicode glyphs and 24-bit color
 	Restrictions: primary
 	Handling: UTF8
 	S_corr: U+2591
