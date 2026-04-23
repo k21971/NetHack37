@@ -2556,11 +2556,16 @@ zapnodir(struct obj *obj)
         known = !!obj->dknown;
         (void) findit();
         break;
-    case WAN_STASIS:
+    case WAN_STASIS: {
+        long tmp_until = svm.moves + (long) rn1(21, 10);
+
         /* no immediately obvious effect, and no message so that it isn't
-           distinguishable from other NODIR wands that produce no message */
-        svl.level.flags.stasis_until = svm.moves + rn1(21, 10);
+           distinguishable from other NODIR wands that produce no message;
+           for multiple zaps, keep the longest duration rather than latest */
+        if (tmp_until > svl.level.flags.stasis_until)
+            svl.level.flags.stasis_until = tmp_until;
         break;
+    }
     case WAN_CREATE_MONSTER:
         /* create_critters() returns True iff hero sees a new monster appear */
         if (create_critters(rn2(23) ? 1 : rn1(7, 2),
@@ -4196,8 +4201,10 @@ boomhit(struct obj *obj, int dx, int dy)
         }
         if (u_at(gb.bhitpos.x, gb.bhitpos.y)) { /* ct == 9 */
             if (Fumbling || rn2(20) >= ACURR(A_DEX)) {
+                int dam = dmgval(obj, &gy.youmonst);
+
                 /* we hit ourselves */
-                (void) thitu(10 + obj->spe, dmgval(obj, &gy.youmonst), &obj,
+                (void) thitu(10 + obj->spe, Maybe_Half_Phys(dam), &obj,
                              "boomerang");
                 endmultishot(TRUE);
                 break;

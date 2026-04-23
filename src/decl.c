@@ -1067,6 +1067,12 @@ const struct const_globals cg = {
     } while(0);
 
 void
+program_state_init(void)
+{
+    program_state = init_program_state;
+}
+
+void
 decl_globals_init(void)
 {
 #if 0
@@ -1117,7 +1123,6 @@ decl_globals_init(void)
     svu = init_svu;
     svx = init_svx;
     svy = init_svy;
-    program_state = init_program_state;
 
     gv.valuables[0].list = gg.gems;
     gv.valuables[0].size = SIZE(gg.gems);

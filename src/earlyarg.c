@@ -424,6 +424,12 @@ scores_only(int argc, char **argv, const char *dir)
     (void) whoami(); /* set up default plname[] */
 #endif
     prscore(argc, argv);
+#ifdef MSWIN_GRAPHICS
+    /* NetHackW can also support WINDOWPORT(curses) now, so check */
+    if (WINDOWPORT(mswin)) {
+        wait_synch();
+    }
+#endif
 
     nh_terminate(EXIT_SUCCESS); /* bypass opt_terminate() */
     /*NOTREACHED*/
@@ -705,7 +711,7 @@ dump_enums(void)
         objclass_classes_enum,
         objclass_syms_enum,
         arti_enum,
-	mcastu_enum,
+        mcastu_enum,
         NUM_ENUM_DUMPS
     };
 
@@ -737,7 +743,7 @@ dump_enums(void)
         objclass_classes_dump,
         objclass_syms_dump,
         arti_enum_dump,
-	mcastu_enum_dump,
+        mcastu_enum_dump,
     };
 
     static const struct de_params {
