@@ -858,7 +858,8 @@ void
 welcome(boolean new_game) /* false => restoring an old game */
 {
     char buf[BUFSZ];
-    boolean currentgend = Upolyd ? u.mfemale : flags.female;
+    boolean currentgend = Upolyd ? u.mfemale : flags.female,
+            adrift = (u.ualign.type != u.ualignbase[A_CURRENT]);
 
     l_nhcore_call(new_game ? NHCORE_START_NEW_GAME : NHCORE_RESTORE_OLD_GAME);
 
@@ -881,8 +882,30 @@ welcome(boolean new_game) /* false => restoring an old game */
      * restores it's only shown if different from its original value.
      */
     *buf = '\0';
+#if 0
     if (new_game || u.ualignbase[A_ORIGINAL] != u.ualignbase[A_CURRENT])
         Sprintf(eos(buf), " %s", align_str(u.ualignbase[A_ORIGINAL]));
+#else
+    /*
+     * 2026-04-24
+     * GitHub issue https://github.com/NetHack/NetHack/issues/537
+     * "Judging by the comment above, it should display your new alignment
+     *  if it was changed, so align_str(u.ualignbase[A_CURRENT]) would
+     *  probably be more appropriate. This won't affect the new game message."
+     *
+     * That is followed by a suggestion to revisit the matter (paraphrased):
+     * "That's actually intentional; the comment oversimplifies.
+     *  When it was implemented, it may have been the only way to tell that
+     *  you had converted alignment. Now ^X mentions your starting alignment
+     *  if base alignment has been changed, so revisiting this welcome back
+     *  message."
+     */
+    if (new_game || u.ualignbase[A_ORIGINAL] != u.ualignbase[A_CURRENT] || adrift)
+        Sprintf(eos(buf), " %s%s",
+                adrift ? "adrift " : "",
+                adrift ? align_str(u.ualign.type)
+                       : align_str(u.ualignbase[A_CURRENT]));
+#endif
     if (!gu.urole.name.f
         && (new_game
             ? (gu.urole.allow & ROLE_GENDMASK) == (ROLE_MALE | ROLE_FEMALE)
