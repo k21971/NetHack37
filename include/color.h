@@ -65,7 +65,6 @@ struct nethack_color {
     int tableindex;
     int rgbindex;
     const char *name;
-    const char *hexval;
     long r, g, b;
 };
 
