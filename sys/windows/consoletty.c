@@ -361,8 +361,8 @@ void win32con_toggle_cursor_info(void);
 static int32
 colortable_to_bgr_int32(const struct nethack_color *tbl)
 {
-    int32 rgbint32 = (tbl->r << 0) | (tbl->g << 8) | (tbl->b << 16);
-    return rgbint32;
+    int32 bgrint32 = (tbl->r << 0) | (tbl->g << 8) | (tbl->b << 16);
+    return bgrint32;
 }
 
 #define rgbtable_offset 16
