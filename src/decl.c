@@ -929,6 +929,11 @@ static const struct instance_globals_saved_m init_svm = {
 static const struct instance_globals_saved_n init_svn = {
     /* dungeon.c */
     0,                                   /* n_dgns */
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0
+    },                                   /* nhuuid */
     /* mkroom.c */
     0,                                   /* nroom */
     /* region.c */

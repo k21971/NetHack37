@@ -292,6 +292,8 @@ savegamestate(NHFILE *nhfp)
     program_state.saving++; /* caller should/did already set this... */
     uid = (unsigned long) getuid();
     Sfo_ulong(nhfp, &uid, "gamestate-uid");
+    Sfo_char(nhfp, &svn.nhuuid[0], "nhuuid", sizeof svn.nhuuid);
+    Sfo_long(nhfp, &svm.moves, "gamestate-moves");
     moves_to_relative_time(&svc.context.seer_turn);
     moves_to_relative_time(&svc.context.digging.lastdigtime);
     Sfo_context_info(nhfp, &svc.context, "gamestate-context");
@@ -322,7 +324,6 @@ savegamestate(NHFILE *nhfp)
     save_dungeon(nhfp, (boolean) !!update_file(nhfp),
                  (boolean) !!release_data(nhfp));
     savelevchn(nhfp);
-    Sfo_long(nhfp, &svm.moves, "gamestate-moves");
     Sfo_q_score(nhfp, &svq.quest_status, "gamestate-quest_status");
     for (i = 0; i < (MAXSPELL + 1); ++i) {
         Sfo_spell(nhfp, &svs.spl_book[i], "gamestate-spl_book");
@@ -1177,6 +1178,7 @@ freedynamicdata(void)
     release_runtime_info(); /* build-time options and version stuff */
     free_convert_filenames();
 #endif /* FREE_ALL_MEMORY */
+    free_nhuuid();
 
     if (VIA_WINDOWPORT())
         status_finish();

@@ -780,6 +780,7 @@ newgame(void)
     svc.context.next_attrib_check = 600L; /* arbitrary first setting */
     svc.context.tribute.enabled = TRUE;   /* turn on 3.6 tributes    */
     svc.context.tribute.tributesz = sizeof(struct tribute_info);
+    get_nhuuid();
 
     for (i = LOW_PM; i < NUMMONS; i++)
         svm.mvitals[i].mvflags = mons[i].geno & G_NOCORPSE;

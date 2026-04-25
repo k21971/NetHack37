@@ -1128,6 +1128,8 @@ extern boolean Death_quote(char *, int) NONNULLARG1;
 extern void livelog_add(long ll_type, const char *) NONNULLARG2;
 ATTRNORETURN extern void do_deferred_showpaths(int) NORETURN;
 extern boolean contains_directory(const char *);
+extern void get_nhuuid(void);
+extern void free_nhuuid(void);
 
 /* ### fountain.c ### */
 
@@ -4031,6 +4033,8 @@ extern char *get_port_id(char *);
 #ifdef RUNTIME_PASTEBUF_SUPPORT
 extern void port_insert_pastebuf(char *);
 #endif
+extern void get_nhuuid(void);
+extern void free_nhuuid(void);
 
 #endif /* !MAKEDEFS_C && !MDLIB_C */
 

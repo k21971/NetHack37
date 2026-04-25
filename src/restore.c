@@ -537,6 +537,8 @@ restgamestate(NHFILE *nhfp)
 #endif
 
     Sfi_ulong(nhfp, &uid, "gamestate-uid");
+    Sfi_char(nhfp, &svn.nhuuid[0], "nhuuid", sizeof svn.nhuuid);
+    Sfi_long(nhfp, &svm.moves, "gamestate-moves");
 #ifndef SFCTOOL
     if (SYSOPT_CHECK_SAVE_UID
         && uid != (unsigned long) getuid()) { /* strange ... */
@@ -676,7 +678,6 @@ restgamestate(NHFILE *nhfp)
 
     restore_dungeon(nhfp);
     restlevchn(nhfp);
-    Sfi_long(nhfp, &svm.moves, "gamestate-moves");
     /* hero_seq isn't saved and restored because it can be recalculated */
     gh.hero_seq = svm.moves << 3; /* normally handled in moveloop() */
     Sfi_q_score(nhfp, &svq.quest_status, "gamestate-quest_status");
