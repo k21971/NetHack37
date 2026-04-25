@@ -850,7 +850,9 @@ void
 get_nhuuid(void)
 {
 #if !defined(MACOS)
+#if defined(NHUUID)
     char struuid[37] = { 0 };
+#endif
 #endif
     char *struuidptr = NULL;
 #if defined(LINUX) && defined(NHUUID)
@@ -868,7 +870,8 @@ get_nhuuid(void)
     struuidptr = &struuid[0];
 #endif /* MACOS || LINUX */
 
-    Snprintf(svn.nhuuid, sizeof svn.nhuuid, "%s", struuidptr);
+    if (struuidptr)
+        Snprintf(svn.nhuuid, sizeof svn.nhuuid, "%s", struuidptr);
 
 #if defined(MACOS) && defined(NHUUID)
     free_macos_uuid();
