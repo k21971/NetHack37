@@ -842,7 +842,6 @@ static const struct instance_globals_x g_init_x = {
 static const struct instance_globals_y g_init_y = {
     /* decl.c */
     (ROWNO - 1) & ~1, /* y_maze_max */
-    DUMMY, /* youmonst */
     /* pline.c */
     NULL, /* you_buf */
     0, /* you_buf_siz */

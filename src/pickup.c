@@ -287,7 +287,7 @@ fatal_corpse_mistake(struct obj *obj, boolean remotely)
     if (u_safe_from_fatal_corpse(obj, st_all) || remotely)
         return FALSE;
 
-    if (poly_when_stoned(gy.youmonst.data) && polymon(PM_STONE_GOLEM)) {
+    if (poly_when_stoned(u.umonst->data) && polymon(PM_STONE_GOLEM)) {
         display_nhwindow(WIN_MESSAGE, FALSE); /* --More-- */
         return FALSE;
     }
@@ -723,9 +723,9 @@ pickup(int what) /* should be a long */
          */
         if ((gm.multi && !svc.context.run)
             || (autopickup && !flags.pickup)
-            || notake(gy.youmonst.data)) {
+            || notake(u.umonst->data)) {
             check_here(FALSE);
-            if (notake(gy.youmonst.data) && OBJ_AT(u.ux, u.uy)
+            if (notake(u.umonst->data) && OBJ_AT(u.ux, u.uy)
                 && (autopickup || flags.pickup))
                 You("are physically incapable of picking anything up.");
             return 0;
@@ -892,8 +892,8 @@ pickup(int what) /* should be a long */
     }
 
     if (!u.uswallow) {
-        if (hides_under(gy.youmonst.data))
-            (void) hideunder(&gy.youmonst);
+        if (hides_under(u.umonst->data))
+            (void) hideunder(u.umonst);
 
         /* position may need updating (invisible hero) */
         if (n_picked)
@@ -1155,7 +1155,7 @@ query_objlist(const char *qstr,        /* query string */
         fake_hero_object = cg.zeroobj;
         fake_hero_object.quan = 1L; /* not strictly necessary... */
         any.a_obj = &fake_hero_object;
-        tmpglyph = mon_to_glyph(&gy.youmonst, rn2_on_display_rng);
+        tmpglyph = mon_to_glyph(u.umonst, rn2_on_display_rng);
         map_glyphinfo(0, 0, tmpglyph, 0U, &tmpglyphinfo);
         add_menu(win, &tmpglyphinfo, &any,
                  /* fake inventory letter, no group accelerator */
@@ -1719,7 +1719,7 @@ lift_object(
        and for boulder picked up by hero poly'd into a giant; override
        availability of open inventory slot iff not already carrying one */
     if (obj->otyp == LOADSTONE
-        || (obj->otyp == BOULDER && throws_rocks(gy.youmonst.data))) {
+        || (obj->otyp == BOULDER && throws_rocks(u.umonst->data))) {
         if (inv_cnt(FALSE) < invlet_basic || !carrying(obj->otyp)
             || merge_choice(gi.invent, obj))
             return 1; /* lift regardless of current situation */
@@ -1823,7 +1823,7 @@ pickup_object(
                && engulfing_u(obj->ocarry)) {
         You_cant("pick %s up.", ysimple_name(obj));
         return 0;
-    } else if (obj->oartifact && !touch_artifact(obj, &gy.youmonst)) {
+    } else if (obj->oartifact && !touch_artifact(obj, u.umonst)) {
         return 0;
     } else if (obj->otyp == CORPSE) {
         if (fatal_corpse_mistake(obj, telekinesis)
@@ -1983,7 +1983,7 @@ encumber_msg(void)
             break;
         case 3:
             You("%s under your heavy load.  Movement is very hard.",
-                stagger(gy.youmonst.data, "stagger"));
+                stagger(u.umonst->data, "stagger"));
             break;
         default:
             You("%s move a handspan with this load!",
@@ -2004,7 +2004,7 @@ encumber_msg(void)
             break;
         case 3:
             You("%s under your load.  Movement is still very hard.",
-                stagger(gy.youmonst.data, "stagger"));
+                stagger(u.umonst->data, "stagger"));
             break;
         }
         disp.botl = TRUE;
@@ -2051,7 +2051,7 @@ able_to_loot(
         You("cannot %s things that are deep in the %s.", verb,
             hliquid(is_lava(x, y) ? "lava" : "water"));
         return FALSE;
-    } else if (nolimbs(gy.youmonst.data)) {
+    } else if (nolimbs(u.umonst->data)) {
         pline("Without limbs, you cannot %s anything.", verb);
         return FALSE;
     } else if (looting && !freehand()) {
@@ -2189,7 +2189,7 @@ doloot_core(void)
         /* "Can't do that while carrying so much stuff." */
         return ECMD_OK;
     }
-    if (nohands(gy.youmonst.data)) {
+    if (nohands(u.umonst->data)) {
         You("have no hands!"); /* not `body_part(HAND)' */
         return ECMD_OK;
     }
@@ -2440,7 +2440,7 @@ loot_mon(struct monst *mtmp, int *passed_info, boolean *prev_loot)
                 x_monnam(mtmp, ARTICLE_THE, (char *) 0,
                          SUPPRESS_SADDLE, FALSE));
         if ((c = yn_function(qbuf, ynqchars, 'n', TRUE)) == 'y') {
-            if (nolimbs(gy.youmonst.data)) {
+            if (nolimbs(u.umonst->data)) {
                 You_cant("do that without limbs."); /* not body_part(HAND) */
                 return 0;
             }
@@ -2732,7 +2732,7 @@ out_container(struct obj *obj)
         obj->owt = weight(obj);
     }
 
-    if (obj->oartifact && !touch_artifact(obj, &gy.youmonst))
+    if (obj->oartifact && !touch_artifact(obj, u.umonst))
         return 0;
 
     if (fatal_corpse_mistake(obj, FALSE))
@@ -2936,7 +2936,7 @@ explain_container_prompt(boolean more_containers)
 boolean
 u_handsy(void)
 {
-    if (nohands(gy.youmonst.data)) {
+    if (nohands(u.umonst->data)) {
         You("have no hands!"); /* not `body_part(HAND)' */
         return FALSE;
     } else if (!freehand()) {

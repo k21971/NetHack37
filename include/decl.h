@@ -1082,7 +1082,6 @@ struct instance_globals_y {
 
     /* decl.c */
     int y_maze_max;
-    struct monst youmonst;
 
     /* pline.c */
     /* work buffer for You(), &c and verbalize() */
