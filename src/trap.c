@@ -3375,6 +3375,23 @@ launch_obj(
             while (tmp-- > 0)
                 nh_delay_output();
 
+        /*
+         * TEMPORARY?  github issue #1490 by BartekCupial reports a
+         * segfault when boulder rolls out of bounds.  That should be
+         * impossible because trap creation validates the path that
+         * the boulder will traverse.
+         *
+         * The suggested fix increments bhitpos, verifies with isok(),
+         * then undoes the increment if not ok.  This is simpler.
+         */
+        if (!isok(gb.bhitpos.x + dx, gb.bhitpos.y + dy)) {
+            x2 = x, y2 = y; /* use current spot for final boulder placement */
+            break;
+        }
+        /*
+         * end TEMPORARY?
+         */
+
         x = (gb.bhitpos.x += dx);
         y = (gb.bhitpos.y += dy);
 
