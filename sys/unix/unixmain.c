@@ -843,12 +843,13 @@ sys_random_seed(void)
 void
 get_nhuuid(void)
 {
-#if defined(LINUX) && defined(NHUUID)
     char struuid[37] = { 0 };
+#if defined(LINUX) && defined(NHUUID)
     uuid_t binuuid;
 #elif defined(MACOS) && defined(NHUUID)
     char *struuid = NULL;
     extern char *get_mac_uuid(char **); /* sys/unix/macuuid.m */
+    extern void free_macos_uuid(void);  /* sys/unix/macuuid.m */
 #endif
 
     if (svn.nhuuid[0])
