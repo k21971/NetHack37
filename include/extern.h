@@ -351,7 +351,7 @@ extern void set_ignore_errors_on_unmatched(void);
 
 extern char *color_attr_to_str(color_attr *);
 extern boolean color_attr_parse_str(color_attr *, char *);
-extern int32 colortable_to_int32(struct nethack_color *);
+extern int32 colortable_to_int32(const struct nethack_color *);
 extern int query_color(const char *, int) NO_NNARGS;
 extern int query_attr(const char *, int) NO_NNARGS;
 extern boolean query_color_attr(color_attr *, const char *) NONNULLARG1;

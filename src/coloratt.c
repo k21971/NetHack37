@@ -64,7 +64,7 @@ static const struct attr_names attrnames[] = {
 #define NOC no_color
 #define RGBC rgb_color
 
-static struct nethack_color colortable[] = {
+const struct nethack_color colortable[] = {
     { NHC,    0,   0, "black", 0x00, 0x00, 0x00 },      /*        CLR_BLACK */
     { NHC,    1,   0, "red", 0xFF, 0x00, 0x00 },        /*          CLR_RED */
     { NHC,    2,   0, "green", 0x22, 0x8B, 0x22 },      /*        CLR_GREEN */
@@ -234,7 +234,7 @@ staticfn int32 alt_color_spec(const char *cp);
 #endif
 
 int32
-colortable_to_int32(struct nethack_color *cte)
+colortable_to_int32(const struct nethack_color *cte)
 {
     int32 clr = NO_COLOR | NH_BASIC_COLOR;
 
