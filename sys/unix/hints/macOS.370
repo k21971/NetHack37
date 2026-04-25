@@ -215,6 +215,13 @@ LFLAGS += -framework AVFoundation
 #endif
 endif
 
+ifdef MAKEFILE_SRC
+ifdef WANT_NHUUID
+CFLAGS += -DNHUUID
+UUIDOBJ = macuuid.o
+endif
+endif
+
 #
 #-INCLUDE multisnd1-pre.370
 #
@@ -545,6 +552,11 @@ checkmakefiles:
 	@$(MAKE) -f sys/unix/Makefile.check \
 		HINTSFILE="$(HINTSFILE)" HINTSINCLFILES="$(HINTSINCLFILES)"
 endif
+endif
+
+ifdef WANT_NHUUID
+$(TARGETPFX)macuuid.o: ../sys/unix/macuuid.m
+	$(CC) $(CFLAGS) -c -o$@ $<
 endif
 
 ifdef WANT_LIBNH
