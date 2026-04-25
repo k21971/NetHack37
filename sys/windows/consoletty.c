@@ -357,8 +357,9 @@ void win32con_debug_keystrokes(void);
 void win32con_toggle_cursor_info(void);
 #endif
 
+/* GDI typically represents color as BGR (Blue-Green-Red) in memory */
 static int32
-rgbtable_to_int32(const struct nethack_color *tbl)
+colortable_to_bgr_int32(const struct nethack_color *tbl)
 {
     int32 rgbint32 = (tbl->r << 0) | (tbl->g << 8) | (tbl->b << 16);
     return rgbint32;
@@ -371,22 +372,22 @@ init_custom_colors(void)
 {
     char bkcolorbuf[32];
 
-    customcolors[CLR_BLACK] = rgbtable_to_int32(&colortable[rgbtable_offset + 131]);
-    customcolors[CLR_RED] = rgbtable_to_int32(&colortable[rgbtable_offset + 5]);
-    customcolors[CLR_GREEN] = rgbtable_to_int32(&colortable[rgbtable_offset + 31]);
-    customcolors[CLR_BROWN] = rgbtable_to_int32(&colortable[rgbtable_offset + 104]);
-    customcolors[CLR_BLUE] = rgbtable_to_int32(&colortable[rgbtable_offset + 58]);
-    customcolors[CLR_MAGENTA] = rgbtable_to_int32(&colortable[rgbtable_offset + 76]);
-    customcolors[CLR_CYAN] = rgbtable_to_int32(&colortable[rgbtable_offset + 48]);
-    customcolors[CLR_GRAY] = rgbtable_to_int32(&colortable[rgbtable_offset + 73]);
-    customcolors[NO_COLOR] = rgbtable_to_int32(&colortable[rgbtable_offset + 137]);
-    customcolors[CLR_ORANGE] = rgbtable_to_int32(&colortable[rgbtable_offset + 15]);
-    customcolors[CLR_BRIGHT_GREEN] = rgbtable_to_int32(&colortable[rgbtable_offset + 34]);
-    customcolors[CLR_YELLOW] = rgbtable_to_int32(&colortable[rgbtable_offset + 18]);
-    customcolors[CLR_BRIGHT_BLUE] = rgbtable_to_int32(&colortable[rgbtable_offset + 69]);
-    customcolors[CLR_BRIGHT_MAGENTA] = rgbtable_to_int32(&colortable[rgbtable_offset + 84]);
-    customcolors[CLR_BRIGHT_CYAN] = rgbtable_to_int32(&colortable[rgbtable_offset + 49]);
-    customcolors[CLR_WHITE] = rgbtable_to_int32(&colortable[rgbtable_offset + 138]);
+    customcolors[CLR_BLACK] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 131]);
+    customcolors[CLR_RED] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 5]);
+    customcolors[CLR_GREEN] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 31]);
+    customcolors[CLR_BROWN] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 104]);
+    customcolors[CLR_BLUE] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 58]);
+    customcolors[CLR_MAGENTA] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 76]);
+    customcolors[CLR_CYAN] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 48]);
+    customcolors[CLR_GRAY] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 73]);
+    customcolors[NO_COLOR] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 137]);
+    customcolors[CLR_ORANGE] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 15]);
+    customcolors[CLR_BRIGHT_GREEN] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 34]);
+    customcolors[CLR_YELLOW] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 18]);
+    customcolors[CLR_BRIGHT_BLUE] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 69]);
+    customcolors[CLR_BRIGHT_MAGENTA] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 84]);
+    customcolors[CLR_BRIGHT_CYAN] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 49]);
+    customcolors[CLR_WHITE] = colortable_to_bgr_int32(&colortable[rgbtable_offset + 138]);
 
 /*    esc_seq_colors[CLR_BLACK] = "\x1b[30m"; */
     esc_seq_colors[CLR_BLACK] = "\x1b[38;2;47;79;79m";
