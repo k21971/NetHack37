@@ -665,7 +665,7 @@ $(BUNDLE_INFOPLIST):
 	@echo '<key>CFBundleShortVersionString</key>' >>$@
 	@echo '<string>3.7.0</string>' >>$@
 	@echo '<key>NSHumanReadableCopyright</key>' >>$@
-	@echo '<string>©By Stichting Mathematisch Centrum and M. Stephenson 1985-2023</string>' >>$@
+	@echo '<string>©By Stichting Mathematisch Centrum and M. Stephenson 1985-2026</string>' >>$@
 	@echo '<key>LSApplicationCategoryType</key>' >>$@
 	@echo '<string>public.app-category.adventure-games</string>' >>$@
 	@echo '</dict>' >>$@
