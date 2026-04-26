@@ -128,7 +128,7 @@ u_calc_moveamt(int wtcap)
         /* your speed doesn't augment steed's speed */
         moveamt = mcalcmove(u.usteed, TRUE);
     } else {
-        moveamt = gy.youmonst.data->mmove;
+        moveamt = u.umonst->data->mmove;
 
         if (Very_fast) { /* speed boots, potion, or spell */
             /* gain a free action on 2/3 of turns */
@@ -306,7 +306,7 @@ moveloop_core(void)
                     mvl_wtcap = UNENCUMBERED;
                 } else if (!Upolyd ? (u.uhp < u.uhpmax)
                            : (u.mh < u.mhmax
-                              || gy.youmonst.data->mlet == S_EEL)) {
+                              || u.umonst->data->mlet == S_EEL)) {
                     /* maybe heal */
                     regen_hp(mvl_wtcap);
                 }
@@ -497,7 +497,7 @@ moveloop_core(void)
         curs_on_u();
     }
 
-    m_everyturn_effect(&gy.youmonst);
+    m_everyturn_effect(u.umonst);
 
     svc.context.move = 1;
 
@@ -650,7 +650,7 @@ regen_hp(int wtcap)
     if (Upolyd) {
         if (u.mh < 1) { /* shouldn't happen... */
             rehumanize();
-        } else if (gy.youmonst.data->mlet == S_EEL
+        } else if (u.umonst->data->mlet == S_EEL
                    && !is_pool(u.ux, u.uy) && !Is_waterlevel(&u.uz)
                    && !Breathless) {
             /* eel out of water loses hp, similar to monster eels;
@@ -789,11 +789,12 @@ newgame(void)
     /* make sure welcome messages are given before noticing monsters */
     notice_mon_off();
     disp.botlx = TRUE;
-    svc.context.ident = 2;  /* id 1 is reserved for gy.youmonst */
+    svc.context.ident = 2;  /* id 1 is reserved for u.umonst->m_id */
     svc.context.warnlevel = 1;
     svc.context.next_attrib_check = 600L; /* arbitrary first setting */
     svc.context.tribute.enabled = TRUE;   /* turn on 3.6 tributes    */
     svc.context.tribute.tributesz = sizeof(struct tribute_info);
+    get_nhuuid();
 
     for (i = LOW_PM; i < NUMMONS; i++)
         svm.mvitals[i].mvflags = mons[i].geno & G_NOCORPSE;
