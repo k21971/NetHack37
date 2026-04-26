@@ -80,8 +80,11 @@ make WANT_SOURCE_INSTALL=1    Place the results of the install/update portion
                               tree, rather than in a system-wide shared area.
 
 make WANT_NHUUID=1            Include support for a unique game identifier.
-                              On Linux, libuuid must be installed for this
-                              to build and link correctly.
+                              On Linux, libuuid and headers ust be installed
+                              and available for this to build and link correctly.
+                                sudo apt install uuid-dev on Debian/Ubuntu
+                              or
+                                sudo dnf install libuuid-devel on Fedora
 
 make VIEWDEPRECATIONS=1       Turn off the suppression of -Wdeprecated and
                               -Wdeprecated-declarations warnings
