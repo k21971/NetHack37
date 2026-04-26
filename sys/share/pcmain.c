@@ -749,7 +749,7 @@ exepath(char *str)
 }
 #endif /* EXEPATH */
 
-#ifdef CROSS_TO_AMIGA
+#if defined(CROSS_TO_AMIGA) || defined(CROSS_TO_MSDOS)
 
 void
 get_nhuuid(void)
@@ -774,7 +774,9 @@ free_nhuuid(void)
         svn.nhuuid[i] = 0;
     }
 }
+#endif
 
+#if defined(CROSS_TO_AMIGA)
 void msmsg
 VA_DECL(const char *, fmt)
 {
