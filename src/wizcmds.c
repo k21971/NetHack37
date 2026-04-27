@@ -1782,6 +1782,7 @@ int
 wiz_show_nhuuid(void)
 {
     pline("The NHUUID for this game is { %s }.", svn.nhuuid);
+    return ECMD_OK;
 }
 
 /* the #wizmondiff command */
