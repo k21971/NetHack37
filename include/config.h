@@ -687,6 +687,7 @@ typedef unsigned char uchar;
  * will perform an update to the checkpoint file.
  * Currently has support in:
  *     WIN32CON
+ *     Qt
  */
 
 /* #define IDLECHECKPOINT */

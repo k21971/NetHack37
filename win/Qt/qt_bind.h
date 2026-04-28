@@ -106,6 +106,9 @@ public:
         static void qtsound_ambience(int32_t, int32_t, int32_t);
         static void qtsound_verbal(char *text, int32_t gender, int32_t tone, int32_t vol, int32_t moreinfo);
 #endif
+#ifdef IDLECHECKPOINT
+        static void free_qt_input_timer(void);
+#endif
 
 private:
 	virtual bool notify(QObject *receiver, QEvent *event);
