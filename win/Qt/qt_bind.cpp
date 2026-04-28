@@ -682,17 +682,17 @@ NetHackQtBind::free_qt_input_timer(void)
 static void
 qt_timer_fire(void)
 {
-#if defined(INSURANCE)
     if (iflags.idlecheckpoint) {
         /* no input for 30 seconds, so let's take
          * advantage and do a game checkpoint,
          * then resume the wait.
          */
+#if defined(INSURANCE)
         save_currentstate();
+#endif /* INSURANCE */
     }
     if (qt_input_timer->isActive())
         qt_input_timer->stop();
-#endif /* INSURANCE */
 }
 
 //void
