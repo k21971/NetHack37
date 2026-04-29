@@ -1511,6 +1511,8 @@ postmov(
             if (mtmp->mx)
                 newsym(mtmp->mx, mtmp->my);
             return MMOVE_DIED; /* it died */
+        } else if (mon_offmap(mtmp)) {
+            return MMOVE_DONE;
         }
         ptr = mtmp->data; /* in case mintrap() caused polymorph */
 
