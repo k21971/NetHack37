@@ -7125,7 +7125,7 @@ trapname(
         "pile of poo", "honey trap", "tourist trap",
         "banana peel", "garden rake", "whoopie cushion", "box and stick trap",
         "fly trap", "legal trap", "pit of snakes", "pollywog trap",
-        "slippery slope", "thirst trap", "tourist trap", "suntrap",
+        "slippery slope", "thirst trap", "suntrap",
     };
     static char roletrap[33]; /* [17 + 5 + 1] should suffice */
 
