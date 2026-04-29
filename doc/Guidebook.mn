@@ -6811,48 +6811,49 @@ miscreants in this, the list of Dungeoneers:
 center;
 c2 c2 c.
 .\"TABLE_START
-Adam Aronow	Irina Rempt-Drijfhout	Mike Passaretti
-Alex Kompel	Izchak Miller	Mike Stephenson
-Alex Smith	J. Ali Harlow	Mikko Juola
-Andreas Dorn	Janet Walz	Nathan Eady
-Andy Church	Janne Salmijarvi	Norm Meluch
-Andy Swanson	Jean-Christophe Collet	Olaf Seibert
-Andy Thomson	Jeff Bailey	Pasi Kallinen
-Ari Huttunen	Jochen Erwied	Pat Rankin
-Bart House	John Kallen	Patric Mueller
-Benson I. Margulies	John Rupley	Paul Winner
-Bill Dyer	John S. Bien	Pierre Martineau
-Boudewijn Waijers	Johnny Lee	Ralf Brown
-Bruce Cox	Jon W{tte	Ray Chason
-Bruce Holloway	Jonathan Handler	Richard Addison
-Bruce Mewborne	Joshua Delahunty	Richard Beigel
-Carl Schelin	Karl Garrison	Richard P. Hughey
-Chris Russo	Keizo Yamamoto	Rob Menke
-David Cohrs	Keith Simpson	Robin Bandy
-David Damerell	Ken Arnold	Robin Johnson
-David Gentzel	Ken Arromdee	Roderick Schertler
-David Hairston	Ken Lorber	Roland McGrath
-Dean Luick	Ken Washikita	Ron Van Iwaarden
-Del Lamb	Kevin Darcy	Ronnen Miller
-Derek S. Ray	Kevin Hugo	Ross Brown
-Deron Meranda	Kevin Sitze	Sascha Wostmann
-Dion Nicolaas	Kevin Smolkowski	Scott Bigham
-Dylan O'Donnell	Kevin Sweet	Scott R. Turner
-Eric Backus	Lars Huttar	Sean Hunt
-Eric Hendrickson	Leon Arnott	Stephen Spackman
-Eric R. Smith	M. Drew Streib	Stefan Thielscher
-Eric S. Raymond	Malcolm Ryan	Stephen White
-Erik Andersen	Mark Gooderum	Steve Creps
-Fredrik Ljungdahl	Mark Modrall	Steve Linhart
-Frederick Roeber	Marvin Bressler	Steve VanDevender
-G. Branden Robinson	Matthew Day	Teemu Suikki
-Gil Neiger	Merlyn LeRoy	Tim Lennan
-Greg Laskin	Michael Allison	Timo Hakulinen
-Greg Olson	Michael Feir	Tom Almy
-Gregg Wonderly	Michael Hamel	Tom West
-Hao-yang Wang	Michael Sokolov	Warren Cheung
-Helge Hafting	Mike Engber	Warwick Allison
-Ingo Paschke	Mike Gallop	Yitzhak Sapir
+Adam Aronow	Izchak Miller	Mike Stephenson
+Alex Kompel	J. Ali Harlow	Mikko Juola
+Alex Smith	Janet Walz	Nathan Eady
+Andreas Dorn	Janne Salmijarvi	Norm Meluch
+Andy Church	Jean-Christophe Collet	Olaf Seibert
+Andy Swanson	Jeff Bailey	Pasi Kallinen
+Andy Thomson	Jochen Erwied	Pat Rankin
+Ari Huttunen	John Kallen	Patric Mueller
+Bart House	John Rupley	Paul Winner
+Benson I. Margulies	John S. Bien	Pierre Martineau
+Bill Dyer	Johnny Lee	Ralf Brown
+Boudewijn Waijers	Jon W{tte	Ray Chason
+Bruce Cox	Jonathan Handler	Richard Addison
+Bruce Holloway	Joshua Delahunty	Richard Beigel
+Bruce Mewborne	Karl Garrison	Richard P. Hughey
+Carl Schelin	Keizo Yamamoto	Rob Menke
+Chris Russo	Keith Simpson	Robin Bandy
+David Cohrs	Ken Arnold	Robin Johnson
+David Damerell	Ken Arromdee	Roderick Schertler
+David Gentzel	Ken Lorber	Roland McGrath
+David Hairston	Ken Washikita	Ron Van Iwaarden
+Dean Luick	Kevin Darcy	Ronnen Miller
+Del Lamb	Kevin Hugo	Ross Brown
+Derek S. Ray	Kevin Sitze	Sascha Wostmann
+Deron Meranda	Kevin Smolkowski	Scott Bigham
+Dion Nicolaas	Kevin Sweet	Scott R. Turner
+Dylan O'Donnell	Lars Huttar	Sean Hunt
+Eric Backus	Leon Arnott	Stephen Spackman
+Eric Hendrickson	M. Drew Streib	Stefan Thielscher
+Eric R. Smith	Malcolm Ryan	Stephen White
+Eric S. Raymond	Mark Gooderum	Steve Creps
+Erik Andersen	Mark Modrall	Steve Linhart
+Fredrik Ljungdahl	Marvin Bressler	Steve VanDevender
+Frederick Roeber	Matthew Day	Teemu Suikki
+G. Branden Robinson	Merlyn LeRoy	Tim Lennan
+Gil Neiger	Michael Allison	Timo Hakulinen
+Greg Laskin	Michael Feir	Tom Almy
+Greg Olson	Michael Hamel	Tom West
+Gregg Wonderly	Michael Meyer	Warren Cheung
+Hao-yang Wang	Michael Sokolov	Warwick Allison
+Helge Hafting	Mike Engber	Yitzhak Sapir
+Ingo Paschke	Mike Gallop
+Irina Rempt-Drijfhout	Mike Passaretti
 .\"TABLE_END  Do not delete this line.
 .TE
 .BR 1
