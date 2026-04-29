@@ -5311,11 +5311,11 @@ optfn_boolean(
             go.opt_need_redraw = TRUE;
             break;
 #ifndef IDLECHECKPOINT
-	case opt_idlecheckpoint:
-	    pline("There is no underlying support for 'idlecheckpoint'"
-		  " compiled in."); 
-	    iflags.idlecheckpoint = FALSE;
-	    give_opt_msg = FALSE;
+        case opt_idlecheckpoint:
+            pline("There is no underlying support for 'idlecheckpoint'"
+                  " compiled in."); 
+            iflags.idlecheckpoint = FALSE;
+            give_opt_msg = FALSE;
             break;
 #endif
         default:
