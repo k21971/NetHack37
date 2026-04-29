@@ -97,7 +97,8 @@ will vary with your background and training:
 \item[Archeologists]
 understand dungeons pretty well; this enables them
 to move quickly and sneak up on the local nasties.  They start equipped
-with the tools for a proper scientific expedition.
+with the tools for a proper scientific expedition, and are able to read
+ancient languages.
 %.pg
 %
 \item[Barbarians]
@@ -5069,6 +5070,16 @@ name (on single-user systems) or it might be disabled entirely.  Requesting
 it when not allowed or not possible results in explore mode instead.
 Default is normal play.
 %.lp
+\item[price\textunderscore quotes]
+Whenever the game mentions the name of an object you haven't identified yet,
+it also mentions the range of buy and sell prices you have seen for that
+item (to help narrow down what it could be).
+The price shown is the unit price for one item (even when you are looking at
+a stack of multiple items).
+Many players may want to turn this on while identifying objects, and then
+turn it back off again for general play.
+Default is off.
+%.lp
 \item[pushweapon]
 Using the `\texttt{w}' (wield) command when already wielding
 something pushes the old item into your alternate weapon slot (default off).
@@ -5096,8 +5107,19 @@ for a description of how to use negation to exclude choices.
 \\
 If \texttt{race} is not specified, there is no default value;
 player will be prompted unless role forces a choice for race.
-unless role forces a choice for race.
 Cannot be set with the `\texttt{O}' command.  Persistent.
+%.lp
+\item[reroll]
+Allows rerolling your character's starting inventory and attributes (default
+false).  Persistent.
+%.lp ""
+\\
+Note that rerolling your character is not a recommended way to play if aiming
+merely to win (a lucky start has a much smaller influence on whether or not
+you win the game than your actions later in the game).  This option exists
+partly as an acknowledgement that some players will insist on doing so anyway,
+and partly because rerolling may be necessary for certain types of challenge
+games.
 %.lp
 \item[rest\textunderscore on\textunderscore space]
 Make the space bar a synonym for the `\texttt{.}' (\#wait) command (default off).

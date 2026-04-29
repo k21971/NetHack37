@@ -70,6 +70,14 @@ static struct key_macro_rec {
     { 0, 0U, (const char *) 0, (const char *) 0 }
 };
 
+#ifdef IDLECHECKPOINT
+#ifndef IDLECHECKPOINT_WAIT_TIME
+#define IDLECHECKPOINT_WAIT_TIME 10
+#endif
+static void qt_timer_fire(void);
+QTimer *qt_input_timer;
+#endif
+
 static QPen *pen = (QPen *) 0;
 
 NetHackQtBind::NetHackQtBind(int& argc, char** argv) :
@@ -309,6 +317,11 @@ public:
  
 void NetHackQtBind::qt_exit_nhwindows(const char *)
 {
+#ifdef IDLECHECKPOINT
+    if (qt_input_timer) {
+        NetHackQtBind::free_qt_input_timer();
+    }
+#endif
 #if defined(QWS)
     // Avoids bug in SHARP SL5500
     ((TApp*)qApp)->lwc();
@@ -653,11 +666,58 @@ QCoreApplication::exec: The event loop is already running
     return keybuffer.GetAscii();
 }
 
+#ifdef IDLECHECKPOINT
+void
+NetHackQtBind::free_qt_input_timer(void)
+{
+    if (qt_input_timer) {
+        if (qt_input_timer->isActive())
+            qt_input_timer->stop();
+        if (qt_input_timer)
+            delete qt_input_timer;
+        qt_input_timer = 0;
+    }
+}
+
+static void
+qt_timer_fire(void)
+{
+    if (iflags.idlecheckpoint) {
+        /* no input for 30 seconds, so let's take
+         * advantage and do a game checkpoint,
+         * then resume the wait.
+         */
+#if defined(INSURANCE)
+        save_currentstate();
+#endif /* INSURANCE */
+    }
+    if (qt_input_timer->isActive())
+        qt_input_timer->stop();
+}
+
+//void
+//cancel_qt_input_timer(void)
+//{
+//
+//}
+#endif  /* IDLECHECKPOINT */
+
 int NetHackQtBind::qt_nh_poskey(coordxy *x, coordxy *y, int *mod)
 {
     if (main)
 	main->fadeHighlighting(true);
 
+#ifdef IDLECHECKPOINT
+    if (iflags.idlecheckpoint) {
+        if (!qt_input_timer) {
+            qt_input_timer = new QTimer();
+	    qt_input_timer->setSingleShot(true);
+	    connect(qt_input_timer, &QTimer::timeout, &qt_timer_fire);
+        }
+        if (!qt_input_timer->isActive())
+	    qt_input_timer->start(IDLECHECKPOINT_WAIT_TIME * 1000);
+    }
+#endif
     // Process events until a key or map-click arrives.
     //
     while (keybuffer.Empty() && clickbuffer.Empty()) {
@@ -672,12 +732,20 @@ int NetHackQtBind::qt_nh_poskey(coordxy *x, coordxy *y, int *mod)
         main->fadeHighlighting(false);
 
     if (!keybuffer.Empty()) {
-	return keybuffer.GetAscii();
+#ifdef IDLECHECKPOINT
+        if (qt_input_timer->isActive())
+            qt_input_timer->stop();
+#endif
+        return keybuffer.GetAscii();
     } else {
 	*x=clickbuffer.NextX();
 	*y=clickbuffer.NextY();
 	*mod=clickbuffer.NextMod();
 	clickbuffer.Get();
+#ifdef IDLECHECKPOINT
+        if (qt_input_timer->isActive())
+            qt_input_timer->stop();
+#endif
 	return 0;
     }
 }
