@@ -798,6 +798,7 @@ struct sinfo {
     int config_error_ready;     /* config_error_add is ready, available */
     int beyond_savefile_load;   /* set when past savefile loading */
     int savefile_completed;     /* savefile has completed writing */
+    int reading_bonesfile;      /* in the midst of trying to read bones file */
 #ifdef PANICLOG
     int in_paniclog;            /* writing a panicloc entry */
 #endif
