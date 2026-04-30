@@ -7123,6 +7123,9 @@ trapname(
         "sweet-smelling gas vent", "phone booth", "exploding runes",
         "never-ending elevator", "slime pit", "warp zone", "illusory floor",
         "pile of poo", "honey trap", "tourist trap",
+        "banana peel", "garden rake", "whoopie cushion", "box and stick trap",
+        "fly trap", "legal trap", "pit of snakes", "pollywog trap",
+        "slippery slope", "thirst trap", "suntrap",
     };
     static char roletrap[33]; /* [17 + 5 + 1] should suffice */
 
