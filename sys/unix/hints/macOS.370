@@ -226,7 +226,7 @@ endif  #NO_NHUUID
 ifdef WANT_NHUUID
 CFLAGS += -DNHUUID
 UUIDOBJ = macuuid.o
-LFLAGS += -framework foundation
+LFLAGS += -framework Foundation
 endif
 endif  #MAKEFILE_SRC
 
