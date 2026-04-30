@@ -709,6 +709,10 @@ enum nhcb_calls {
     NUM_NHCB
 };
 
+#ifdef NHUUID
+#define NHUUIDSZ 37
+#endif
+
 struct plinemsg_type {
     xint16 msgtype;  /* one of MSGTYP_foo */
     struct nhregex *regex;
