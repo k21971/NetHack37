@@ -5,7 +5,7 @@
 #include "hack.h"
 
 void free_macos_uuid(void);
-const char *get_macos_uuid(void);
+void get_macos_uuid(char *);
 
 #ifdef DEBUG
 #undef DEBUG
@@ -25,19 +25,34 @@ free_macos_uuid(void)
     } 
 }
 
-const char *
-get_macos_uuid(void)
+void
+get_macos_uuid(char *target)
 {
     NSString *uuidString = [[NSUUID UUID] UUIDString];
-    const char *str_uuid;
- 
+    const char *str_uuid, *src;
+    char *dst;
+    int i;
+    
     if (macos_uuid)
         free_macos_uuid();
 
     /* str_uuid = [uuidString cStringUsingEncoding:NSUTF8StringEncoding]; */
     str_uuid = [uuidString cStringUsingEncoding:NSASCIIStringEncoding];
     macos_uuid = dupstr(str_uuid);
-    return macos_uuid;
+    
+    if (macos_uuid) {
+        src = macos_uuid;
+        dst = target;
+        for (i = 0; i < 36; ++i) {
+            *dst = *src;
+            ++src;
+            ++dst;
+        }
+        dst[36] = '\0';
+    }
+    free_macos_uuid();
+    macos_uuid = 0;
+    return;
 }
 
 
