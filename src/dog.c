@@ -427,6 +427,7 @@ mon_arrive(struct monst *mtmp, int when)
     stairway *stway;
     d_level fromdlev;
 
+    mtmp->mstate |= MON_STILL_ARRIVING;
     mtmp->nmon = fmon;
     fmon = mtmp;
     if (mtmp->isshk)
@@ -475,6 +476,7 @@ mon_arrive(struct monst *mtmp, int when)
             rloc_to(mtmp, u.ux, u.uy);
         else
             mnexto(mtmp, RLOC_NOMSG);
+        mtmp->mstate &= ~MON_STILL_ARRIVING;
         return;
     } else if (when == Wiz_arrive) {
         /* resurrect() is bringing existing wizard to harass the hero */
@@ -604,6 +606,8 @@ mon_arrive(struct monst *mtmp, int when)
 
     mtmp->mx = 0; /*(already is 0)*/
     mtmp->my = xyflags;
+    mtmp->mstate &= ~MON_STILL_ARRIVING;
+
     if (xlocale)
         failed_to_place = !mnearto(mtmp, xlocale, ylocale, FALSE, RLOC_NOMSG);
     else
