@@ -606,7 +606,6 @@ mon_arrive(struct monst *mtmp, int when)
 
     mtmp->mx = 0; /*(already is 0)*/
     mtmp->my = xyflags;
-    mtmp->mstate &= ~MON_STILL_ARRIVING;
 
     if (xlocale)
         failed_to_place = !mnearto(mtmp, xlocale, ylocale, FALSE, RLOC_NOMSG);
@@ -620,6 +619,7 @@ mon_arrive(struct monst *mtmp, int when)
         else /* when==Wiz_arrive => not being called by losedogs() */
             m_into_limbo(mtmp);
     }
+    mtmp->mstate &= ~MON_STILL_ARRIVING;
 }
 
 /* heal monster for time spent elsewhere */
