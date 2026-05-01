@@ -60,7 +60,7 @@
 .ds f0 \*(vr
 .ds f1 \" empty
 .\"DO NOT REMOVE NH_DATESUB .ds f2 Date(%B %-d, %Y)
-.ds f2 April 16, 2026
+.ds f2 May 1, 2026
 .
 .\" A note on some special characters:
 .\" \(lq = left double quote
@@ -1034,9 +1034,16 @@ choices but will accept an item of armor and attempt to take it off.)
 .lp \(haT
 Teleport, if you have the ability.
 .lp v
-Display version number.
+Display a list of significant events in the current game, also shown by
+\f(CR#chronicle\fP.
+.lp ""
+\(oq\f(CRv\fP\(cq used to display the game's version number.
+Use \(oq\f(CRV\fP\(cq for that now.
 .lp V
-Display the game history.
+Display version number.
+.lp ""
+\(oq\f(CRV\fP\(cq used to display a summary of the game's history.
+Still available via \f(CR#history\fP.
 .lp w
 Wield weapon.
 .sd
@@ -1385,7 +1392,7 @@ If mouse support is enabled and the
 option is On, clicking on the hero (or steed when mounted) will
 execute this command.
 .lp "#history "
-Show long version and game history.
+Show a summary of the game's development.
 .lp #inventory
 Show your inventory.
 Default key is \(oqi\(cq.
@@ -4803,6 +4810,12 @@ option is recommended so that there will be more room available for
 status information, unless you're using NetHack's \fIQt\fP interface
 or your terminal emulator window displays fewer than 25 lines.
 Persistent.
+.lp ""
+The
+.op versinfo
+option provides limited control over what information
+.op showvers
+displays.
 .lp "silent  "
 Suppress terminal beeps (default on).
 Persistent.
@@ -4943,6 +4956,10 @@ Play a tutorial level at the start of the game.
 Setting this option on or off in the config file will skip the query.
 .lp "verbose "
 Provide more commentary during the game (default on).  Persistent.
+.lp versinfo
+Controls what the
+.op showvers
+option displays on the status lines.
 .lp weaponstatus
 Display an extra status condition which describes currently wielded weapon
 (default off, not supported by all interfaces).
