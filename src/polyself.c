@@ -1408,6 +1408,7 @@ rehumanize(void)
     disp.botl = TRUE;
     gv.vision_full_recalc = 1;
     encumber_msg();
+    update_inventory();
     if (was_flying && !Flying && u.usteed)
         You("and %s return gently to the %s.",
             mon_nam(u.usteed), surface(u.ux, u.uy));
