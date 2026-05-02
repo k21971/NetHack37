@@ -881,7 +881,8 @@ mswin_display_nhwindow(winid wid, boolean block)
             if (!block) {
                 UpdateWindow(GetNHApp()->windowlist[wid].win);
             } else {
-                if (GetNHApp()->windowlist[wid].type == NHW_MAP) {
+                if ((GetNHApp()->windowlist[wid].type == NHW_MAP)
+                    || (GetNHApp()->windowlist[wid].type == NHW_MESSAGE)) {
                     (void) mswin_nhgetch();
                 }
             }
