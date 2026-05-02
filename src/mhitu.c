@@ -1916,7 +1916,6 @@ mdamageu(struct monst *mtmp, int n)
         if (u.mh < 1)
             rehumanize();
     } else {
-        n = saving_grace(n);
         u.uhp -= n;
         showdamage(n);
         /* caller might have reduced uhpmax before calling mdamageu() */

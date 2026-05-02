@@ -4242,60 +4242,6 @@ maybe_wail(void)
     }
 }
 
-/* once per game, if receiving a killing blow from above 90% HP,
-   allow the hero to survive with 1 HP */
-int
-saving_grace(int dmg)
-{
-    if (dmg < 0) {
-        impossible("saving_grace check for negative damage? (%d)", dmg);
-        return 0;
-    }
-#if 0   /* saving grace _does_ protect hero during own actions */
-    if (!svc.context.mon_moving) {
-        /* saving grace doesn't protect you from your own actions */
-        return dmg;
-    }
-#endif
-    if (dmg < u.uhp || u.uhp <= 0) {
-        /* no need for saving grace */
-        return dmg;
-    }
-
-    if (gs.saving_grace_turn) {
-        /* saving grace already triggered and prevents HP reducing below 1
-           this turn (specifically: until the next player action or turn
-           boundary), don't print further messages or livelog entries */
-        return u.uhp - 1;
-    }
-
-    if (!u.usaving_grace &&
-        (gu.uhp_at_start_of_monster_turn * 100 / u.uhpmax) >= 90) {
-        /* saving_grace doesn't have it's own livelog classification;
-           we might invent one, or perhaps use LL_LIFESAVE, but surviving
-           certain death (or preserving worn amulet of life saving) via
-           saving-grace feels like breaking a conduct; not sure how best
-           to phrase this though; classifying it as a spoiler will hide it
-           from #chronicle during play but show it to livelog observers */
-        livelog_printf(LL_CONDUCT | LL_SPOILER, "%s (%d damage, %d/%d HP)",
-                       "survived one-shot death via saving-grace",
-                       /* include damage that happened earlier this turn */
-                       gu.uhp_at_start_of_monster_turn - u.uhp + dmg,
-                       gu.uhp_at_start_of_monster_turn, u.uhpmax);
-
-        /* note: this could reduce dmg to 0 if u.uhpmax==1 */
-        dmg = u.uhp - 1;
-        u.usaving_grace = 1; /* used up */
-        gs.saving_grace_turn = TRUE;
-        end_running(TRUE);
-        if (u.usleep)
-            unmul("Suddenly you wake up!");
-        if (is_fainted())
-            reset_faint();
-    }
-    return dmg;
-}
-
 /* show a message how much damage you received */
 void
 showdamage(int dmg)
@@ -4330,7 +4276,6 @@ losehp(int n, const char *knam, schar k_format)
         return;
     }
 
-    n = saving_grace(n);
     u.uhp -= n;
     showdamage(n);
     if (u.uhp > u.uhpmax)
