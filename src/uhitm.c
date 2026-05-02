@@ -4837,7 +4837,8 @@ damageum(
     struct attack *mattk, /* hero's attack */
     int specialdmg) /* blessed and/or silver bonus against various things */
 {
-    struct mhitm_data mhm;
+    /* { damage, hitflags, done, permdmg, specialdmg, dieroll } */
+    struct mhitm_data mhm = { 0, 0, FALSE, FALSE, 0, 0 };
 
     mhm.damage = d((int) mattk->damn, (int) mattk->damd);
     mhm.hitflags = M_ATTK_MISS;
