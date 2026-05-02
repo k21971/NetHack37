@@ -1673,7 +1673,7 @@ doname_base(
                      nochrg ? "contents" : "for sale", pricebuf);
         } else if (nochrg > 0) {
             Concat(bp, 0, " (no charge)");
-        } else {
+        } else if (iflags.pricequotes && !objects[obj->otyp].oc_name_known) {
             append_price_quote(bp, &bp_eos, obj->otyp);
         }
 

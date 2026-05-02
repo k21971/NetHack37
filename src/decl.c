@@ -678,8 +678,6 @@ static const struct instance_globals_r g_init_r = {
 };
 
 static const struct instance_globals_s g_init_s = {
-    /* allmain.c */
-    FALSE, /* saving_grace_turn */
     /* artifact.c */
     0,  /* spec_dbon_applies */
     /* decl.c */
@@ -770,8 +768,6 @@ static const struct instance_globals_t g_init_t = {
 };
 
 static const struct instance_globals_u g_init_u = {
-    /* allmain.c */
-    0, /* uhp_at_start_of_monster_turn */
     /* botl.c */
     FALSE, /* update_all */
     /* decl.c */
@@ -845,6 +841,7 @@ static const struct instance_globals_x g_init_x = {
 static const struct instance_globals_y g_init_y = {
     /* decl.c */
     (ROWNO - 1) & ~1, /* y_maze_max */
+    DUMMY, /* youmonst */
     /* pline.c */
     NULL, /* you_buf */
     0, /* you_buf_siz */

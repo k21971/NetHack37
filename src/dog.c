@@ -1185,7 +1185,7 @@ tamedog(
     if (mtmp == u.ustuck) {
         if (u.uswallow)
             expels(mtmp, mtmp->data, TRUE);
-        else if (!(Upolyd && sticks(u.umonst->data)))
+        else if (!(Upolyd && sticks(gy.youmonst.data)))
             unstuck(mtmp);
     }
 
@@ -1243,7 +1243,7 @@ tamedog(
            with each other anymore] */
         || mtmp->isshk || mtmp->isgd || mtmp->ispriest || mtmp->isminion
         || is_covetous(mtmp->data) || is_human(mtmp->data)
-        || (is_demon(mtmp->data) && !is_demon(u.umonst->data))
+        || (is_demon(mtmp->data) && !is_demon(gy.youmonst.data))
         || (obj && dogfood(mtmp, obj) >= MANFOOD))
         return FALSE;
 
@@ -1313,7 +1313,7 @@ wary_dog(struct monst *mtmp, boolean was_dead)
             if (!rn2(edog->abuse + 1))
                 mtmp->mpeaceful = 1;
         if (!quietly && cansee(mtmp->mx, mtmp->my)) {
-            if (haseyes(u.umonst->data)) {
+            if (haseyes(gy.youmonst.data)) {
                 if (haseyes(mtmp->data))
                     pline_mon(mtmp,
                              "%s %s to look you in the %s.", Monnam(mtmp),

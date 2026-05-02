@@ -2219,9 +2219,6 @@ uncursed genocide while hallucinating deliberately mis-reports hero's role as
 	target but was also inappropriately showing it to livelog/#chronicle
 livelog/#chronicle for bribing a demon lord reported random monster and
 	currency if hero was hallucinating
-livelog/#chronicle for saving-grace: if saving-grace prevents hero's death,
-	report it [at present, it uses the livelog classification for breaking
-	a conduct]
 naming a type of item, unnaming it (with name of <space>), naming it again
 	(new name or re-use of old one), then unnaming it again would issue
 	impossible: "named object not in disco"
@@ -2904,11 +2901,6 @@ pyrolisk eggs explode when broken
 pauper-option to start the character with no possessions
 wand of secret door detection, spell of detect unseen, and wizard mode ^E now
 	flash the cursor at each location where detection finds something
-saving-grace: once per game if receiving a killing blow from full or nearly
-	full HP, survive with 1 HP
-enlightenment/attribute disclosure for saving-grace: include a line for have
-	or haven't been saved (game in progress) or did or didn't get saved
-	(game over) via saving-grace
 'selectsaved' lists "name-role-race-gend-algn" instead of just "name" in the
 	menu of save files available to be restored
 'selectsaved' prefixes "name-role-race-gend-algn" with "- " for normal play,

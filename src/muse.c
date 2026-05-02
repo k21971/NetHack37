@@ -252,7 +252,7 @@ mreadmsg(struct monst *mtmp, struct obj *otmp)
         pline_mon(mtmp, "%s reads %s!", Monnam(mtmp), onambuf);
     } else { /* !Deaf, otherwise we wouldn't reach here */
         char blindbuf[BUFSZ];
-        boolean similar = same_race(u.umonst->data, mtmp->data),
+        boolean similar = same_race(gy.youmonst.data, mtmp->data),
                 uniqmon = ((mtmp->data->geno & G_UNIQ) != 0
                            /* shopkeepers aren't unique monsters but since
                               they have distinct names, treat them as such */
@@ -1565,8 +1565,8 @@ find_offensive(struct monst *mtmp)
         }
         nomore(MUSE_CAMERA);
         if (obj->otyp == EXPENSIVE_CAMERA
-            && ((!Blind && !resists_blnd(u.umonst))
-                || hates_light(u.umonst->data))
+            && ((!Blind && !resists_blnd(&gy.youmonst))
+                || hates_light(gy.youmonst.data))
             && dist2(mtmp->mx, mtmp->my, mtmp->mux, mtmp->muy) <= 2
             && obj->spe > 0 && !rn2(6)) {
             gm.m.offensive = obj;
@@ -1598,7 +1598,7 @@ mbhitm(struct monst *mtmp, struct obj *otmp)
 {
     int tmp;
     boolean reveal_invis = FALSE, learnit = FALSE,
-            hits_you = (mtmp == u.umonst);
+            hits_you = (mtmp == &gy.youmonst);
 
     if (!hits_you && otmp->otyp != WAN_UNDEAD_TURNING) {
         mtmp->msleeping = 0;
@@ -1761,7 +1761,7 @@ mbhit(
             break;
         }
         if (u_at(gb.bhitpos.x, gb.bhitpos.y)) {
-            (*fhitm)(u.umonst, obj);
+            (*fhitm)(&gy.youmonst, obj);
             range -= 3;
         } else if ((mtmp = m_at(gb.bhitpos.x, gb.bhitpos.y)) != 0) {
             if (cansee(gb.bhitpos.x, gb.bhitpos.y) && !canspotmon(mtmp))
@@ -1944,7 +1944,7 @@ use_offensive(struct monst *mtmp)
                   Monnam(mtmp), an(xname(otmp)));
         }
         gm.m_using = TRUE;
-        if (!Blind && !resists_blnd(u.umonst)) {
+        if (!Blind && !resists_blnd(&gy.youmonst)) {
             You("are blinded by the flash of light!");
             make_blinded(BlindedTimeout + (long) rnd(1 + 50), FALSE);
         }
@@ -2857,7 +2857,7 @@ ureflects(const char *fmt, const char *str)
         if (fmt && str)
             pline(fmt, str, uskin ? "luster" : "armor");
         return TRUE;
-    } else if (u.umonst->data == &mons[PM_SILVER_DRAGON]) {
+    } else if (gy.youmonst.data == &mons[PM_SILVER_DRAGON]) {
         if (fmt && str)
             pline(fmt, str, "scales");
         return TRUE;

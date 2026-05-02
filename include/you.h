@@ -428,7 +428,6 @@ struct you {
     Bitfield(uinvulnerable, 1); /* you're invulnerable (praying) */
     Bitfield(uburied, 1);       /* you're buried */
     Bitfield(uedibility, 1);    /* blessed food detect; sense unsafe food */
-    Bitfield(usaving_grace, 1); /* prevents death once */
     Bitfield(uhandedness, 1); /* There is no advantage for either handedness.
                                  The distinction is only for flavor variation
                                  and for use in messages. */
@@ -496,9 +495,8 @@ struct you {
     struct skills weapon_skills[P_NUM_SKILLS];
     boolean twoweap;         /* KMH -- Using two-weapon combat */
     short mcham;             /* vampire mndx if shapeshifted to bat/cloud */
-    short umovement;         /* instead of u.umonst->movement */
+    short umovement;         /* instead of youmonst.movement */
     schar uachieved[N_ACH];  /* list of achievements in the order attained */
-    struct monst *umonst;
 }; /* end of `struct you' */
 
 

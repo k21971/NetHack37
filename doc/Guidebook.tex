@@ -25,7 +25,7 @@
 \author{Original version - Eric S. Raymond\\
 (Edited and expanded for 3.7.0 by Mike Stephenson and others)}
 %DO NOT REMOVE NH_DATESUB \date{Date(%B %-d, %Y)}
-\date{April 16, 2026}
+\date{May 1, 2026}
 
 \maketitle
 
@@ -1067,10 +1067,20 @@ choices but will accept an item of armor and attempt to take it off.)
 Teleport, if you have the ability.
 %.lp
 \item[v]
-Display version number.
+Display a list of significant events in the current game, also shown by
+\texttt{\#chronicle}.
+\\
+%.lp ""
+`\texttt{v}' used to display the game's version number.
+Use `\texttt{V}' for that now.
+
 %.lp
 \item[V]
-Display the game history.
+Display version number.
+\\
+%.lp ""
+`\texttt{V}' used to display a summary of the game's history.
+Still available via \texttt{\#history}.
 %.lp
 \item[w]
 Wield weapon.\\
@@ -1430,7 +1440,7 @@ option is On, clicking on the hero (or steed when mounted) will
 execute this command.
 %.lp
 \item[\#history]
-Show long version and game history.
+Show a summary of the game's development.
 %.lp
 \item[\#inventory]
 Show your inventory. Default key is `\texttt{i}'.
@@ -5234,6 +5244,11 @@ option is recommended so that there will be more room available for
 status information, unless you're using NetHack's \textit{Qt} interface
 or your terminal emulator window displays fewer than 25 lines.
 Persistent.
+\\
+%.lp ""
+The \textit{versinfo}
+option provides limited control over what information
+\textit{showvers} displays.
 %.lp
 \item[silent]
 Suppress terminal beeps (default on).  Persistent.
@@ -5397,6 +5412,9 @@ Setting this option on or off in the config file will skip the query.
 %.lp
 \item[verbose]
 Provide more commentary during the game (default on).  Persistent.
+%.lp
+\item[versinfo]
+Controls what the \textit{showvers} option displays on the status lines.
 %.lp
 \item[weaponstatus]
 Display an extra status condition which describes currently wielded weapon
