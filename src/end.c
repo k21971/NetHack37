@@ -747,7 +747,7 @@ savelife(int how)
         /* might drop hero onto a trap that kills her all over again */
         expels(u.ustuck, u.ustuck->data, TRUE);
     } else if (u.ustuck) {
-        if (Upolyd && sticks(u.umonst->data))
+        if (Upolyd && sticks(gy.youmonst.data))
             You("release %s.", mon_nam(u.ustuck));
         else
             pline("%s releases you.", Monnam(u.ustuck));

@@ -84,7 +84,7 @@ dowrite(struct obj *pen)
     const char *typeword;
     int spell_knowledge;
 
-    if (nohands(u.umonst->data)) {
+    if (nohands(gy.youmonst.data)) {
         You("need hands to be able to write!");
         return ECMD_OK;
     } else if (Glib) {
